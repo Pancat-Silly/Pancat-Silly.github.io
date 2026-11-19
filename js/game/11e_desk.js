@@ -12,12 +12,14 @@ const SITE = {
   p2pNow() { const v = window.SITE_P2PQ !== undefined ? String(window.SITE_P2PQ) : this.q.get('p2p'); if (this._p2p !== undefined) return this._p2p; if (v === '0' || v === '1') return v === '1'; const s = this.getP2P(); return s ? s.allow !== false : true; },
   setP2PNow(v) { this._p2p = !!v; this.setP2P(!!v); },
   toParent(m) { if (this.inFrame) try { parent.postMessage(Object.assign({ site: 1 }, m), '*'); } catch (e) { } },
-  // 가로 전체화면 끄기 (phones): turn back to portrait while still in fullscreen (orientation locks only work there), then leave fullscreen and release the lock
+  // 가로 전체화면 끄기 (phones): leave fullscreen right away, inside the tap (waiting for the rotation first left some phones
+  // turned portrait but still fullscreen). Ask for portrait at the same moment, retry the exit once, then release the lock.
   landOff() {
-    const d = document, o = screen.orientation;
-    const exit = () => { try { if (d.fullscreenElement || d.webkitFullscreenElement) { const ex = d.exitFullscreen || d.webkitExitFullscreen; const p = ex && ex.call(d); if (p && p.catch) p.catch(() => { }); } } catch (e) { } setTimeout(() => { try { o && o.unlock && o.unlock(); } catch (e) { } }, 400); };
-    try { const q = o && o.lock && (d.fullscreenElement || d.webkitFullscreenElement) && o.lock('portrait'); if (q && q.then) { q.then(() => setTimeout(exit, 250), exit); return; } } catch (e) { }
-    exit();
+    const d = document, o = screen.orientation, isFs = () => d.fullscreenElement || d.webkitFullscreenElement;
+    const exit = () => { if (!isFs()) return; try { const ex = d.exitFullscreen || d.webkitExitFullscreen; const p = ex && ex.call(d); if (p && p.catch) p.catch(() => { }); } catch (e) { } };
+    try { const q = o && o.lock && isFs() && o.lock('portrait'); if (q && q.catch) q.catch(() => { }); } catch (e) { }
+    exit(); setTimeout(exit, 500);
+    setTimeout(() => { try { o && o.unlock && o.unlock(); } catch (e) { } }, 700);
   },
   isMobile() { return matchMedia('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent); },
   // ---------- site version ----------
