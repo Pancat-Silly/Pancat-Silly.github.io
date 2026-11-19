@@ -1,0 +1,298 @@
+4중인격 능력 PvP · 커스텀 직업 결과물 (개발 도구 v3 · 프롬프트 v3 · 최신)
+만든 날짜: 2026. 11. 18. 오후 12:50:36
+
+=====새 직업 요청 원문=====
+(없음)
+
+=====JS 코드=====
+```js
+(function () {
+  const SKILLS = ['jw_shadow', 'jw_blast', 'jw_barrier', 'jw_ult'];
+  const VEX_N = 3;        // 벡스 수
+  const MAX_MARK = 5;     // 적 한 명당 표식 최대
+  const MARK_TICKS = 300; // 표식 지속 15초
+
+  function say(api, p, text) { api.actionbar(p, text); }
+
+  // 벡스가 소환되어 있는지
+  function vexOn(p, api) {
+    const v = p.st.vex;
+    return !!v && api.tick() < v.until && v.hp > 0;
+  }
+
+  // 벡스 위치: 내 머리 위를 날아다님 (블록과 상관없이 떠다니는 입자)
+  function vexPos(p, i, now) {
+    const a = now * 0.12 + i * (Math.PI * 2 / VEX_N);
+    return {
+      x: p.x + Math.cos(a) * 1.6,
+      y: p.y + 2.6 + Math.sin(now * 0.2 + i * 2) * 0.3,
+      z: p.z + Math.sin(a) * 1.6,
+    };
+  }
+
+  // 벡스 추가타: 벽을 통과해 날아가서 0.5초 뒤 방어 무시 3 피해 + 내 체력 1 회복
+  // (무적 시간 때문에 바로 주면 무시되므로 10틱 늦춤)
+  function vexStrike(p, t, api) {
+    if (!vexOn(p, api)) return;
+    const v = p.st.vex;
+    v.next = ((v.next || 0) + 1) % VEX_N;
+    const from = vexPos(p, v.next, api.tick());
+    api.line(from, { x: t.x, y: t.y + 1.2, z: t.z }, [0.6, 0.8, 1], 0.5);
+    api.after(10, () => {
+      if (!p.alive || !t || t.hp <= 0) return;
+      api.damage(t, 3, { by: p, type: 'magic' });
+      api.heal(p, 1);
+      api.particles('dust', t.x, t.y + 1, t.z, 4, [0.6, 0.8, 1]);
+    });
+  }
+
+  // 마법 그림자에 맞은 적에게 표식 +1
+  function addMark(p, t, api) {
+    if (!t || t.kind === 'mob' || t.id === undefined) return;
+    const st = p.st;
+    st.marks = st.marks || {};
+    const m = st.marks[t.id] || { t: t, n: 0, until: 0 };
+    m.t = t;
+    m.n = Math.min(MAX_MARK, m.n + 1);
+    m.until = api.tick() + MARK_TICKS;
+    st.marks[t.id] = m;
+    api.particles('dust', t.x, t.y + 2.3, t.z, 4 + m.n * 2, [0.5, 0.1, 0.8]);
+    say(api, p, '§5표식 §f' + m.n + '/' + MAX_MARK + ' §7(' + (t.name || '적') + ')');
+  }
+
+  // 벡스가 모두 쓰러짐
+  function vexDown(p, api) {
+    api.heal(p, 5);
+    p.st.vex = null;
+    api.particles('dust', p.x, p.y + 2.6, p.z, 12, [0.6, 0.8, 1]);
+    say(api, p, '§b벡스가 쓰러졌다 §a체력 +5');
+  }
+
+  APVP.addJob({
+    id: 'jemwenti',
+    name: '젬웬티', icon: '👻',
+    desc: '원거리 마법형 · 그림자 표식 + 벡스 소환',
+    maxHp: 20,
+    speed: 1,
+    kit: ['jw_staff', 'jw_shadow', 'jw_blast', 'jw_barrier', 'jw_ult'],
+    items: {
+      jw_staff: {
+        type: 'weapon', name: '강령술사의 지팡이', icon: '🪄', mc: 'bone',
+        damage: 5, speed: 1.6,
+        lore: '벡스가 있는 동안 맞힌 적에게 추가타',
+      },
+      jw_shadow: {
+        type: 'skill', name: '마법 그림자', icon: '🌑', mc: 'echo_shard', cooldown: 5,
+        lore: '직선 그림자 마법 4 피해 · 맞은 적에게 표식 +1 · 맞히면 쿨타임 2초 감소 · 사용 시 내 디버프 제거',
+        use(p, api) {
+          // 내게 걸린 디버프 제거
+          for (const n of ['slowness', 'weakness', 'poison', 'glowing']) api.clearEffect(p, n);
+          api.synth({ wave: 'sawtooth', freq: 420, to: 140, dur: 0.25, vol: 0.4 }, p);
+          api.projectile(p, {
+            speed: 1.3, gravity: 0, size: 0.35, life: 3,
+            damage: 4, type: 'magic', knockback: 0.3, pierce: false,
+            color: [0.45, 0.1, 0.7], trail: 3,
+            onHit(t, pos, api) {
+              api.particles('dust', pos.x, pos.y, pos.z, 8, [0.45, 0.1, 0.7]);
+              // 맞히면 남은 쿨타임 2초 감소
+              api.setCooldown(p, 'jw_shadow', Math.max(0, api.cooldown(p, 'jw_shadow') - 2));
+              addMark(p, t, api);
+              vexStrike(p, t, api);
+            },
+          });
+          return true;
+        },
+      },
+      jw_blast: {
+        type: 'skill', name: '그림자 폭발', icon: '💥', mc: 'nether_star', cooldown: 12,
+        lore: '표식이 있는 모든 적에게 3초 뒤 폭발 6 피해 · 표식 수만큼 힘 레벨 5초 · 표식 소모',
+        use(p, api) {
+          const now = api.tick();
+          const marks = p.st.marks || {};
+          const list = Object.values(marks).filter((m) => m.t && m.t.hp > 0 && now <= m.until && m.n > 0);
+          if (!list.length) { say(api, p, '§7표식이 있는 적이 없습니다'); return false; }
+
+          // 표식이 있는 만큼 공격력(힘)이 올라감
+          let total = 0;
+          for (const m of list) total += m.n;
+          const lv = Math.min(MAX_MARK, total);
+          api.effect(p, 'strength', lv, 5);
+          p.st.marks = {}; // 표식 소모
+
+          api.synth({ wave: 'sine', freq: 200, to: 90, dur: 0.4, vol: 0.5 }, p);
+          api.title(p, '§5그림자 폭발', '§f힘 ' + lv + ' · 표식 ' + total + '개');
+
+          for (const m of list) {
+            const t = m.t;
+            let lx = t.x, lz = t.z;
+            if (t.kind !== 'mob') api.effect(t, 'glowing', 1, 3);
+            api.ring(t.x, t.y + 0.1, t.z, 3, [0.5, 0.1, 0.8], 24);
+            for (let i = 10; i < 60; i += 10) {
+              api.after(i, () => {
+                if (t.hp <= 0) return;
+                lx = t.x; lz = t.z;
+                api.ring(t.x, t.y + 0.1, t.z, 3, [0.5, 0.1, 0.8], 24);
+                api.particles('dust', t.x, t.y + 2.2, t.z, 3, [0.5, 0.1, 0.8]);
+              });
+            }
+            api.after(60, () => {
+              if (!p.alive || t.hp <= 0) return;
+              if (Math.hypot(t.x - lx, t.z - lz) > 8) return; // 죽어서 멀리 부활했으면 취소
+              const hit = api.explode(p, t.x, t.y + 0.5, t.z, 3, 6, { knockback: 0.8, falloff: false, self: false, sound: true });
+              api.particles('dust', t.x, t.y + 1, t.z, 12, [0.5, 0.1, 0.8]);
+              for (const e of (hit || [])) vexStrike(p, e, api);
+            });
+          }
+          return true;
+        },
+      },
+      jw_barrier: {
+        type: 'skill', name: '그림자 방벽', icon: '🛡️', mc: 'phantom_membrane', cooldown: 20,
+        lore: '6초 동안 다음 1회 피해 무효 · 막은 피해의 50%를 공격자에게 반사',
+        use(p, api) {
+          p.st.barrier = { until: api.tick() + 120 };
+          api.sound('shield_', p, 20, 0.8);
+          api.ring(p.x, p.y + 0.1, p.z, 1.5, [0.4, 0.1, 0.6], 20);
+          api.particles('dust', p.x, p.y + 1, p.z, 10, [0.4, 0.1, 0.6]);
+          say(api, p, '§5그림자 방벽 §f발동 §7(6초)');
+          return true;
+        },
+      },
+      jw_ult: {
+        type: 'skill', name: '유령님 한턴해요', icon: '👻', mc: 'ghast_tear', cooldown: 45,
+        lore: '하늘을 날고 벽을 통과하는 벡스 3마리 소환 15초 · 받는 피해 50% 대신 맞음 · 내 공격마다 추가타 3',
+        use(p, api) {
+          const now = api.tick();
+          p.st.vex = { since: now, until: now + 300, hp: 40, next: 0 };
+          api.synth({ wave: 'sine', freq: 300, to: 120, dur: 0.6, vol: 0.5 }, p);
+          api.ring(p.x, p.y + 0.1, p.z, 2, [0.6, 0.8, 1], 24);
+          for (let i = 0; i < VEX_N; i++) {
+            const pos = vexPos(p, i, now);
+            api.particles('dust', pos.x, pos.y, pos.z, 8, [0.6, 0.8, 1]);
+          }
+          api.title(p, '§b유령님 한턴해요!', '§7벡스 ' + VEX_N + '마리 소환');
+          return true;
+        },
+      },
+    },
+
+    tick(p, api) {
+      const st = p.st, now = api.tick();
+
+      // ── 벡스: 입자로 날아다님 / 초당 체력 회복 / 지속시간 ──
+      const v = st.vex;
+      if (v) {
+        if (now >= v.until) {
+          st.vex = null;
+          say(api, p, '§7벡스가 사라졌습니다');
+        } else {
+          if (now % 20 === 0) v.hp = Math.min(40, v.hp + 1);
+          if (now % 2 === 0) {
+            for (let i = 0; i < VEX_N; i++) {
+              const pos = vexPos(p, i, now);
+              api.particles('dust', pos.x, pos.y, pos.z, 2, [0.6, 0.8, 1]);
+              if (now % 6 === 0) api.particles('glow', pos.x, pos.y, pos.z, 1);
+            }
+          }
+        }
+      }
+
+      // ── 표식: 지속시간 확인 / 머리 위 표시 ──
+      if (st.marks) {
+        for (const id of Object.keys(st.marks)) {
+          const m = st.marks[id];
+          if (!m.t || m.t.hp <= 0 || now > m.until) { delete st.marks[id]; continue; }
+          if (now % 10 === 0) api.particles('dust', m.t.x, m.t.y + 2.3, m.t.z, m.n * 2, [0.5, 0.1, 0.8]);
+        }
+      }
+
+      // ── 그림자 방벽 ──
+      const b = st.barrier;
+      if (b) {
+        if (now > b.until) {
+          st.barrier = null;
+          api.actionbar(p, '§7그림자 방벽이 사라졌습니다');
+        } else if (now % 6 === 0) {
+          api.particles('dust', p.x, p.y + 1, p.z, 5, [0.4, 0.1, 0.6]);
+        }
+      }
+    },
+
+    hit(p, t, damage, api) {
+      vexStrike(p, t, api); // 벡스가 있으면 추가타
+    },
+
+    hurt(p, amount, src, api) {
+      if (!p.alive || p.hp <= 0) return;
+      if (!src || src.by == null || src.by === p.id) return; // 환경 · 자해 피해는 제외
+
+      // 그림자 방벽: 다음 1회 피해 무효 + 50% 반사
+      const b = p.st.barrier;
+      if (b && api.tick() <= b.until) {
+        api.heal(p, amount);
+        p.st.barrier = null;
+        const att = api.players().find((q) => q.id === src.by);
+        if (att) api.damage(att, amount * 0.5, { by: p, type: 'magic' });
+        api.sound('shieldbreak_', p, 20, 0.7);
+        api.particles('dust', p.x, p.y + 1, p.z, 12, [0.4, 0.1, 0.6]);
+        say(api, p, '§5그림자 방벽 §f반사!');
+        return;
+      }
+
+      // 벡스: 받는 피해의 50%를 대신 맞음 (공유 체력 40)
+      if (vexOn(p, api)) {
+        const half = amount * 0.5;
+        api.heal(p, half);
+        p.st.vex.hp -= half;
+        api.particles('dust', p.x, p.y + 2.6, p.z, 6, [0.6, 0.8, 1]);
+        if (p.st.vex.hp <= 0) vexDown(p, api);
+      }
+    },
+
+    // 특성: 처치하면 영혼 폭발 + 모든 스킬 쿨타임 2초 감소
+    kill(p, victim, pos, api) {
+      if (victim && p.st.marks) delete p.st.marks[victim.id];
+      const list = api.enemiesAt(p, pos.x, pos.y, pos.z, 5);
+      for (const t of list) {
+        api.damage(t, 3, { by: p, type: 'magic' });
+        api.particles('dust', t.x, t.y + 1, t.z, 6, [0.5, 0.2, 0.8]);
+      }
+      api.ring(pos.x, pos.y + 0.1, pos.z, 5, [0.5, 0.2, 0.8], 32);
+      api.particles('dust', pos.x, pos.y + 1, pos.z, 16, [0.5, 0.2, 0.8]);
+      api.synth({ wave: 'triangle', freq: 500, to: 150, dur: 0.4, vol: 0.4 }, p);
+      for (const id of SKILLS) {
+        const c = api.cooldown(p, id);
+        if (c > 0) api.setCooldown(p, id, Math.max(0, c - 2));
+      }
+      say(api, p, '§d영혼 폭발! §7쿨타임 -2초');
+    },
+
+    respawn(p, api) {
+      say(api, p, '§b젬웬티 §7- 이세계에서도 강령술은 통한다');
+    },
+
+    bot(p, t, dist, api) {
+      if (dist < 30) api.useItem(p, 'jw_shadow');
+      if (dist < 35) api.useItem(p, 'jw_blast');
+      if (dist < 12) api.useItem(p, 'jw_ult');
+      if (p.hp < 12) api.useItem(p, 'jw_barrier');
+    },
+  });
+})();
+```
+
+=====기존 직업·시스템 변경 요청 원문=====
+없음
+
+=====구현 메모=====
+없음
+
+=====필요했던 API (개발자용 메모)=====
+없음 (추가로 필요한 API가 기록되지 않았어요)
+
+=====효과음=====
+(없음)
+
+=====개발 도구 로그 (오류 · 경고)=====
+(없음)
+=====끝=====

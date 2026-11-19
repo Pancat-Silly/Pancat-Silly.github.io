@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<script>window.SITE_MULTI=1</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>4중인격 능력 PvP</title>
+<link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+<div id="boot"><div class="bootin">
+  <div class="boott">4중인격 능력 PvP</div>
+  <div class="bootbar"><div id="bootBar"></div></div>
+  <div class="bootrow"><span id="bootMsg">에셋 받는 중…</span><span id="bootPct"></span></div>
+  <div class="boottip">처음 접속할 때는 게임 파일(약 1MB)을 받느라 몇 초 걸릴 수 있어요</div>
+</div></div>
+<div id="app">
+<canvas id="cv"></canvas>
+<div id="hud" class="hide">
+  <div id="tags"></div>
+  <div id="hurt"></div>
+  <div id="cross"></div><div id="tapmark"></div><div id="atkind"><i></i></div>
+  <div id="info"></div>
+  <div id="effects"></div>
+  <div id="title"><div id="tt"></div><div id="ts"></div></div>
+  <div id="chat"></div>
+  <form id="chatbar" class="hide" autocomplete="off"><input id="chatin" type="text" maxlength="120" placeholder="메시지 입력" enterkeyhint="send"><button type="submit" class="mcbtn">전송</button><button type="button" class="mcbtn" id="chatX">✕</button></form>
+  <div id="actionbar"></div>
+  <div id="prompt"></div>
+  <div id="debug"></div>
+  <div id="tab" class="hide"></div>
+  <div id="touch">
+    <div id="joy"><div id="knob"></div></div>
+    <div class="tb" id="tSpawn">📍 스폰포인트 설정</div>
+    <div id="tMenu" class="hide">
+      <div class="tmi" id="tTab">📋 점수판</div>
+      <div class="tmi" id="tView">👁 시점 전환</div>
+      <div class="tmi" id="tChat">💬 채팅</div>
+      <div class="tmi" id="tSwap">⇄ 보조손 교체</div>
+      <div class="tmi" id="tLand">⛶ 가로 전체화면</div>
+      <div class="tmi" id="tEditM">🎮 버튼 배치 편집</div>
+    </div>
+    <div id="tEdit" class="hide">
+      <select id="teScheme"><option value="classic">기존 조작</option><option value="pe">마크 PE 조작</option></select>
+      <select id="teAdd"></select>
+      <button id="teMinus">크기 −</button><button id="tePlus">크기 ＋</button><button id="teDel">🗑 빼기</button><button id="teReset">초기화</button><button id="teDone">✔ 완료</button>
+      <div id="teSel"></div>
+    </div>
+  </div>
+  <button class="mcbtn" id="pauseBtn">☰</button>
+  <div id="bottom">
+    <div id="itemname"></div>
+    <div id="heartsRow"><canvas id="heartsC"></canvas></div>
+    <div id="hotbarWrap"><div id="offhand"><span class="ic"></span></div><div id="hotbar"></div></div>
+  </div>
+  <div id="rot"><span id="rotBtn">📱 가로 화면 권장 · 탭해서 가로 전체화면</span></div>
+</div>
+<div id="menu">
+  <div id="devBanner" class="hide">🛠 개발 도구 모드 · 오프라인 연습 전용 (커스텀 직업 테스트용 · 온라인 대전 불가)</div>
+  <div class="panel">
+    <button class="mcbtn" id="mGear" title="설정">⚙️</button>
+    <h1>4중인격 능력 PvP</h1>
+    <div class="sub">Minecraft 1.21.4 서버 맵·커맨드 블록 이식판 · 1인칭 팀전 · 개인전 · 부활 10회</div>
+    <div class="grid2">
+      <div class="box">
+        <h3>플레이어</h3>
+        <div class="row"><input type="text" id="nick" maxlength="16" placeholder="닉네임"></div>
+        <div class="row"><input type="text" id="skinName" maxlength="16" placeholder="마크 스킨 닉네임 (영문, 비우면 기본)" autocapitalize="off" autocorrect="off" spellcheck="false"><canvas id="skinPrev" width="32" height="32" style="image-rendering:pixelated;width:36px;height:36px;background:#222;border:2px solid #555;flex:none"></canvas></div>
+        <div id="skinStat" style="font-size:12px;color:#ccc;margin:-4px 0 8px">비우면 기본 모습</div>
+        <h3>인격 선택</h3>
+        <div id="personas"></div>
+        <h3 style="margin-top:12px">방</h3>
+        <div class="row"><input type="text" id="room" maxlength="30" placeholder="방 코드 (기본 main)"></div>
+        <div class="row" style="font-size:13px">게임 모드 <select id="mode" style="flex:1"><option value="team">팀전 · 같은 인격끼리 아군</option><option value="ffa">개인전 · 모두가 적</option></select></div>
+        <div class="row" style="font-size:13px">직업 선택 <select id="uniq" style="flex:1"><option value="1">직업당 1명 (먼저 고른 사람)</option><option value="0">여러 명 같은 직업 가능</option></select></div>
+        <div style="font-size:11px;color:#bbb" id="roomNote"></div>
+        <div class="row" style="font-size:13px"><label class="mcbtn" id="upBtn" style="flex:1;cursor:pointer;text-align:center">📂 직업 업로드 (개발 도구 결과물 txt · 방장만)<input type="file" id="upFile" accept=".txt,text/plain" style="display:none"></label></div>
+        <div style="font-size:11px;color:#9cf" id="upList"></div>
+        <div id="netstat"></div>
+        <div id="plist" style="margin-top:6px"></div>
+      </div>
+      <div class="box hide" id="devPanel">
+        <h3>🛠 커스텀 직업 개발 도구 <button id="devFold" class="mcbtn" style="float:right;padding:2px 8px;font-size:12px">접기/펴기</button></h3>
+        <div class="devbody">
+          <div class="devstep"><b>① 만들고 싶은 것 적기</b> (비워 두고 AI에게 직접 말해도 돼요)
+            <textarea id="devJob" rows="3" placeholder="새 직업: 이름, 무기, 능력, 쿨타임, 효과음 등을 자유롭게"></textarea>
+            <textarea id="devSys" rows="2" placeholder="(선택) 기존 직업 · 시스템 변경 요청 — 코드로 바뀌지 않고 원문 그대로 결과물에 들어가요"></textarea>
+          </div>
+          <div class="devstep"><b>② (선택) 효과음 넣기</b> mp3 · ogg · wav, 3MB 이하 <input type="file" id="devSnd" accept="audio/*,.ogg,.mp3,.wav" multiple><div id="devSnds"></div></div>
+          <div class="devstep"><b>③ AI 프롬프트 받기</b> → 내 AI(ChatGPT, Claude, Gemini 등)에 파일을 첨부하거나 내용을 붙여넣기
+            <div class="row"><button class="mcbtn" id="devPrompt">📄 프롬프트 .txt 받기</button><button class="mcbtn" id="devCopy">📋 복사</button></div></div>
+          <div class="devstep"><b>④ AI 응답 붙여넣고 테스트</b>
+            <textarea id="devResp" rows="5" placeholder="AI가 준 답 전체를 붙여넣으세요 (=====새 직업 요청 원문===== 부터 =====끝===== 까지). 저장한 결과물 txt를 다시 붙여넣어도 돼요."></textarea>
+            <div class="row"><label class="mcbtn" style="cursor:pointer">📂 결과물 · 응답 txt 파일 불러오기<input type="file" id="devFile" accept=".txt,text/plain" style="display:none"></label></div>
+            <div class="row"><button class="mcbtn" id="devApply">✔ 적용</button><button class="mcbtn" id="devPlay">▶ 적용하고 연습 모드</button> 봇 <select id="devBots"><option>1</option><option selected>2</option><option>3</option><option>5</option></select></div></div>
+          <div class="devstep" id="devVer" style="color:#9cf"></div>
+          <div class="devstep"><b>🧪 테스트 옵션</b> <label><input type="checkbox" id="devGod"> 🛡️ 무적 (나는 피해를 안 받음)</label> <label><input type="checkbox" id="devNoAI"> 🤖 봇 AI 끄기 (가만히 서 있는 허수아비)</label></div>
+          <div class="devstep"><b>⑤ 최종 결과물 저장</b> → 이 txt를 개발자(Claude)에게 보내면 정식 직업으로 넣어 줘요
+            <div class="row"><button class="mcbtn" id="devResult">💾 결과물 .txt 저장</button></div></div>
+          <div class="row devlogbar"><b style="font-size:13px">📜 실행 로그</b><select id="devFilter"><option value="all">전체</option><option value="err">오류 · 경고만</option><option value="skill">능력 사용</option><option value="dmg">피해</option><option value="event">이벤트</option><option value="user">api.log</option></select>
+            <button class="mcbtn" id="devLogCopy">📋 로그 복사</button><button class="mcbtn" id="devErrCopy">🩹 오류 보고 복사 (AI에게)</button><button class="mcbtn" id="devLogClear">지우기</button></div>
+          <pre id="devLog"></pre>
+        </div>
+      </div>
+      <div class="box">
+        <h3>직업 선택</h3>
+        <div id="jobs"></div>
+        <div id="jobinfo" style="margin-top:10px"></div>
+      </div>
+    </div>
+    <div class="play">
+      <button class="mcbtn" id="btnPlay" disabled>⚔️ 아레나 입장 (멀티플레이)</button>
+      <button class="mcbtn" id="btnPractice" disabled>🤖 연습 모드 · 봇 <span id="botv">3</span>명</button>
+    </div>
+    <button class="mcbtn frameonly" id="btnDesk">게임 끄고 바탕화면으로</button>
+    <button class="mcbtn" id="btnLand">📱 가로 전체화면: 꺼짐</button>
+    <div class="row" style="margin-top:8px;justify-content:flex-end;font-size:13px">봇 수 <input type="range" id="botn" min="1" max="7" value="3" style="width:140px"></div>
+    <div class="box" style="margin-top:10px" id="packBox">
+      <h3>🎨 마인크래프트 바닐라 리소스팩 (선택)</h3>
+      <div style="font-size:12px;color:#ddd;margin-bottom:8px;line-height:1.5">버튼 한 번이면 블록 텍스처와 효과음(발소리 · 타격음 · 모루 · 폭발 · 노트블록 등 커맨드 playsound 소리)을 마인크래프트 1.21.4 원본으로 바꿔요. 필요한 파일 약 100개(수 MB)만 공개 에셋 서버에서 이 기기로 받아 저장하고, 게임 파일에는 들어 있지 않아요.</div>
+      <button class="mcbtn" id="packGet" style="width:100%;margin-bottom:8px">⬇️ 바닐라 리소스팩 받아서 적용</button>
+      <div class="row" style="font-size:13px;flex-wrap:wrap">
+        <label><input type="checkbox" id="packOn" disabled> 리소스팩 사용</label>
+        <button class="mcbtn" id="packDel" style="padding:4px 10px;font-size:13px" disabled>지우기</button>
+      </div>
+      <div id="packSt" style="font-size:12px;color:#ccc">불러온 리소스팩 없음 · 기본 텍스처/효과음 사용 중</div>
+    </div>
+    <div class="box" style="margin-top:10px">
+      <button class="mcbtn" id="btnHelp">조작법 · 규칙 보기</button>
+      <div id="help" class="hide" style="margin-top:8px">
+        <b>PC</b> WASD 이동 · 마우스 시점 · 좌클릭 공격 · 우클릭 사용(스킬/방패/활 당기기) · 1~9/휠 핫바 · Space 점프 · Shift 웅크리기 · Ctrl 또는 W 두 번 달리기 (W를 누른 채 Ctrl을 톡 치면 계속 달려요) · E 스폰포인트 설정 · F 보조손 교체 · V/F5 시점 · Tab 점수판 · T 채팅 · F3 좌표 · Esc 메뉴<br>
+        <b>모바일</b> 왼쪽 드래그 이동(끝까지 밀면 달리기) · 오른쪽 드래그 시점 · 짧게 탭 = 공격 · ✋ 사용(누르고 있으면 방패/활) · ⇩ 웅크리기 토글 · ⛶ 가로 전체화면 · 핫바 칸 두 번 탭 = 바로 사용<br>
+        <b>규칙</b> 자연 회복 없음(스킬·포션으로만 회복) · 낙하 피해 있음 · 섬 밖 구덩이는 가루눈(감속) 아래 용암 · 죽으면 찍어 둔 스폰 패드에서 즉시 부활, 아이템 유지 · "경기 시작" 후 11번째 사망 시 관전자 · 마지막 생존자 승리 · 매끄러운 돌 위에 서면 빙글빙글 돌아요(원본 맵 장치)<br>
+        <b>스킬</b> 스킬 아이템을 손에 들고 우클릭(모바일 ✋). 그랩은 웅크린 채 1.1초 차징 후, 웅크린 상태 그대로 사용(웅크리기를 풀면 차징 취소). 스킬이 쿨타임이면 우클릭이 보조손 방패로 넘어가요(원본과 같은 동작).
+      </div>
+    </div>
+  </div>
+</div>
+<div id="pause" class="hide">
+  <div class="inner">
+    <div class="mctitle" id="pTitle">게임 메뉴</div>
+    <button class="mcbtn" id="pResume">게임으로 돌아가기</button><button class="mcbtn" id="pClose">완료</button>
+    <label class="praconly gameonly">무적 (연습) <input type="checkbox" id="pGod"></label>
+    <label class="praconly gameonly">봇 AI 끄기 <input type="checkbox" id="pNoAI"></label>
+    <label class="gameonly">게임 모드 <select id="pMode"><option value="team">팀전</option><option value="ffa">개인전</option></select></label>
+    <label class="gameonly">직업 선택 <select id="pUniq"><option value="1">직업당 1명</option><option value="0">중복 가능</option></select> <small id="pRoomNote" style="color:#bbb"></small></label>
+    <button class="mcbtn gameonly" id="pStart">경기 시작 (사망 수 초기화)</button>
+    <button class="mcbtn gameonly" id="pView">시점 전환</button>
+    <label>감도 <input type="range" id="sens" min=".3" max="3" step=".05"></label>
+    <label>시야각 <span id="fovv">70</span> <input type="range" id="pFov" min="30" max="110" step="1"></label>
+    <label>볼륨 <input type="range" id="vol" min="0" max="1" step=".05"></label>
+    <label>사망 메시지 <select id="pDeath"><option value="full">보이기</option><option value="simple">간소화</option><option value="hide">숨기기</option></select></label>
+    <label>해상도 <select id="pRes"><option value="1">기본</option><option value=".75">낮게</option><option value=".5">매우 낮게</option></select></label>
+    <label>머리 위 HP 표시 <input type="checkbox" id="pHp" checked></label>
+    <label>화면 흔들림 <input type="checkbox" id="pBob" checked></label>
+    <label class="mobonly">터치 조준 보조 <input type="checkbox" id="pAssist" checked></label>
+    <label class="mobonly">모바일 조작 <select id="pCtl"><option value="classic">기존</option><option value="pe">마크 PE</option></select></label>
+    <label class="mobonly">이동 방식 <select id="pMove"><option value="joy">조이스틱</option><option value="dpad">방향키 버튼</option></select></label>
+    <label class="mobonly">웅크리기 <select id="pSneakM"><option value="toggle">토글</option><option value="hold">누르는 동안</option></select></label>
+    <button class="mcbtn mobonly" id="pEdit" style="justify-content:center">터치 버튼 배치 편집</button>
+    <label class="pconly">자동 전체화면 <input type="checkbox" id="pLock" checked></label>
+    <label>P2P 멀티플레이 <input type="checkbox" id="pP2P"></label>
+    <button class="mcbtn pconly" id="pWinMode" style="justify-content:center">창 모드로</button>
+    <button class="mcbtn" id="pHelp">조작법</button>
+    <div id="help2" class="hide">PC: WASD/마우스, 좌클릭 공격, 우클릭 사용, Shift 웅크리기, Ctrl 또는 W 두 번 달리기, E 스폰 설정, F 보조손 교체, V 시점, Tab 점수판, T 채팅<br>모바일: 왼쪽 드래그 이동, 오른쪽 드래그 시점, 탭 공격, ✋ 사용, ⇩ 웅크리기</div>
+    <button class="mcbtn frameonly" id="pDeskX">🖥️ 게임 끄고 바탕화면으로</button>
+    <button class="mcbtn gameonly" id="pLobby">로비로 나가기</button>
+  </div>
+</div>
+</div>
+<div id="newJobPop" class="hide"><div class="njbox">
+  <h3>＋ 능력 새로 추가하기 (또는 시스템 수정하기)</h3>
+  <ol>
+    <li><b>개발 도구 HTML</b>을 내 컴퓨터 / 휴대폰에 받아서 열어요. (지금 이 게임에 개발 도구가 켜진 사본이에요)</li>
+    <li>개발 도구에서 <b>AI 프롬프트 .txt</b>를 받아 내 AI(ChatGPT · Claude · Gemini 등)에 첨부하고, 만들고 싶은 직업과 능력을 말해요.</li>
+    <li>AI의 답을 개발 도구에 붙여넣으면 바로 <b>연습 모드에서 테스트</b>할 수 있어요. 효과음 파일도 넣을 수 있어요.</li>
+    <li>마음에 들면 <b>결과물 .txt</b>를 저장해서 개발자(Claude)에게 보내 주세요. 정식 직업으로 넣어 드려요.</li>
+  </ol>
+  <div style="font-size:12px;color:#bbb">기존 직업 · 시스템을 바꾸고 싶은 내용은 코드로 바뀌지 않고, 쓴 글 그대로 결과물에 따로 담겨요.</div>
+  <div class="row" style="margin-top:10px"><button class="mcbtn" id="njDown" style="flex:1">⬇️ 개발 도구 HTML 받기</button><button class="mcbtn" id="njClose">닫기</button></div>
+  <div id="njMsg" style="font-size:12px;color:#8f8;margin-top:6px"></div>
+</div></div>
+<script src="js/data/apvp_assets.js"></script>
+<script src="js/data/rbs_data.js"></script>
+<script src="js/data/rbs_assets.js"></script>
+<script src="js/data/rbs_icon.js"></script>
+<script src="js/data/jobs_builtin.js"></script>
+<script src="js/game/00_wall.js"></script>
+<script src="js/game/01_core.js"></script>
+<script src="js/game/02_gfx.js"></script>
+<script src="js/game/02b_skin.js"></script>
+<script src="js/game/03_audio.js"></script>
+<script src="js/game/03b_pack.js"></script>
+<script src="js/game/04_items.js"></script>
+<script src="js/game/05_player.js"></script>
+<script src="js/game/06_skills.js"></script>
+<script src="js/game/07_net.js"></script>
+<script src="js/game/08_bot.js"></script>
+<script src="js/game/09_game.js"></script>
+<script src="js/game/10_render.js"></script>
+<script src="js/game/11_ui.js"></script>
+<script src="js/game/11b_touch.js"></script>
+<script src="js/game/11c_mod.js"></script>
+<script src="js/game/11d_prompt.js"></script>
+<script src="js/game/11e_desk.js"></script>
+<script src="js/game/11f_upload.js"></script>
+<script src="js/game/12_main.js"></script>
+<script src="js/game/20_rbs_tex.js"></script>
+<script src="js/game/21_rbs_blocks.js"></script>
+<script src="js/game/22_rbs_items.js"></script>
+<script src="js/game/23_rbs_world.js"></script>
+<script src="js/game/24_rbs_player.js"></script>
+<script src="js/game/25_rbs_game.js"></script>
+<script src="js/game/26_rbs_bot.js"></script>
+<script src="js/game/27_rbs_render.js"></script>
+<script src="js/game/28_rbs_audio.js"></script>
+<script src="js/game/29_rbs_input.js"></script>
+<script src="js/game/31_rbs_ui.js"></script>
+<script src="js/game/32_rbs_gui.js"></script>
+<script src="js/game/33_rbs_pack.js"></script>
+<script src="js/game/34_rbs_main.js"></script>
+<script src="js/game/99_boot.js"></script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>랜덤블록 서바이벌</title>
+<style>html,body{margin:0;height:100%;background:#000;color:#aaa;font:14px sans-serif}body{display:flex;align-items:center;justify-content:center}</style>
+</head>
+<body>
+불러오는 중…
+<script>
+// 사이트주소/randomblock : 가상 데스크톱 위에 이 게임 창 하나만 띄운다.
+// 사이트 루트의 index.html을 받아 <base href>(css·js·rbs/music 경로가 루트 기준)와 앱 플래그만 넣어 그린다. index.html에 모듈을 추가해도 여기는 고칠 필요 없다.
+(function () {
+  var APPID = 'rbs', DESK = true, root = new URL('../', location.href);
+  fetch(new URL('index.html', root), { cache: 'no-cache' }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); }).then(function (h) {
+    var flag = '<base href="' + root.href + '"><script>' + (DESK ? 'window.SITE_OPEN=' : 'window.SITE_APP=') + JSON.stringify(APPID) + ';<\/script>';
+    h = h.replace(/<head([^>]*)>/i, function (m) { return m + flag; });
+    h = h.replace(/<title>[^<]*<\/title>/i, '<title>' + document.title + '</title>');
+    document.open(); document.write(h); document.close();
+  }).catch(function () { location.replace(DESK ? root.href : new URL('?app=' + APPID + location.search.replace(/^\?/, '&'), root).href); });
+})();
+</script>
+</body>
+</html>
