@@ -177,6 +177,13 @@ const G = {
     if (kid) this.kills[kid] = (this.kills[kid] || 0) + 1;
     this.domains = this.domains.filter(d => d.by !== vid); // 세룡이's space ends when its owner dies
     if (kid && kid !== vid) { const k = [this.me, ...this.bots].find(q => q && q.id === kid); if (k) { if (k.job === 'seryong') SK.srKill(k, pos); if (MOD.defs[k.job]) MOD.fire(k, 'kill', this.players().find(q => q.id === vid) || { id: vid }, pos || null); } }
+    // 세룡이's space also ends when the enemy trapped in it dies (after srKill above, so the in-space kill bonus still counts):
+    // the space disappears on every client and its owner loses the space's Regeneration III / Strength II
+    for (const dm of this.domains) if (dm.tid === vid) {
+      const o = [this.me, ...this.bots].find(q => q && q.id === dm.by && q.effects);
+      if (o) { for (const [n, amp] of [['regeneration', 2], ['strength', 1]]) { const e = o.effects[n]; if (e && e.amp === amp) { if (e.hidden && e.hidden.t > 0) o.effects[n] = e.hidden; else delete o.effects[n]; } } o.actionbar && o.actionbar('§7귀멸의 세명컴고: 갇힌 적이 쓰러져서 공간이 사라졌어요'); }
+    }
+    this.domains = this.domains.filter(d => d.tid !== vid);
     if (UI.deathMode === 'hide') return;
     if (UI.deathMode !== 'full') {
       const tag = id => { const e = this.players().find(p => p.id === id) || [...this.remotes.values()].find(r => r.id === id); const P = PERSONAS[e ? e.persona : 0] || PERSONAS[0]; return '§x' + P.color + '[' + (e ? e.name : '?') + ']§7(' + this.jobOf(id) + ')§f'; };

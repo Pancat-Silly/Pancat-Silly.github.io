@@ -7,18 +7,18 @@ const RV = { // markers.json points (minecraft coords)
   spawn: [0.5, 31, 0.5], ret: [0.5, 32, 0.5], dm: [4.5, 73, 0.5], dmSpec: [4.5, 79, 0.5], dm25: [4.5, 61, 1.5], dmSpec25: [4.5, 67, 1.5], miniRet: [5.5, 94, -0.5], mini1: [16.5, 94, 6.5], mini2: [16.5, 94, 0.5], miniCage: [11.5, 92, 7.5], podium: [-45.5, 10, -39.5], aud: [-34.5, 10, -39.5], playground: [2.5, 96, -11.5],
   // V2.1: the arena judge box is the 25-player one in both modes; the deathmatch has a 9-player floor (y72..82) and a new 25-player floor (y60..70)
   AREAS: { arena: [-27, 200, -28, 27, 216, 27], dm: [[-2, 73, -5, 9, 78, 6], [-3, 61, -6, 12, 65, 9]], dmspec: [[-2, 79, -5, 9, 81, 6], [-3, 67, -6, 12, 69, 9]], minizone: [10, 88, -2, 18, 96, 8], lobby: [-21, 29, -21, 21, 43, 21], playground: [-22, 84, -22, 21, 105, 21], winner: [-56, 5, -56, -25, 16, -25] },
-  TIME: ['약 0초', '30초', '1분', '1분 30초', '2분', '2분 30초', '3분', '3분 30초', '4분', '4분 30초', '5분', '5분 30초', '6분', '6분 30초', '7분', '7분 30초', '8분', '8분 30초', '9분', '9분 30초', '10분', '영원히 안끝남!', '게임시간도 랜덤!', '5분 30초 / 기본템 포함!', '게임 시작 금지!'],
+  TIME: ['약 0초', '30초', '1분', '1분 30초', '2분', '2분 30초', '3분', '3분 30초', '4분', '4분 30초', '5분', '5분 30초', '6분', '6분 30초', '7분', '7분 30초', '8분', '8분 30초', '9분', '9분 30초', '10분', '영원히 안끝남!', '게임시간도 랜덤!', '5분 30초', '게임 시작 금지!'], // 23 = the old '5분 30초 + 기본템' (kit is its own setting now: opts.kit); skipped when cycling
 };
 const RG = {
   tick: 0, me: null, nid: null, remotes: new Map(), bots: [], items: new Map(), projs: [], parts: [], be: new Map(), chestType: new Map(),
   since: Date.now(), hostOff: 0, seq: 0, mods: [], rd: 0, wins: 0,
-  gs: { ph: 'lobby', t: 0, seed: 1, rnd: 0, end: 0, sp: {}, win: null, dmp: [], big: 0, mini: { ph: 'idle', t: 0 }, opts: { time: 23, brk: 1, build: 0, lava: 1, pvp: 1, shield: 0, typo: 0, bots: 0 } },
+  gs: { ph: 'lobby', t: 0, seed: 1, rnd: 0, end: 0, sp: {}, win: null, dmp: [], big: 0, mini: { ph: 'idle', t: 0 }, opts: { time: 11, kit: 1, brk: 1, build: 0, lava: 1, pvp: 1, shield: 0, typo: 0, bots: 0 } },
   lp: { ph: 'lobby', key: '' }, // local copy of the phase being played + fired steps
   init() {
     RW.init(); this.nid = uid(8);
     try { const s = JSON.parse(localStorage.getItem('rbs_stats') || '{}'); this.wins = s.wins | 0; this.playtime = s.pt | 0; this.ach = s.ach || {}; } catch (e) { this.ach = {}; this.playtime = 0; }
     const me = this.me = new RPlayer(this.nid, RUI.name); me.skin = RUI.skin; this.toSpawn(me);
-    try { const o = JSON.parse(localStorage.getItem('rbs_host2') || 'null'); if (o) Object.assign(this.gs.opts, o); this.gs.opts.typo = 0; this.gs.opts.bots = 0; } catch (e) { }
+    try { const o = JSON.parse(localStorage.getItem('rbs_host2') || 'null'); if (o) { if (o.kit === undefined) o.kit = o.time === 23 ? 1 : 0; if (o.time === 23) o.time = 11; Object.assign(this.gs.opts, o); } /* old saves: '5분 30초 / 기본템' -> 5:30 + kit on */ this.gs.opts.typo = 0; this.gs.opts.bots = 0; } catch (e) { }
   },
   saveStats() { try { localStorage.setItem('rbs_stats', JSON.stringify({ wins: this.wins, pt: this.playtime, ach: this.ach })); } catch (e) { } },
   // ---------- helpers ----------
@@ -101,6 +101,8 @@ falls: [], // falling block entities (sand, gravel, anvil) — animated on every
     p.exhaust(.005); this.fallCheck(x, y, z);
   },
   // round start (시작시 주변블록 파괴): the 3x3x2 around the spawn pocket breaks, drops included
+  // 기본템 (host setting opts.kit): stone pickaxe / axe / sword + 4 healing splash potions
+  giveKit(p) { for (const id of ['stone_pickaxe', 'stone_axe', 'stone_sword']) p.give({ id, n: 1 }); p.give({ id: 'splash_potion', n: 4 }); },
   breakAround(p) { const [x, y, z] = this.mcOf(p).map(Math.floor); for (let dy = 0; dy <= 1; dy++) for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) { const id = RW.getM(x + dx, y + dy, z + dz); if (id && !BL[id].unbreak && !(dx === 0 && dz === 0)) this.breakBlock(p, x + dx, y + dy, z + dz, true); } },
   placeBlock(p, x, y, z, key) {
     const id = RBLK.K(key); if (!id) return false; const B = BL[id];
@@ -376,10 +378,10 @@ falls: [], // falling block entities (sand, gravel, anvil) — animated on every
       }
       case 'game': {
         const inA = this.area(me) === 'arena' && !me.spectator;
-        if (inA) { me.mode = 'survival'; if (O.time === 23) for (const id of ['stone_pickaxe', 'stone_axe', 'stone_sword']) me.give({ id, n: 1 }); if (O.time === 23) me.give({ id: 'splash_potion', n: 4 }); }
+        if (inA) { me.mode = 'survival'; if (O.kit) this.giveKit(me); }
         if (inA && O.brk && fresh) this.breakAround(me);
-        for (const b of this.bots) if (this.area(b) === 'arena') { b.mode = 'survival'; if (O.brk && fresh) this.breakAround(b); } // bots too: 시작시 주변블록 파괴
-        if (fresh) { this.chat('§l§b>§5>§a> §r§e이번 라운드 정보 §l§a<§5<§b<'); this.chat('§e시작시 주변블록 파괴 : ' + (O.brk ? '§a활성화' : '§c비활성화')); this.chat('§e방패 제작 유무 : ' + (O.shield ? '§a활성화' : '§c비활성화')); this.chat('§e데스매치 패널티 : ' + (O.lava ? '§c용암' : '§a독가스')); this.chat('§e데스매치 건축 유무 : ' + (O.build ? '§a활성화' : '§c비활성화')); this.chat('§e경기장 pvp 유무 : ' + (O.pvp ? '§a활성화' : '§c비활성화')); }
+        for (const b of this.bots) if (this.area(b) === 'arena') { b.mode = 'survival'; if (O.kit && fresh) this.giveKit(b); if (O.brk && fresh) this.breakAround(b); } // bots get the same kit // bots too: 시작시 주변블록 파괴
+        if (fresh) { this.chat('§l§b>§5>§a> §r§e이번 라운드 정보 §l§a<§5<§b<'); this.chat('§e시작시 주변블록 파괴 : ' + (O.brk ? '§a활성화' : '§c비활성화')); this.chat('§e기본템 지급 : ' + (O.kit ? '§a활성화' : '§c비활성화')); this.chat('§e방패 제작 유무 : ' + (O.shield ? '§a활성화' : '§c비활성화')); this.chat('§e데스매치 패널티 : ' + (O.lava ? '§c용암' : '§a독가스')); this.chat('§e데스매치 건축 유무 : ' + (O.build ? '§a활성화' : '§c비활성화')); this.chat('§e경기장 pvp 유무 : ' + (O.pvp ? '§a활성화' : '§c비활성화')); }
         break;
       }
       case 'tover': RAU.stopBgm(); if (fresh) { this.title('§cTime over!', ''); RAU.sfx('bell', true); } if (me.mode === 'survival') me.mode = 'adventure'; for (const b of this.bots) b.mode = 'adventure'; break;

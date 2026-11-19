@@ -92,7 +92,7 @@ const JOBS = {
   randomizer: { name: '랜더마이져', icon: '🎲', desc: '랜덤형 · 철 검 + 활 + 럭키 박스', kit: [['iron_sword'], ['bow'], ['luckybox']] },
   suno: { name: '수노', icon: '💿', desc: '되감기형 · wait / 공부좀 하고옴', kit: [['create'], ['wait'], ['study']] },
   mefab3: { name: '그랩', icon: '⛓️', desc: '끌어오기형 · 웅크려 차징', kit: [['stick_mace'], ['grab'], ['grabex']] },
-  slime: { name: '슬라임', icon: '🟦', desc: 'HP 연동 스케일형 · 최대 HP 40', kit: [['slime_axe'], ['cutter']], off: 'slime_shield', armor: 'leather', maxHp: 40 },
+  slime: { name: '슬라임', icon: '🟦', desc: 'HP 연동 스케일형 · 최대 HP 40', kit: [['slime_axe'], ['cutter']], maxHp: 40 }, // no armor / shield (removed on request)
   viggle: { name: '비글', icon: '🚀', desc: '파괴형 · 철거 해머 + 드론 / 다 부셔버려 / 360도 회전', kit: [['hammer'], ['drone'], ['destroy'], ['spinpot']] },
   seryong: { name: '세룡이', icon: '🐷', desc: '미완성 직업 · 근접형 · 성진이 낙하 + 레이저 스턴 + 귀멸의 감옥', kit: [['sr_sword'], ['sr_pig'], ['sr_laser'], ['sr_domain']], wip: true },
   ai: { name: 'Ai', icon: '🤖', desc: '미완성 직업 · 해킹형 · 프롬프트 + 능력 훔치기 레이저 + 순간이동', kit: [['ai_prompt'], ['ai_glasses'], ['big_data']], wip: true },
