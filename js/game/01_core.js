@@ -1,6 +1,8 @@
 // the page's own source, captured before anything touches the DOM (used to save the dev tool copy)
 // single-file build: the page keeps a copy of itself (game windows = srcdoc, dev tool download). Split build (GitHub Pages, window.SITE_MULTI):
 // game windows load index.html?app=... and the dev tool is assembled from the split files on download.
+// dev tool window of the split build: index.html?app=apvp&dev=1 (the single-file build injects window.APVP_DEV instead)
+if (!window.APVP_DEV && /[?&]dev=1(&|$)/.test(location.search)) window.APVP_DEV = 1;
 const SELF_HTML = window.SITE_MULTI ? '' : (() => { try { return '<!DOCTYPE html>\n' + document.documentElement.outerHTML; } catch (e) { return ''; } })();
 // dev tool prompt / result / mod API version: bump whenever the prompt or API changes (shown on the prompt, dev panel, every result txt)
 const DEV_VER = 3;

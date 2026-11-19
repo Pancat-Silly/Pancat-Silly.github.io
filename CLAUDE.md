@@ -20,7 +20,7 @@
 ## 파일 구조
 ```
 index.html            페이지 뼈대(HTML만) + <script src> 목록 (이 순서가 곧 로드 순서)
-ability_pvp/, randomblock/ (+ 각 nodesktop/)  바로 들어가기 페이지: 루트 index.html을 받아 <base href> + SITE_OPEN(데스크톱) 또는 SITE_APP(nodesktop)을 넣고 그린다 (손볼 일 없음)
+ability_pvp/, randomblock/, ability_pvp_dev/ (+ 각 nodesktop/)  바로 들어가기 페이지: 루트 index.html을 받아 <base href> + SITE_OPEN(데스크톱) 또는 SITE_APP(nodesktop)을 넣고 그린다. tools/mkentry.py로 만든다 (모듈 추가 때 손볼 일 없음)
 css/site.css          모든 스타일 (4중인격 + 데스크톱; 랜덤블록 CSS는 31_rbs_ui.js 안의 RUI_CSS 문자열)
 js/data/              생성된 데이터 (손으로 고치지 말고 tools/ 스크립트로 다시 생성)
   apvp_assets.js      4중인격 맵 복셀 + 사운드 (mkassets.py)
@@ -30,7 +30,7 @@ js/data/              생성된 데이터 (손으로 고치지 말고 tools/ 스
   jobs_builtin.js     개발 도구로 만든 내장 직업 BUILTIN_JOBS (mkmodjobs.py)
 js/game/              게임 코드. 파일 이름 순서로 로드하는 일반 <script>들 (전역 공유)
 rbs/music/            랜덤블록 BGM mp3 (선택)
-tools/                build_single.py, rbsconv.py, rbsassets.py, mkmodjobs.py, mkassets.py, modjobs/*.txt
+tools/                mkentry.py, bump_version.py, hooks/pre-commit, build_single.py, rbsconv.py, rbsassets.py, mkmodjobs.py, mkassets.py, modjobs/*.txt
 ```
 모듈을 새로 추가하면 **index.html에 `<script src>`도 추가**해야 한다. 순서는 파일 이름 순이다.
 
@@ -65,7 +65,8 @@ tools/                build_single.py, rbsconv.py, rbsassets.py, mkmodjobs.py, m
 - **바로 들어가기:** `사이트주소/ability_pvp`, `사이트주소/randomblock` → 가상 데스크톱 위에 그 게임 창만 연다(`SITE_OPEN`). 뒤에 `/nodesktop`을 붙이면 바탕화면 없이 단독 실행한다(`SITE_APP`). 단독 실행(창 밖, `p2p=` 없음)이면 `SITE_ASK_P2P`(99_boot.js)가 같은 동의 화면을 먼저 띄운다.
 - **사이트 버전·새 버전 알림:** 커밋할 때마다 pre-commit 훅(`tools/hooks/pre-commit`, `git config core.hooksPath tools/hooks`)이 `tools/bump_version.py`로 버전(`YYYY.MM.DD-N`)을 올린다. 바뀌는 파일은 `version.json`, `js/data/version.js`(`SITE_VER`), index.html의 css·js `?v=`(Pages 10분 캐시 회피)이다. 열려 있는 최상위 페이지는 `SITE.watchVer()`가 3분마다 `version.json`을 확인하고, 바뀌면 "새 버전이 나왔어요 · 새로고침" 알림을 띄운다. 버전명은 4중인격 메뉴 부제와 랜덤블록 오른쪽 위에 표시된다. GitHub 웹에서 직접 커밋하면 버전이 안 올라가니 주의한다.
 - **P2P 동의:** 게임 아이콘을 누르면 "P2P 멀티플레이 허용" 화면이 뜬다. 결정은 localStorage `site_p2p`에 저장되고 게임 안 설정에서 바꿀 수 있다.
-- **개발 도구 다운로드:** 분할 빌드에서는 `devToolHTMLMulti()`가 index.html과 css, js를 fetch해서 한 파일로 인라인한다. 한 파일 빌드에서는 `SELF_HTML`에 `APVP_DEV`를 넣는다.
+- **개발 도구 창:** 4중인격의 "🛠 개발 도구 창 열기"(`SITE.openDev`)는 데스크톱 안이면 `{t:'dev'}`를 보내서 숨은 앱 `apvp_dev`(아이콘 없음, 오프라인 전용이라 P2P 질문 없음) 창을 열고 게임 창과 좌우로 나란히 놓는다(`DESK.tile`, 모바일은 앞으로 가져오기만). 단독 실행이면 새 탭으로 `사이트주소/ability_pvp_dev/nodesktop`을 연다. 분할 빌드의 개발 도구 창은 `index.html?app=apvp&dev=1`이고, 01_core.js가 `dev=1`을 `APVP_DEV`로 바꾼다.
+- **개발 도구 다운로드:** (사이트 파일 없이 디스크에서 연 한 파일 빌드에서만 `devDownload` 대체) 분할 빌드에서는 `devToolHTMLMulti()`가 index.html과 css, js를 fetch해서 한 파일로 인라인한다. 한 파일 빌드에서는 `SELF_HTML`에 `APVP_DEV`를 넣는다.
 
 ## 4중인격 능력 PvP (G / UI)
 - **기본 진행:** 팀전 또는 개인전, 부활 10회. 직업 선택 → 경기, 연습 모드(봇)도 있다.

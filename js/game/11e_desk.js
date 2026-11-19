@@ -17,6 +17,12 @@ const SITE = {
   // SITE_VER (js/data/version.js) = the version this page was loaded with; version.json on the site is bumped on every commit
   // (tools/bump_version.py). Top pages poll it and show a refresh notice when it changes; game windows inside the desktop don't poll.
   VER: typeof SITE_VER !== 'undefined' ? SITE_VER : '',
+  // 4중인격 '개발 도구 창 열기': inside the desktop -> a dev tool window next to the game; alone -> 사이트주소/ability_pvp_dev in a new tab
+  openDev() {
+    if (this.inFrame) { this.toParent({ t: 'dev' }); return true; }
+    if (window.SITE_MULTI && /^https?:$/.test(location.protocol)) { window.open(new URL('ability_pvp_dev/nodesktop/', document.baseURI).href, '_blank'); return true; }
+    devDownload(); return false; // single file opened from disk: no site to open, save the dev tool copy instead
+  },
   verLabel() { return this.VER ? 'v' + this.VER : ''; },
   watchVer() {
     if (this.inFrame || !this.VER || !window.SITE_MULTI || !/^https?:$/.test(location.protocol)) return;
@@ -53,7 +59,7 @@ const DESK = {
       + '<div id="dkBar"><button id="dkStart">⊞ 시작</button><div id="dkStartMenu" class="hide"></div><div id="dkTasks"></div><div class="dkfill"></div><div id="dkClock"></div><button id="dkExit"></button></div>';
     document.body.insertBefore(d, document.body.firstChild);
     this.setWall(this.wall);
-    $('dkIcons').innerHTML = this.APPS.map(a => '<div class="dkIcon" data-app="' + a.id + '" title="' + (this.mobile ? '탭' : '더블클릭') + '해서 열기"><div class="dkimg" style="background:' + (a.bg || '#3c6a24') + '">' + (a.img ? '<img src="' + a.img + '">' : a.icon) + '</div><div class="dklbl">' + a.label + '</div></div>').join('');
+    $('dkIcons').innerHTML = this.APPS.filter(a => !a.hidden).map(a => '<div class="dkIcon" data-app="' + a.id + '" title="' + (this.mobile ? '탭' : '더블클릭') + '해서 열기"><div class="dkimg" style="background:' + (a.bg || '#3c6a24') + '">' + (a.img ? '<img src="' + a.img + '">' : a.icon) + '</div><div class="dklbl">' + a.label + '</div></div>').join('');
     for (const el of document.querySelectorAll('.dkIcon')) {
       el.onclick = () => { if (this.mobile) { const A = this.APPS.find(a => a.id === el.dataset.app); this.open(el.dataset.app); if (A && A.game) { this.setMode(A.id, 'full'); this.goFs(false); } return; } for (const o of document.querySelectorAll('.dkIcon')) o.classList.remove('sel'); el.classList.add('sel'); };
       el.ondblclick = () => { if (!this.mobile) this.open(el.dataset.app); };
@@ -78,8 +84,17 @@ const DESK = {
     else if (m.t === 'unfs') { if (W.mode === 'full') this.setMode(W.id, this.mobile ? 'max' : 'normal'); if (document.fullscreenElement) try { document.exitFullscreen(); } catch (x) { } }
     else if (m.t === 'win') { this.setMode(W.id, this.mobile ? 'max' : 'normal'); }
     else if (m.t === 'land') { if (m.on) this.setMode(W.id, 'full'); this.land(!!m.on); }
+    else if (m.t === 'dev') { this.open('apvp_dev'); this.tile(W.id, 'apvp_dev'); }
     else if (m.t === 'title') { W.el.querySelector('.dktt').textContent = m.title; }
     else if (m.t === 'close') { this.close(W.id); if (document.fullscreenElement && !Object.values(this.wins).some(w => !w.closed && w.mode === 'full')) try { document.exitFullscreen(); } catch (x) { } }
+  },
+  // two windows side by side (PC); on phones every game window is full screen, so the second one just comes to the front
+  tile(a, b) {
+    const A = this.wins[a], B = this.wins[b]; if (!A || !B) return; if (this.mobile) { this.focus(b); return; }
+    if (document.fullscreenElement && A.mode === 'full') try { document.exitFullscreen(); } catch (e) { }
+    const SW = innerWidth, SH = innerHeight - this.TB, w = Math.floor(SW / 2), h = SH - this.TITLE;
+    Object.assign(A, { mode: 'normal', min: false, x: 0, y: 0, w, h }); Object.assign(B, { mode: 'normal', min: false, x: w, y: 0, w: SW - w, h });
+    this.focus(b); this.sync(); this.save();
   },
   land(on) {
     const lock = () => { try { const q = screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape'); if (q && q.catch) q.catch(() => { }); } catch (e) { } };
@@ -149,6 +164,7 @@ const DESK = {
   },
   // ---------- game windows: consent screen -> iframe ----------
   gameStart(W) {
+    if (W.A.offline) { this.loadGame(W, false); return; } // the dev tool is offline practice only: no P2P question
     const s = SITE.getP2P();
     if (s && s.remember) { this.loadGame(W, s.allow !== false); return; }
     W.body.innerHTML = '<div class="p2pask"><div class="p2pin">'
@@ -166,8 +182,9 @@ const DESK = {
     const f = document.createElement('iframe'); f.className = 'dkFrame'; f.setAttribute('allow', 'fullscreen; autoplay; keyboard-map; gamepad');
     // the window gets a copy of this very page (already in memory) with the app flag injected: no second request, so it also
     // works when the file is opened from disk or inside a preview where ?app=... can't be loaded (Chrome's broken-page icon)
-    const flag = '<script>window.SITE_APP=' + JSON.stringify(W.id) + ';window.SITE_P2PQ=' + (allow ? 1 : 0) + ';<\/script>';
-    if (SELF_HTML && SELF_HTML.length > 1000) f.srcdoc = SELF_HTML.replace(/<head([^>]*)>/i, m => m + flag); else f.src = new URL('index.html', document.baseURI).pathname + '?app=' + W.id + '&p2p=' + (allow ? 1 : 0) + (SITE.VER ? '&v=' + encodeURIComponent(SITE.VER) : '');
+    const app = W.A.app || W.id, dev = W.A.dev ? 1 : 0;
+    const flag = '<script>window.SITE_APP=' + JSON.stringify(app) + ';window.SITE_P2PQ=' + (allow ? 1 : 0) + ';' + (dev ? 'window.APVP_DEV=1;' : '') + '<\/script>';
+    if (SELF_HTML && SELF_HTML.length > 1000) f.srcdoc = SELF_HTML.replace(/<head([^>]*)>/i, m => m + flag); else f.src = new URL('index.html', document.baseURI).pathname + '?app=' + app + (dev ? '&dev=1' : '') + '&p2p=' + (allow ? 1 : 0) + (SITE.VER ? '&v=' + encodeURIComponent(SITE.VER) : '');
     f.onload = () => { const l = W.body.querySelector('.dkload'); if (l) l.remove(); };
     W.body.appendChild(f); W.frame = f; setTimeout(() => { try { f.focus(); } catch (e) { } }, 300);
   },
@@ -175,7 +192,7 @@ const DESK = {
   startMenu(show) {
     const m = $('dkStartMenu'); if (show === false) { m.classList.add('hide'); return; } if (show === undefined && !m.classList.contains('hide')) { m.classList.add('hide'); return; }
     const fs = !!document.fullscreenElement;
-    m.innerHTML = '<div class="smh">앱</div>' + this.APPS.map(a => '<div data-a="open" data-app="' + a.id + '">' + (a.img ? '<img src="' + a.img + '">' : a.icon) + ' ' + a.title + '</div>').join('')
+    m.innerHTML = '<div class="smh">앱</div>' + this.APPS.filter(a => !a.hidden).map(a => '<div data-a="open" data-app="' + a.id + '">' + (a.img ? '<img src="' + a.img + '">' : a.icon) + ' ' + a.title + '</div>').join('')
       + '<div class="smh">화면</div><div data-a="fs">' + (fs ? '↩ 브라우저 전체화면 나가기' : '⛶ 브라우저 전체화면') + '</div>';
     m.onclick = e => { const t = e.target.closest('[data-a]'); if (!t) return; e.stopPropagation(); if (t.dataset.a === 'open') { this.open(t.dataset.app); const A = this.APPS.find(a => a.id === t.dataset.app); if (this.mobile && A && A.game) { this.setMode(A.id, 'full'); this.goFs(false); } } if (t.dataset.a === 'fs') { this.toggleFs(); this.startMenu(false); } };
     m.classList.remove('hide');
@@ -186,6 +203,8 @@ const DESK = {
 // ---------- apps ----------
 DESK.addApp({ id: 'apvp', icon: '⚔️', label: '4중인격<br>능력 PvP', title: '4중인격 능력 PvP', game: true, w: 1280, h: 800, bg: 'linear-gradient(#5b8a3a,#3c6a24)' });
 DESK.addApp({ id: 'rbs', icon: '🧱', img: (typeof RB_ICON !== 'undefined' ? RB_ICON : ''), label: '랜덤블록<br>서바이벌 <b class="dkbeta">베타</b>', title: '랜덤블록 서바이벌 V2 파트 2 · 베타', game: true, w: 1280, h: 800, bg: 'linear-gradient(#3a7bd5,#22427a)' });
+// 개발 도구: the 4중인격 game with APVP_DEV, offline only. No icon; opened from the game's '개발 도구 창 열기' or 사이트주소/ability_pvp_dev
+DESK.addApp({ id: 'apvp_dev', app: 'apvp', dev: true, offline: true, hidden: true, icon: '🛠', title: '4중인격 개발 도구', game: true, w: 1280, h: 800 });
 DESK.addApp({ id: 'settings', icon: '⚙️', label: '설정', title: '설정', w: 460, h: 440, bg: 'linear-gradient(#6a7480,#3f4650)',
   build(body) { body.classList.add('dkApp'); this.onOpen(body); },
   onOpen(body) {

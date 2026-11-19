@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>4중인격 능력 PvP</title>
-<link rel="stylesheet" href="css/site.css?v=2026.11.19-3">
+<link rel="stylesheet" href="css/site.css?v=2026.11.19-4">
 </head>
 <body>
 <div id="boot"><div class="bootin">
@@ -171,55 +171,55 @@
 <div id="newJobPop" class="hide"><div class="njbox">
   <h3>＋ 능력 새로 추가하기 (또는 시스템 수정하기)</h3>
   <ol>
-    <li><b>개발 도구 HTML</b>을 내 컴퓨터 / 휴대폰에 받아서 열어요. (지금 이 게임에 개발 도구가 켜진 사본이에요)</li>
+    <li><b>개발 도구 창</b>을 열어요. (이 게임에 개발 도구가 켜진 창이에요 · 사이트주소/ability_pvp_dev 로도 들어갈 수 있어요)</li>
     <li>개발 도구에서 <b>AI 프롬프트 .txt</b>를 받아 내 AI(ChatGPT · Claude · Gemini 등)에 첨부하고, 만들고 싶은 직업과 능력을 말해요.</li>
     <li>AI의 답을 개발 도구에 붙여넣으면 바로 <b>연습 모드에서 테스트</b>할 수 있어요. 효과음 파일도 넣을 수 있어요.</li>
     <li>마음에 들면 <b>결과물 .txt</b>를 저장해서 개발자(Claude)에게 보내 주세요. 정식 직업으로 넣어 드려요.</li>
   </ol>
   <div style="font-size:12px;color:#bbb">기존 직업 · 시스템을 바꾸고 싶은 내용은 코드로 바뀌지 않고, 쓴 글 그대로 결과물에 따로 담겨요.</div>
-  <div class="row" style="margin-top:10px"><button class="mcbtn" id="njDown" style="flex:1">⬇️ 개발 도구 HTML 받기</button><button class="mcbtn" id="njClose">닫기</button></div>
+  <div class="row" style="margin-top:10px"><button class="mcbtn" id="njDown" style="flex:1">🛠 개발 도구 창 열기</button><button class="mcbtn" id="njClose">닫기</button></div>
   <div id="njMsg" style="font-size:12px;color:#8f8;margin-top:6px"></div>
 </div></div>
-<script src="js/data/version.js?v=2026.11.19-3"></script>
-<script src="js/data/apvp_assets.js?v=2026.11.19-3"></script>
-<script src="js/data/rbs_data.js?v=2026.11.19-3"></script>
-<script src="js/data/rbs_assets.js?v=2026.11.19-3"></script>
-<script src="js/data/rbs_icon.js?v=2026.11.19-3"></script>
-<script src="js/data/jobs_builtin.js?v=2026.11.19-3"></script>
-<script src="js/game/00_wall.js?v=2026.11.19-3"></script>
-<script src="js/game/01_core.js?v=2026.11.19-3"></script>
-<script src="js/game/02_gfx.js?v=2026.11.19-3"></script>
-<script src="js/game/02b_skin.js?v=2026.11.19-3"></script>
-<script src="js/game/03_audio.js?v=2026.11.19-3"></script>
-<script src="js/game/03b_pack.js?v=2026.11.19-3"></script>
-<script src="js/game/04_items.js?v=2026.11.19-3"></script>
-<script src="js/game/05_player.js?v=2026.11.19-3"></script>
-<script src="js/game/06_skills.js?v=2026.11.19-3"></script>
-<script src="js/game/07_net.js?v=2026.11.19-3"></script>
-<script src="js/game/08_bot.js?v=2026.11.19-3"></script>
-<script src="js/game/09_game.js?v=2026.11.19-3"></script>
-<script src="js/game/10_render.js?v=2026.11.19-3"></script>
-<script src="js/game/11_ui.js?v=2026.11.19-3"></script>
-<script src="js/game/11b_touch.js?v=2026.11.19-3"></script>
-<script src="js/game/11c_mod.js?v=2026.11.19-3"></script>
-<script src="js/game/11d_prompt.js?v=2026.11.19-3"></script>
-<script src="js/game/11e_desk.js?v=2026.11.19-3"></script>
-<script src="js/game/11f_upload.js?v=2026.11.19-3"></script>
-<script src="js/game/12_main.js?v=2026.11.19-3"></script>
-<script src="js/game/20_rbs_tex.js?v=2026.11.19-3"></script>
-<script src="js/game/21_rbs_blocks.js?v=2026.11.19-3"></script>
-<script src="js/game/22_rbs_items.js?v=2026.11.19-3"></script>
-<script src="js/game/23_rbs_world.js?v=2026.11.19-3"></script>
-<script src="js/game/24_rbs_player.js?v=2026.11.19-3"></script>
-<script src="js/game/25_rbs_game.js?v=2026.11.19-3"></script>
-<script src="js/game/26_rbs_bot.js?v=2026.11.19-3"></script>
-<script src="js/game/27_rbs_render.js?v=2026.11.19-3"></script>
-<script src="js/game/28_rbs_audio.js?v=2026.11.19-3"></script>
-<script src="js/game/29_rbs_input.js?v=2026.11.19-3"></script>
-<script src="js/game/31_rbs_ui.js?v=2026.11.19-3"></script>
-<script src="js/game/32_rbs_gui.js?v=2026.11.19-3"></script>
-<script src="js/game/33_rbs_pack.js?v=2026.11.19-3"></script>
-<script src="js/game/34_rbs_main.js?v=2026.11.19-3"></script>
-<script src="js/game/99_boot.js?v=2026.11.19-3"></script>
+<script src="js/data/version.js?v=2026.11.19-4"></script>
+<script src="js/data/apvp_assets.js?v=2026.11.19-4"></script>
+<script src="js/data/rbs_data.js?v=2026.11.19-4"></script>
+<script src="js/data/rbs_assets.js?v=2026.11.19-4"></script>
+<script src="js/data/rbs_icon.js?v=2026.11.19-4"></script>
+<script src="js/data/jobs_builtin.js?v=2026.11.19-4"></script>
+<script src="js/game/00_wall.js?v=2026.11.19-4"></script>
+<script src="js/game/01_core.js?v=2026.11.19-4"></script>
+<script src="js/game/02_gfx.js?v=2026.11.19-4"></script>
+<script src="js/game/02b_skin.js?v=2026.11.19-4"></script>
+<script src="js/game/03_audio.js?v=2026.11.19-4"></script>
+<script src="js/game/03b_pack.js?v=2026.11.19-4"></script>
+<script src="js/game/04_items.js?v=2026.11.19-4"></script>
+<script src="js/game/05_player.js?v=2026.11.19-4"></script>
+<script src="js/game/06_skills.js?v=2026.11.19-4"></script>
+<script src="js/game/07_net.js?v=2026.11.19-4"></script>
+<script src="js/game/08_bot.js?v=2026.11.19-4"></script>
+<script src="js/game/09_game.js?v=2026.11.19-4"></script>
+<script src="js/game/10_render.js?v=2026.11.19-4"></script>
+<script src="js/game/11_ui.js?v=2026.11.19-4"></script>
+<script src="js/game/11b_touch.js?v=2026.11.19-4"></script>
+<script src="js/game/11c_mod.js?v=2026.11.19-4"></script>
+<script src="js/game/11d_prompt.js?v=2026.11.19-4"></script>
+<script src="js/game/11e_desk.js?v=2026.11.19-4"></script>
+<script src="js/game/11f_upload.js?v=2026.11.19-4"></script>
+<script src="js/game/12_main.js?v=2026.11.19-4"></script>
+<script src="js/game/20_rbs_tex.js?v=2026.11.19-4"></script>
+<script src="js/game/21_rbs_blocks.js?v=2026.11.19-4"></script>
+<script src="js/game/22_rbs_items.js?v=2026.11.19-4"></script>
+<script src="js/game/23_rbs_world.js?v=2026.11.19-4"></script>
+<script src="js/game/24_rbs_player.js?v=2026.11.19-4"></script>
+<script src="js/game/25_rbs_game.js?v=2026.11.19-4"></script>
+<script src="js/game/26_rbs_bot.js?v=2026.11.19-4"></script>
+<script src="js/game/27_rbs_render.js?v=2026.11.19-4"></script>
+<script src="js/game/28_rbs_audio.js?v=2026.11.19-4"></script>
+<script src="js/game/29_rbs_input.js?v=2026.11.19-4"></script>
+<script src="js/game/31_rbs_ui.js?v=2026.11.19-4"></script>
+<script src="js/game/32_rbs_gui.js?v=2026.11.19-4"></script>
+<script src="js/game/33_rbs_pack.js?v=2026.11.19-4"></script>
+<script src="js/game/34_rbs_main.js?v=2026.11.19-4"></script>
+<script src="js/game/99_boot.js?v=2026.11.19-4"></script>
 </body>
 </html>

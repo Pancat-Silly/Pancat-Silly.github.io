@@ -102,7 +102,7 @@ const UI = {
     const nb = document.createElement('button'); nb.className = 'mcbtn jobnew'; nb.id = 'btnNewJob'; nb.innerHTML = '<b>＋ 능력 새로 추가하기</b><small class="desc">(또는 시스템 수정하기) · 내 AI로 직업을 만들어 테스트</small>';
     nb.onclick = () => { AU.init(); AU.sfx('click'); if (DEV.on) { $('devPanel').classList.remove('fold'); $('devPanel').scrollIntoView({ block: 'nearest' }); return; } $('newJobPop').classList.remove('hide'); }; jb.appendChild(nb);
     JOB_ORDER.forEach(id => this.addJobButton(id));
-    $('njDown').onclick = () => { devDownload(); $('njMsg').textContent = '✔ apvp4_devtool.html 을 저장했어요 (다운로드 폴더). 그 파일을 열면 개발 도구가 켜져요.'; };
+    $('njDown').onclick = () => { const ok = SITE.openDev(); $('njMsg').textContent = !ok ? '✔ apvp4_devtool.html 을 저장했어요 (다운로드 폴더). 그 파일을 열면 개발 도구가 켜져요.' : SITE.inFrame ? '✔ 바탕화면에 개발 도구 창을 열었어요' : '✔ 새 탭에 개발 도구를 열었어요'; };
     $('njClose').onclick = () => $('newJobPop').classList.add('hide');
     $('nick').oninput = e => { this.name = e.target.value.slice(0, 16); this.save(); };
     $('skinName').oninput = e => { clearTimeout(this._skT); this._skT = setTimeout(() => { this.skinName = e.target.value.trim().slice(0, 16); SKIN.retry(this.skinName); this.save(); if (G.me) G.me.skin = this.skinName; SKIN.get(this.skinName); this.onSkin(this.skinName); }, 500); };
