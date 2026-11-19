@@ -13,6 +13,28 @@ const SITE = {
   setP2PNow(v) { this._p2p = !!v; this.setP2P(!!v); },
   toParent(m) { if (this.inFrame) try { parent.postMessage(Object.assign({ site: 1 }, m), '*'); } catch (e) { } },
   isMobile() { return matchMedia('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent); },
+  // ---------- site version ----------
+  // SITE_VER (js/data/version.js) = the version this page was loaded with; version.json on the site is bumped on every commit
+  // (tools/bump_version.py). Top pages poll it and show a refresh notice when it changes; game windows inside the desktop don't poll.
+  VER: typeof SITE_VER !== 'undefined' ? SITE_VER : '',
+  verLabel() { return this.VER ? 'v' + this.VER : ''; },
+  watchVer() {
+    if (this.inFrame || !this.VER || !window.SITE_MULTI || !/^https?:$/.test(location.protocol)) return;
+    let shown = '';
+    const check = () => fetch(new URL('version.json?t=' + Date.now(), document.baseURI), { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(j => {
+      if (!j || !j.ver || j.ver === this.VER || j.ver === shown) return; shown = j.ver; this.verNotice(j.ver);
+    }).catch(() => { });
+    setTimeout(check, 20000); setInterval(check, 180000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
+  },
+  verNotice(ver) {
+    let d = document.getElementById('siteVerNote'); if (d) d.remove();
+    d = document.createElement('div'); d.id = 'siteVerNote';
+    d.innerHTML = '<div class="svt">새 버전이 나왔어요! <b>v' + ver + '</b></div><div class="svs">지금 버전 v' + this.VER + ' · 새로고침하면 적용돼요 (진행 중인 게임은 끊겨요)</div>'
+      + '<div class="svb"><button class="svy">새로고침</button><button class="svn">나중에</button></div>';
+    document.body.appendChild(d);
+    d.querySelector('.svy').onclick = () => location.reload(); d.querySelector('.svn').onclick = () => d.remove();
+  },
 };
 if (SITE.inFrame && SITE.isMobile()) { const fs = () => SITE.toParent({ t: 'fs', lock: false }); addEventListener('touchend', fs, { once: true, capture: true }); }
 const APP = (() => { if (window.APVP_DEV) return 'apvp'; const a = window.SITE_APP || SITE.q.get('app'); return a === 'apvp' || a === 'rbs' ? a : 'desk'; })();
@@ -47,8 +69,8 @@ const DESK = {
     const tick = () => { const n = new Date(); $('dkClock').innerHTML = n.toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' }) + '<br><small>' + n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0') + '-' + String(n.getDate()).padStart(2, '0') + '</small>'; };
     tick(); setInterval(tick, 5000);
     this.sync();
-    // opened (maximised) on arrival: 4중인격 PvP, or the game a 바로 들어가기 page asked for (사이트주소/ability_pvp, /randomblock -> SITE_OPEN)
-    const first = window.SITE_OPEN === 'rbs' ? 'rbs' : 'apvp'; this.open(first); this.setMode(first, 'max');
+    // the plain site address shows just the desktop; 바로 들어가기 pages (사이트주소/ability_pvp, /randomblock -> SITE_OPEN) open that game maximised
+    const first = window.SITE_OPEN; if (first && this.APPS.some(a => a.id === first)) { this.open(first); this.setMode(first, 'max'); }
   },
   onMsg(e) {
     const m = e.data; if (!m || !m.site) return; const W = Object.values(this.wins).find(w => w.frame && w.frame.contentWindow === e.source); if (!W) return;
@@ -145,7 +167,7 @@ const DESK = {
     // the window gets a copy of this very page (already in memory) with the app flag injected: no second request, so it also
     // works when the file is opened from disk or inside a preview where ?app=... can't be loaded (Chrome's broken-page icon)
     const flag = '<script>window.SITE_APP=' + JSON.stringify(W.id) + ';window.SITE_P2PQ=' + (allow ? 1 : 0) + ';<\/script>';
-    if (SELF_HTML && SELF_HTML.length > 1000) f.srcdoc = SELF_HTML.replace(/<head([^>]*)>/i, m => m + flag); else f.src = new URL('index.html', document.baseURI).pathname + '?app=' + W.id + '&p2p=' + (allow ? 1 : 0);
+    if (SELF_HTML && SELF_HTML.length > 1000) f.srcdoc = SELF_HTML.replace(/<head([^>]*)>/i, m => m + flag); else f.src = new URL('index.html', document.baseURI).pathname + '?app=' + W.id + '&p2p=' + (allow ? 1 : 0) + (SITE.VER ? '&v=' + encodeURIComponent(SITE.VER) : '');
     f.onload = () => { const l = W.body.querySelector('.dkload'); if (l) l.remove(); };
     W.body.appendChild(f); W.frame = f; setTimeout(() => { try { f.focus(); } catch (e) { } }, 300);
   },

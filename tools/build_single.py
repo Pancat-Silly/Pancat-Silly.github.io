@@ -9,9 +9,9 @@ import os, re
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 h = open(os.path.join(R, 'index.html'), encoding='utf-8').read()
 for m in re.findall(r'<link rel="stylesheet" href="([^"]+)">', h):
-    h = h.replace('<link rel="stylesheet" href="%s">' % m, '<style>\n' + open(os.path.join(R, m), encoding='utf-8').read() + '</style>')
+    h = h.replace('<link rel="stylesheet" href="%s">' % m, '<style>\n' + open(os.path.join(R, m.split('?')[0]), encoding='utf-8').read() + '</style>')
 tags = re.findall(r'<script src="([^"]+)"></script>\n?', h)
-code = ''.join(open(os.path.join(R, t), encoding='utf-8').read() + '\n' for t in tags)
+code = ''.join(open(os.path.join(R, t.split('?')[0]), encoding='utf-8').read() + '\n' for t in tags)
 for i, t in enumerate(tags):
     h = re.sub(r'<script src="%s"></script>\n?' % re.escape(t), '@@CODE@@' if i == 0 else '', h, count=1)
 h = h.replace('<script>window.SITE_MULTI=1</script>\n', '').replace('@@CODE@@', '<script>\n' + code + '</script>\n')

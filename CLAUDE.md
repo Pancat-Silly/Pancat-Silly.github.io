@@ -5,7 +5,7 @@
 - **4중인격 능력 PvP (apvp):** 사용자가 만든 Java 1.21.4 서버 맵이다.
 - **랜덤블록 서바이벌 V2 P2 + V2.1 (rbs, 베타):** LemonyMEF의 Bedrock 맵이다.
 
-사이트 첫 화면은 "가상 데스크톱"이다. 열면 4중인격 PvP 창이 최대화된 채 자동으로 뜬다.
+사이트 첫 화면은 "가상 데스크톱"이다. 기본 주소로 열면 게임 창 없이 바탕화면만 뜬다(아이콘으로 연다).
 
 ## 사용자 규칙 (항상 지킬 것)
 - **답변과 UI 문구:** 답변은 **한국어**로 한다. UI 문구도 한국어이고 마인크래프트 톤을 따른다.
@@ -63,6 +63,7 @@ tools/                build_single.py, rbsconv.py, rbsassets.py, mkmodjobs.py, m
 - **창 ↔ 데스크톱 통신:** `postMessage {site:1, t:'fs'|'unfs'|'win'|'close'|'land'|'title'}`.
 - **모바일:** 게임 창은 항상 전체 화면이고, 가로 모드 버튼(`land`)이 있다.
 - **바로 들어가기:** `사이트주소/ability_pvp`, `사이트주소/randomblock` → 가상 데스크톱 위에 그 게임 창만 연다(`SITE_OPEN`). 뒤에 `/nodesktop`을 붙이면 바탕화면 없이 단독 실행한다(`SITE_APP`). 단독 실행(창 밖, `p2p=` 없음)이면 `SITE_ASK_P2P`(99_boot.js)가 같은 동의 화면을 먼저 띄운다.
+- **사이트 버전·새 버전 알림:** 커밋할 때마다 pre-commit 훅(`tools/hooks/pre-commit`, `git config core.hooksPath tools/hooks`)이 `tools/bump_version.py`로 버전(`YYYY.MM.DD-N`)을 올린다. 바뀌는 파일은 `version.json`, `js/data/version.js`(`SITE_VER`), index.html의 css·js `?v=`(Pages 10분 캐시 회피)이다. 열려 있는 최상위 페이지는 `SITE.watchVer()`가 3분마다 `version.json`을 확인하고, 바뀌면 "새 버전이 나왔어요 · 새로고침" 알림을 띄운다. 버전명은 4중인격 메뉴 부제와 랜덤블록 오른쪽 위에 표시된다. GitHub 웹에서 직접 커밋하면 버전이 안 올라가니 주의한다.
 - **P2P 동의:** 게임 아이콘을 누르면 "P2P 멀티플레이 허용" 화면이 뜬다. 결정은 localStorage `site_p2p`에 저장되고 게임 안 설정에서 바꿀 수 있다.
 - **개발 도구 다운로드:** 분할 빌드에서는 `devToolHTMLMulti()`가 index.html과 css, js를 fetch해서 한 파일로 인라인한다. 한 파일 빌드에서는 `SELF_HTML`에 `APVP_DEV`를 넣는다.
 

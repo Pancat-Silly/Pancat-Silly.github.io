@@ -15,6 +15,8 @@ function SITE_ASK_P2P(go) {
   const pick = allow => { SITE.setP2P(allow, d.querySelector('.p2pr input').checked); SITE._p2p = allow; d.remove(); go(); };
   d.querySelector('.p2pyes').onclick = () => pick(true); d.querySelector('.p2pno').onclick = () => pick(false);
 }
+SITE.watchVer();
 if (APP === 'desk') { const bo = $('boot'); if (bo) bo.remove(); DESK.init(); }
 else if (APP === 'rbs') SITE_ASK_P2P(RBS_BOOT);
 else SITE_ASK_P2P(APVP_BOOT);
+{ const s = document.querySelector('#menu .sub'); if (s && SITE.VER) s.insertAdjacentHTML('beforeend', ' · <span class="sitever">' + SITE.verLabel() + '</span>'); } // 4중인격 version label

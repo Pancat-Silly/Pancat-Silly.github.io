@@ -215,3 +215,8 @@ body.mobile #actionbar{bottom:128px}
 @media (orientation:portrait){body.mobile:not(.rot):not(.land) #rot{display:flex}}
 #rot{position:fixed;left:0;right:0;top:max(6px,env(safe-area-inset-top));display:none;justify-content:center;pointer-events:none}
 #rot span{background:rgba(0,0,0,.7);padding:8px 14px;font-size:14px;pointer-events:auto;border:2px solid #fff}
+/* site version: refresh notice (SITE.verNotice) + labels */
+#siteVerNote{position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:2147483647;background:rgba(16,16,16,.94);border:2px solid #55ff55;border-radius:4px;padding:10px 14px;color:#fff;font:14px system-ui,sans-serif;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.6);max-width:calc(100vw - 32px)}
+#siteVerNote .svt{color:#ffff55;font-weight:bold}#siteVerNote .svt b{color:#55ff55}#siteVerNote .svs{font-size:12px;color:#aaa;margin:4px 0 8px}
+#siteVerNote .svb{display:flex;gap:8px;justify-content:center}#siteVerNote button{padding:7px 16px;font-size:14px;cursor:pointer;color:#fff;background:#6f6f6f;border:2px solid;border-color:#aaa #333 #333 #aaa}#siteVerNote .svy{background:#2f7d32;border-color:#6c6 #1b4d1d #1b4d1d #6c6}
+.sitever{color:#aaa}
