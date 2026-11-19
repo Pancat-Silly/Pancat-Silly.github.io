@@ -19,7 +19,7 @@ const ITEMS = {
   fist: { name: '맨손', icon: '✊', dmg: 1, spd: 4 },
   breeze_rod: { name: '바람 막대기', icon: '🌀', dmg: 1, spd: 4, sharp: 3, kb: 3, reach: .2, col: [.9, .85, .5], lore: '밀치기 III · 날카로움 III · 사거리 +20%' },
   rush: { name: '러셔', icon: '⚡', use: 'skill', cd: 10, group: 'rush', cast: 'rush', lore: '신속 X 1.5초' },
-  rzone: { name: '번개 자국', icon: '🌩️', use: 'skill', cd: 14, group: 'rzone', cast: 'rzone', lore: '5초 동안 지나간 자리에 번개 자국을 남김 (자국 5초 유지) · 자국을 밟은 적은 구속 II + 나약함 I' },
+  rzone: { name: '번개 자국', icon: '🌩️', use: 'skill', cd: 14, group: 'rzone', cast: 'rzone', lore: '5초 동안 지나간 자리에 번개 자국을 남김 (자국 5초 유지) · 자국을 밟은 적은 구속 II + 1초마다 1 피해' },
   baton: { name: '진압봉', icon: '🏏', dmg: 6, spd: 2, use: 'skill', cd: 7, group: 'baton', cast: 'baton', step: .4, col: [.15, .15, .2], lore: '공격력 +5 · "경찰이 온다"' },
   riot_shield: { name: '진압 방패', icon: '🛡️', use: 'shield', kb: 1, col: [.6, .45, .3] },
   colony: { name: '군락', icon: '🕷️', use: 'skill', cd: 20, group: 'colony', cast: 'colony', lore: '거미 4마리 → 3.35초 뒤 동굴거미 13마리(약 3초)' },
@@ -80,7 +80,7 @@ const ITEMS = {
   sr_pig: { name: '성진이 소환', icon: '🐷', use: 'skill', cd: 7, group: 'sr_pig', cast: 'srPig', lore: '상대 위치 위에 성진이를 1초 띄운 뒤 떨굼 · 반경 1.6 피해 5 (바닥 표시를 보고 피할 수 있음)' },
   sr_laser: { name: '세명컴고가', icon: '🔴', use: 'skill', cd: 9, group: 'sr_laser', cast: 'srLaser', lore: '일직선 레이저(40칸) · 맞은 플레이어 3초 스턴' },
   sr_domain: { name: '귀멸의 세명컴고', icon: '🌀', use: 'skill', cd: 40, group: 'sr_domain', cast: 'srDomain', lore: '세명컴고가에 맞은 적에게 돌진 · 7초 탈출 불가 공간 · 재생 III + 힘 II · 공간 안 처치마다 최대 체력 +5' },
-  drug: { name: '약물 복용', icon: '💊', use: 'skill', cd: 15, group: 'drug', cast: 'drug', lore: '신속 III · 힘 II · 저항 II 6초' },
+  drug: { name: '약물 복용', icon: '💊', use: 'skill', cd: 15, group: 'drug', cast: 'drug', lore: '신속 III · 힘 I · 저항 II 6초' },
 };
 // armor: [points, toughness, color]
 const ARMOR = { iron: [15, 0, [.8, .8, .82]], chain: [12, 0, [.45, .45, .5]], leather: [6, 0, [.227, .702, .855]] };

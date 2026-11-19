@@ -24,7 +24,7 @@ const SK = {
   // ---------- rusher ----------
   rush(p) { p.addEff('speed', 9, 1.5); AU.sfx('firework', p, .6); return true; },
   // 번개 자국: for 5 s the rusher leaves a mark every block it runs (each mark lasts 5 s). Enemies standing on a mark get
-  // slowness II + weakness I (refreshed while they stay on it). Marks are network events; every client applies them to its own players / bots
+  // slowness II (refreshed while they stay on it) and 1 damage per second (once per victim, however many marks overlap). Marks are network events; every client applies them to its own players / bots
   TRAIL_T: 100, MARK_T: 100, MARK_R: .9,
   rzone(p) { p.st.trailUntil = G.tick + SK.TRAIL_T; p.st.trailLast = null; AU.sfx('firework', p, .8, .6); p.swingT = 6; if (p.msg) p.msg('§e번개 자국 §f5초 동안 지나간 자리에 자국이 남아요'); return true; },
   trailTick(p) {
@@ -39,7 +39,8 @@ const SK = {
       if (a % 4 === 0) { for (let i = 0; i < 2; i++) { const q = Math.random() * 6.28, d = Math.random() * z.r; G.particles('dust', z.x + Math.cos(q) * d, z.y + .08, z.z + Math.sin(q) * d, 1, [1, .85 * fade + .1, .2]); } if (a % 12 === 0) G.particles('glow', z.x, z.y + .15, z.z, 1); }
       if (a % 5 !== 0 || G.phase !== 'game') continue;
       const on = t => Math.hypot(t.x - z.x, t.z - z.z) <= z.r && t.y > z.y - .6 && t.y < z.y + 1.2;
-      for (const t of [G.me, ...G.bots]) { if (!t || !t.alive || t.spectator || t.id === z.by || G.sameTeam(t.id, z.by) || !on(t)) continue; t.addEff('slowness', 1, 1.5); t.addEff('weakness', 0, 1.5); }
+      for (const t of [G.me, ...G.bots]) { if (!t || !t.alive || t.spectator || t.id === z.by || G.sameTeam(t.id, z.by) || !on(t)) continue; t.addEff('slowness', 1, 1.5);
+        if (!(t.trailHitT > G.tick - 20)) { t.trailHitT = G.tick; t.hurt(1, { type: 'magic', by: z.by, nokb: true, noinvul: true }); G.particles('glow', t.x, t.y + 1, t.z, 2); } }
     }
     G.zones = G.zones.filter(z => G.tick - z.t0 < SK.MARK_T);
   },
@@ -311,7 +312,7 @@ const SK = {
     const cur = p.effects.strength ? p.effects.strength.amp : -1; p.effects.strength = { amp: cur + 1, t: 2e6, max: 2e6 };
     G.fx('explosion', p.x, p.y + 1, p.z); return true;
   },
-  drug(p) { p.addEff('speed', 2, 6); p.addEff('strength', 1, 6); p.addEff('resistance', 1, 6); G.sound('chang_12b', p); return true; },
+  drug(p) { p.addEff('speed', 2, 6); p.addEff('strength', 0, 6); p.addEff('resistance', 1, 6); G.sound('chang_12b', p); return true; },
   // ---------- dude (WIP) ----------
   maceBonus(fd) { let b = 0; b += 4 * Math.min(3, fd); if (fd > 3) b += 2 * Math.min(5, fd - 3); if (fd > 8) b += fd - 8; return b + 0.5 * fd; },
   maceSmash(p, tgt) {
