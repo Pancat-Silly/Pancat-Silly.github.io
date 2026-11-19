@@ -144,7 +144,7 @@ body.rbsapp #app,body.rbsapp #newJobPop{display:none!important}body.rbsapp{backg
 #rbBottom{position:absolute;left:50%;bottom:4px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center}
 #rbBars{width:364px;height:46px;image-rendering:pixelated}#rbXp{width:364px;height:6px;background:#111;border:1px solid #000;margin:1px 0 3px;position:relative}#rbXp i{display:block;height:100%;background:#7efc20;width:0}
 #rbLvl{position:absolute;left:50%;top:-14px;transform:translateX(-50%);color:#7efc20;font-weight:bold;font-size:15px}
-#rbHotW{display:flex;align-items:flex-end;gap:8px;pointer-events:auto}#rbHot{display:flex;background:rgba(0,0,0,.45);border:2px solid #222;padding:1px}
+#rbHotW{display:flex;align-items:flex-end;gap:8px;pointer-events:auto}#rbBottom,#rbChatF{z-index:11}#rbHot{display:flex;background:rgba(0,0,0,.45);border:2px solid #222;padding:1px}
 .rhs,#rbOff{width:40px;height:40px;border:2px solid #8b8b8b;margin:0;position:relative;box-sizing:border-box}.rhs.sel{border-color:#fff;outline:2px solid #000;z-index:1;transform:scale(1.08)}#rbOff{background:rgba(0,0,0,.45);border-color:#555}
 .ric{position:absolute;left:3px;top:3px;width:30px;height:30px;image-rendering:pixelated;pointer-events:none}.ric.glint{filter:drop-shadow(0 0 3px #c58cff) brightness(1.15)}
 .rcn{position:absolute;right:2px;bottom:0;font-size:14px;font-weight:bold;color:#fff;text-shadow:2px 2px 0 #3f3f3f;pointer-events:none}.rdur{position:absolute;left:4px;right:4px;bottom:3px;height:3px;background:#000}.rdur i{display:block;height:2px}
