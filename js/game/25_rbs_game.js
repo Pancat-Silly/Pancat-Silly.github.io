@@ -100,6 +100,8 @@ falls: [], // falling block entities (sand, gravel, anvil) — animated on every
     const I = p.heldI(); if (I && I.dur && B.hard > 0) p.damageItem({ arr: p.inv, i: p.sel }, I.sword ? 2 : 1);
     p.exhaust(.005); this.fallCheck(x, y, z);
   },
+  // round start (시작시 주변블록 파괴): the 3x3x2 around the spawn pocket breaks, drops included
+  breakAround(p) { const [x, y, z] = this.mcOf(p).map(Math.floor); for (let dy = 0; dy <= 1; dy++) for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) { const id = RW.getM(x + dx, y + dy, z + dz); if (id && !BL[id].unbreak && !(dx === 0 && dz === 0)) this.breakBlock(p, x + dx, y + dy, z + dz, true); } },
   placeBlock(p, x, y, z, key) {
     const id = RBLK.K(key); if (!id) return false; const B = BL[id];
     // never inside a player
@@ -154,14 +156,13 @@ falls: [], // falling block entities (sand, gravel, anvil) — animated on every
       const ar = this.area(e); if ((ar === 'lobby' || ar === 'dmspec') && e.age > 2) { this.items.delete(id); continue; }
       // dungeon key thrown at the wall spot
       if (e.own === me.id && e.st.id === 'tripwire_hook' && e.ground) { const [mx, my, mz] = this.mcOf(e); if (Math.hypot(mx + 16.5, mz + 18.5) < 1.6 && Math.abs(my - 90) < 1.6) { this.items.delete(id); this.emit({ k: 'pick', i: id }); this.dungeonWall(); continue; } }
-      // pickup
-      if (!e.pick && me.alive && !me.spectator && me.mode !== 'spectator') {
-        const d = Math.hypot(me.x - e.x, me.y + .9 - e.y, me.z - e.z);
-        if (d < (xp ? 1.2 : 1.6)) {
-          if (xp) { this.addXp(me, e.st.n); RAU.at('orb', me); this.items.delete(id); this.emit({ k: 'pick', i: id }); continue; }
-          if (this.area(me) === 'lobby') continue;
-          const left = me.give(e.st); if (left < e.st.n) { RAU.at('pop', me); if (left) { e.st.n = left; this.emit({ k: 'drop', e }); } else { this.items.delete(id); this.emit({ k: 'pick', i: id }); } }
-        }
+      // pickup: me, and on the host my bots too
+      if (!e.pick) for (const p of [me, ...this.bots]) {
+        if (!p.alive || p.spectator || p.mode === 'spectator') continue;
+        const d = Math.hypot(p.x - e.x, p.y + .9 - e.y, p.z - e.z); if (d >= (xp ? 1.2 : 1.6)) continue;
+        if (xp) { this.addXp(p, e.st.n); RAU.at('orb', p); this.items.delete(id); this.emit({ k: 'pick', i: id }); break; }
+        if (this.area(p) === 'lobby') continue;
+        const left = p.give(e.st); if (left < e.st.n) { RAU.at('pop', p); if (left) { e.st.n = left; this.emit({ k: 'drop', e }); } else { this.items.delete(id); this.emit({ k: 'pick', i: id }); break; } }
       }
     }
   },
@@ -370,14 +371,14 @@ falls: [], // falling block entities (sand, gravel, anvil) — animated on every
       case 'start': {
         RAU.gameBgm(1); const sl = gs.sp[me.id]; if (me.spectator) { this.tp(me, [.5, 213, .5]); RUI.specNext(1); }
         if (sl !== undefined && !me.spectator) { const [x, z] = RW.spawns(gs.big)[sl]; this.tp(me, [x + .5, 210, z + .5]); me.clearInv(); me.clearEff(); me.mode = 'adventure'; me.xp = me.lvl = 0; me.hp = 20; }
-        for (const b of this.bots) { const s = gs.sp[b.id]; if (s !== undefined) { const [x, z] = RW.spawns(gs.big)[s]; this.tp(b, [x + .5, 210, z + .5]); b.clearInv(); b.mode = 'adventure'; } }
+        for (const b of this.bots) { b.ai = null; const s = gs.sp[b.id]; if (s !== undefined) { const [x, z] = RW.spawns(gs.big)[s]; this.tp(b, [x + .5, 210, z + .5]); b.clearInv(); b.mode = 'adventure'; } }
         break;
       }
       case 'game': {
         const inA = this.area(me) === 'arena' && !me.spectator;
         if (inA) { me.mode = 'survival'; if (O.time === 23) for (const id of ['stone_pickaxe', 'stone_axe', 'stone_sword']) me.give({ id, n: 1 }); if (O.time === 23) me.give({ id: 'splash_potion', n: 4 }); }
-        if (inA && O.brk && fresh) { const [x, y, z] = this.mcOf(me).map(Math.floor); for (let dy = 0; dy <= 1; dy++) for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) { const id = RW.getM(x + dx, y + dy, z + dz); if (id && !BL[id].unbreak && !(dx === 0 && dz === 0)) this.breakBlock(me, x + dx, y + dy, z + dz, true); } }
-        for (const b of this.bots) if (this.area(b) === 'arena') b.mode = 'survival';
+        if (inA && O.brk && fresh) this.breakAround(me);
+        for (const b of this.bots) if (this.area(b) === 'arena') { b.mode = 'survival'; if (O.brk && fresh) this.breakAround(b); } // bots too: 시작시 주변블록 파괴
         if (fresh) { this.chat('§l§b>§5>§a> §r§e이번 라운드 정보 §l§a<§5<§b<'); this.chat('§e시작시 주변블록 파괴 : ' + (O.brk ? '§a활성화' : '§c비활성화')); this.chat('§e방패 제작 유무 : ' + (O.shield ? '§a활성화' : '§c비활성화')); this.chat('§e데스매치 패널티 : ' + (O.lava ? '§c용암' : '§a독가스')); this.chat('§e데스매치 건축 유무 : ' + (O.build ? '§a활성화' : '§c비활성화')); this.chat('§e경기장 pvp 유무 : ' + (O.pvp ? '§a활성화' : '§c비활성화')); }
         break;
       }
