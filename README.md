@@ -1,7 +1,9 @@
 ## [Pancat-Silly.github.io](https://pancat-silly.github.io/)
 
 바이브코딩된 개인 프로젝트 사이트
+
 멀티플레이 기능은 클라이언트간 P2P방식을 이용하고있음.
+
 사이트에서 P2P 통신 허용 유무 선택 가능.
 
 ---
