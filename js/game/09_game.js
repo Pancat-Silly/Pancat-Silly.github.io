@@ -5,11 +5,11 @@ const PAD_POS = { red: [21, 21, 13], lime: [66, 21, 24], purple: [9, 21, 46], bl
 const PAD_ORDER = ['red', 'lime', 'purple', 'blue'];
 const PAD_KO = { red: '빨강', lime: '연두', purple: '보라', blue: '파랑' };
 const G = {
-  tick: 0, phase: 'menu', world: null, me: null, bots: [], remotes: new Map(), mobs: [], rmobs: new Map(), arrows: [], drops: [], chains: [], parts: [], timers: [], ices: [], vigs: [], pigs: [], domains: [], ghosts: [], dashFx: new Map(), fangs: [], fangLines: [], fangHit: new Map(),
+  tick: 0, phase: 'menu', world: null, me: null, bots: [], remotes: new Map(), mobs: [], rmobs: new Map(), arrows: [], drops: [], chains: [], parts: [], timers: [], ices: [], vigs: [], pigs: [], domains: [], ghosts: [], dashFx: new Map(), fangs: [], fangLines: [], zones: [], fangHit: new Map(),
   match: false, winShown: false, kills: {}, mobN: 0, fangN: 0, arrowN: 0, dropN: 0, practice: false, nid: uid(6),
   pads: PAD_ORDER.map(k => ({ x: PAD_POS[k][0], y: PAD_POS[k][1], z: PAD_POS[k][2], k })),
   initWorld() { const [sx, sy, sz] = MAPDATA.size; this.world = new World(sx, sy, sz); this.world.loadRLE(MAPDATA.rle); this.orig = this.world.b.slice(); },
-  resetWorld() { this.world.b.set(this.orig); for (let i = 0; i < this.world.cx * this.world.cy * this.world.cz; i++) this.world.dirty.add(i); this.ices = []; this.vigs = []; this.fangs = []; this.fangLines = []; this.fangHit.clear(); MOD.proj = []; this.pigs = []; this.domains = []; this.ghosts = []; this.dashFx.clear(); },
+  resetWorld() { this.world.b.set(this.orig); for (let i = 0; i < this.world.cx * this.world.cy * this.world.cz; i++) this.world.dirty.add(i); this.ices = []; this.vigs = []; this.fangs = []; this.fangLines = []; this.zones = []; this.fangHit.clear(); MOD.proj = []; this.pigs = []; this.domains = []; this.ghosts = []; this.dashFx.clear(); },
   // ---------- entity queries ----------
   players() {
     const a = []; if (this.phase === 'game' && this.me) a.push(this.me); for (const b of this.bots) a.push(b);
@@ -125,6 +125,7 @@ const G = {
       case 'ice': this.placeIce(ev.x, ev.y, ev.z, ev.by); break;
       case 'iceb': this.breakIce(ev.x, ev.y, ev.z, false); break;
       case 'fang': SK.fangSpawn(ev); break;
+      case 'rzone': this.zones.push({ x: ev.x, y: ev.y, z: ev.z, r: 3, by: ev.by, t0: this.tick }); break;
       case 'srpig': this.pigs.push({ x: ev.x, y: ev.y, z: ev.z, by: ev.by, yaw: ev.yaw || 0, t0: this.tick }); break;
       case 'srbeam': SK.srLine({ x: ev.a[0], y: ev.a[1], z: ev.a[2] }, { x: ev.b[0], y: ev.b[1], z: ev.b[2] }, ev.c || [1, .15, .15], .3); this.particles('glow', ev.b[0], ev.b[1], ev.b[2]); break;
       case 'srdomain': this.domains = this.domains.filter(d => d.by !== ev.by); this.domains.push({ x: ev.x, y: ev.y, z: ev.z, r: 5, by: ev.by, tid: ev.tid, t0: this.tick }); break;
@@ -358,9 +359,9 @@ const G = {
         if (rattle) AU.sfx('chain', null, .55, .85 + Math.random() * .3); if (done) AU.sfx('chainplace', null, .7); }
       this.chains = this.chains.filter(c => c.t <= 20);
       for (const r of this.remotes.values()) { if (r.hurtTime > 0) r.hurtTime--; if (r.swingT > 0) r.swingT--; if (r.spectator || r.ph !== 'game') r.hurtTime = 0; } // remotes: hurt flash/swing count down here (they have no own tick) -> no permanent red skin
-      SK.fangTick(); if (MOD.proj.length) MOD.projTick(); if (this.pigs.length) SK.srPigTick(); if (this.domains.length) SK.srDomainTick();
+      SK.fangTick(); if (MOD.proj.length) MOD.projTick(); if (this.pigs.length) SK.srPigTick(); if (this.domains.length) SK.srDomainTick(); if (this.zones.length) SK.zoneTick();
       if (PACK.on) this.footsteps();
-      // 창녀찬 dash afterimages: a fading copy every tick while dashing (works for remote players too)
+      // 창찬 dash afterimages: a fading copy every tick while dashing (works for remote players too)
       for (const [id, until] of this.dashFx) { if (this.tick >= until) { this.dashFx.delete(id); continue; } const e = this.players().find(q => q.id === id); if (!e) continue; const lg = this.ghosts[this.ghosts.length - 1]; if (lg && lg.id === id && Math.hypot(lg.x - e.x, lg.z - e.z) < .4) continue; this.ghosts.push({ id, e, x: e.x, y: e.y, z: e.z, yaw: e.yaw, pitch: e.pitch, walkP: e.walkP || 0, walkA: e.walkA || 0, life: 10 }); }
       for (const g of this.ghosts) g.life--; this.ghosts = this.ghosts.filter(g => g.life > 0);
       for (const v of this.vigs) this.tickVig(v); this.vigs = this.vigs.filter(v => !v.done);

@@ -26,6 +26,7 @@ const RPACK = {
       const names = [...RTEX.map.keys()].filter(n => !this.KEEP.has(n)); const tex = {}, snd = {}; let nt = 0, ns = 0; const jobs = [];
       for (const n of names) jobs.push(async () => { const d = await PACK.get(this.path(n)); if (d) { tex[n] = new Blob([d], { type: 'image/png' }); nt++; } });
       jobs.push(async () => { const d = await PACK.get('textures/entity/chest/normal.png'); if (d) tex.__chest = new Blob([d], { type: 'image/png' }); });
+      jobs.push(async () => { const d = await PACK.get(this.path('item/potion_overlay')); if (d) tex['item/potion_overlay'] = new Blob([d], { type: 'image/png' }); });
       let sj = null; const sjb = await PACK.get('sounds.json'); if (sjb) try { sj = JSON.parse(new TextDecoder().decode(sjb)); } catch (e) { }
       const ev = Object.assign({}, this.SND); for (const m in this.MATS) for (const a of ['break', 'place', 'step', 'hit']) ev[a + '_' + m] = 'block.' + this.MATS[m] + '.' + a;
       for (const k in ev) { const e = sj && sj[ev[k]]; if (!e || !e.sounds) continue; const files = e.sounds.map(s => typeof s === 'string' ? s : s.type === 'event' ? null : s.name).filter(Boolean).slice(0, 3); for (const f of files) jobs.push(async () => { const d = await PACK.get('sounds/' + f.replace(/^minecraft:/, '') + '.ogg'); if (d) { (snd[k] || (snd[k] = [])).push(d); ns++; } }); }
@@ -39,12 +40,17 @@ const RPACK = {
   },
   async apply() {
     const T = this.data && this.data.tex; if (!T) return; const g = RTEX.g; g.imageSmoothingEnabled = false;
+    if (!T['item/potion_overlay']) try { const d = await PACK.get(this.path('item/potion_overlay')); if (d) { T['item/potion_overlay'] = new Blob([d], { type: 'image/png' }); IDB.set('rbs_pack', this.data).catch(() => { }); } } catch (e) { } // packs saved before the overlay was fetched
     const tmp = document.createElement('canvas'); tmp.width = tmp.height = 16; const tg = tmp.getContext('2d'); tg.imageSmoothingEnabled = false;
     for (const [name, t] of RTEX.map) {
       const b = T[name]; if (!b || this.KEEP.has(name)) continue; let img; try { img = await createImageBitmap(b); } catch (e) { continue; }
       tg.clearRect(0, 0, 16, 16); tg.globalCompositeOperation = 'source-over'; tg.drawImage(img, 0, 0, img.width, Math.min(img.width, img.height), 0, 0, 16, 16); // animated strips: first frame
       if (this.TINT[name]) { tg.globalCompositeOperation = 'multiply'; tg.fillStyle = this.TINT[name]; tg.fillRect(0, 0, 16, 16); tg.globalCompositeOperation = 'destination-in'; tg.drawImage(img, 0, 0, img.width, Math.min(img.width, img.height), 0, 0, 16, 16); tg.globalCompositeOperation = 'source-over'; }
-      if (name === 'item/splash_potion' && T['item/potion_overlay']) { }
+      if (name === 'item/splash_potion' && T['item/potion_overlay']) try { // MC draws potions as a tinted liquid overlay under the bottle: healing = red #F82423
+        const ov = await createImageBitmap(T['item/potion_overlay']); const c2 = document.createElement('canvas'); c2.width = c2.height = 16; const g2 = c2.getContext('2d'); g2.imageSmoothingEnabled = false;
+        g2.drawImage(ov, 0, 0, 16, 16); g2.globalCompositeOperation = 'multiply'; g2.fillStyle = '#f82423'; g2.fillRect(0, 0, 16, 16); g2.globalCompositeOperation = 'destination-in'; g2.drawImage(ov, 0, 0, 16, 16);
+        g2.globalCompositeOperation = 'source-over'; g2.drawImage(tmp, 0, 0); tg.clearRect(0, 0, 16, 16); tg.drawImage(c2, 0, 0);
+      } catch (e) { }
       const [ox, oy] = RTEX.xy(t); g.clearRect(ox, oy, 16, 16); g.drawImage(tmp, ox, oy);
     }
     if (T.__chest) try { const img = await createImageBitmap(T.__chest); const k = img.width / 64; const put = (name, parts) => { const t = RTEX.T(name); const [ox, oy] = RTEX.xy(t); g.clearRect(ox, oy, 16, 16); for (const [sx, sy, w, h, dx, dy] of parts) g.drawImage(img, sx * k, sy * k, w * k, h * k, ox + dx, oy + dy, w, h); };

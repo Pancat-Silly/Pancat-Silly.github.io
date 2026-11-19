@@ -305,12 +305,10 @@ falls: [], // falling block entities (sand, gravel, anvil) — animated on every
     if (this.lp.key !== key) { const prev = this.lp.ph; this.lp = { ph: gs.ph, key, done: new Set(), prev }; this.onPhase(gs.ph, prev); }
     const el = this.hostNow() - gs.t; const O = gs.opts;
     switch (gs.ph) {
-      case 'prep': { // V2.1: two rows of stands sweep in from both ends, one layer per tick (9 players 255 ticks, 25 players 405), then the bedrock ceiling
-        const N = RW.genTicks(gs.big); if (!this.lp.gen) this.lp.gen = 0; const want = clamp(Math.floor(el / 50) + 1, 1, N);
-        while (this.lp.gen < want) { RW.genTick(this.lp.gen, gs.seed, O.pal, O.palN, gs.big); this.lp.gen++; }
-        RUI.actionbar('§a게임 준비중 : ' + Math.min(this.lp.gen, N) + ' / ' + (N + 3));
-        if (this.lp.gen >= N) this.once('done', () => { RW.ceiling(); this.chat('§aDONE'); RUI.actionbar(''); });
-        break;
+      case 'prep': { // the whole arena is built in one go (like the older layer version) instead of the V2.1 sweep of 255 / 405 ticks:
+        // one chunk rebuild instead of hundreds, so much less lag. Same cells either way (every cell comes from seed, x, y, z)
+        if (!this.lp.gen) { RW.genAll(gs.seed, O.pal, O.palN, gs.big); RW.ceiling(); this.lp.gen = RW.genTicks(gs.big); this.chat('§aDONE'); }
+        RUI.actionbar(el < RW.PREP_MS - 300 ? '§a게임 준비중…' : ''); break;
       }
       case 'count': {
         if (!this.lp.gen || this.lp.gen < RW.genTicks(gs.big)) { RW.walls(gs.big); RW.genAll(gs.seed, O.pal, O.palN, gs.big); RW.ceiling(); this.lp.gen = RW.genTicks(gs.big); }
@@ -365,9 +363,9 @@ falls: [], // falling block entities (sand, gravel, anvil) — animated on every
         for (const b of this.bots) { b.clearInv(); b.clearEff(); b.mode = 'adventure'; b.hp = 20; this.tp(b, [rand(-3, 3), 31, rand(-3, 3)]); }
         break;
       case 'prep':
-        RAU.stopBgm(); if (fresh) this.chat('§a게임시작 준비중입니다...\n §a호스트의 환경에 따라 5~30초가 소요됩니다.');
+        RAU.stopBgm(); if (fresh) this.chat('§a게임시작 준비중입니다...');
         RW.clearArena(); RW.restore(RW.dmSnap); RW.restore(RW.dmSnap25); RW.walls(gs.big); this.itemsClear(); this.mods = []; this.lp.gen = 0;
-        if (fresh) this.chat(gs.big ? '§e이번 경기장: §c25명 §7(53×53 · 준비가 오래 걸려요)' : '§e이번 경기장: §a9명 §7(33×33)');
+        if (fresh) this.chat(gs.big ? '§e이번 경기장: §c25명 §7(53×53)' : '§e이번 경기장: §a9명 §7(33×33)');
         if (!me.spectator && this.area(me) !== 'lobby') this.tp(me, RV.ret);
         this.rd = 0; break;
       case 'start': {
@@ -416,7 +414,7 @@ falls: [], // falling block entities (sand, gravel, anvil) — animated on every
     RBOT.manage(); this.miniHost(now);
     switch (gs.ph) {
       case 'lobby': if (O.time !== 24 && this.readyCount() >= 2) this.setPh('prep', { seed: (Math.random() * 2 ** 31) | 0, rnd: gs.rnd + 1, win: null, sp: {}, dmp: [], big: O.big ? 1 : 0 }); break;
-      case 'prep': if (el >= RW.genTicks(gs.big) * 50 + 800) this.setPh('count'); break;
+      case 'prep': if (el >= RW.PREP_MS) this.setPh('count'); break;
       case 'count': if (el >= 10500) { const L = this.players().filter(p => !p.spectator && p.alive !== false); for (let i = L.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [L[i], L[j]] = [L[j], L[i]]; } const sp = {}; const NS = RW.spawns(gs.big).length; const sl = [...Array(NS).keys()].sort(() => Math.random() - .5); L.slice(0, NS).forEach((p, i) => sp[p.id] = sl[i]); this.setPh('start', { sp }); } break;
       case 'start': if (el >= 4200) { let t = O.time; if (t === 22) t = randi(0, 20); const ms = t === 21 ? -1 : t === 0 ? 1000 : t === 20 ? 600000 : t === 23 ? 330000 : t * 30000; this.setPh('game', { end: ms === -1 ? -1 : Date.now() + ms }); } break;
       case 'game': { if (el < 1500) break; const a = this.alivePlayers('arena'); if (a.length < 2) this.win(a); else if (gs.end > 0 && now >= gs.end) this.setPh('tover', { dmp: a.map(p => p.id) }); break; }

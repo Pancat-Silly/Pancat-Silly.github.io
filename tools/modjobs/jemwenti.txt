@@ -83,14 +83,14 @@
       },
       jw_shadow: {
         type: 'skill', name: '마법 그림자', icon: '🌑', mc: 'echo_shard', cooldown: 5,
-        lore: '직선 그림자 마법 4 피해 · 맞은 적에게 표식 +1 · 맞히면 쿨타임 2초 감소 · 사용 시 내 디버프 제거',
+        lore: '직선 그림자 마법 2 피해 · 맞은 적에게 표식 +1 · 맞히면 쿨타임 2초 감소 · 사용 시 내 디버프 제거',
         use(p, api) {
           // 내게 걸린 디버프 제거
           for (const n of ['slowness', 'weakness', 'poison', 'glowing']) api.clearEffect(p, n);
           api.synth({ wave: 'sawtooth', freq: 420, to: 140, dur: 0.25, vol: 0.4 }, p);
           api.projectile(p, {
             speed: 1.3, gravity: 0, size: 0.35, life: 3,
-            damage: 4, type: 'magic', knockback: 0.3, pierce: false,
+            damage: 2, type: 'magic', knockback: 0.3, pierce: false,
             color: [0.45, 0.1, 0.7], trail: 3,
             onHit(t, pos, api) {
               api.particles('dust', pos.x, pos.y, pos.z, 8, [0.45, 0.1, 0.7]);
@@ -105,7 +105,7 @@
       },
       jw_blast: {
         type: 'skill', name: '그림자 폭발', icon: '💥', mc: 'nether_star', cooldown: 12,
-        lore: '표식이 있는 모든 적에게 3초 뒤 폭발 6 피해 · 표식 수만큼 힘 레벨 5초 · 표식 소모',
+        lore: '표식이 있는 모든 적에게 3초 뒤 폭발 6 피해 · 표식 5개가 쌓인 적은 처형 · 표식 수만큼 힘 레벨 5초 · 표식 소모',
         use(p, api) {
           const now = api.tick();
           const marks = p.st.marks || {};
@@ -138,6 +138,12 @@
             api.after(60, () => {
               if (!p.alive || t.hp <= 0) return;
               if (Math.hypot(t.x - lx, t.z - lz) > 8) return; // 죽어서 멀리 부활했으면 취소
+              // 표식 5개(최대)가 쌓인 적은 처형
+              if (m.n >= MAX_MARK) {
+                api.particles('dust', t.x, t.y + 1.2, t.z, 30, [0.35, 0, 0.5]); api.ring(t.x, t.y + 0.1, t.z, 1.5, [0.8, 0.1, 0.9], 30);
+                say(api, p, '§5§l처형! §f' + (t.name || '적'));
+                api.damage(t, 1000, { by: p, type: 'magic' });
+              }
               const hit = api.explode(p, t.x, t.y + 0.5, t.z, 3, 6, { knockback: 0.8, falloff: false, self: false, sound: true });
               api.particles('dust', t.x, t.y + 1, t.z, 12, [0.5, 0.1, 0.8]);
               for (const e of (hit || [])) vexStrike(p, e, api);

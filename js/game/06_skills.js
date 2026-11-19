@@ -22,6 +22,19 @@ const SK = {
   onDeath(p) { if (p === G.me) AU.loop('360song', false); },
   // ---------- rusher ----------
   rush(p) { p.addEff('speed', 9, 1.5); AU.sfx('firework', p, .6); return true; },
+  // 번개 장판: a 3-block field at the feet for 4 s; every client damages its own players / bots / mobs standing in it (2 per second + slowness I)
+  rzone(p) { G.emitAndApply({ k: 'rzone', x: r1(p.x), y: r1(p.y), z: r1(p.z), by: p.id }); AU.sfx('firework', p, .8, .6); p.swingT = 6; return true; },
+  zoneTick() {
+    for (const z of G.zones) {
+      const a = G.tick - z.t0;
+      if (a % 3 === 0) { SK.srRing(z.x, z.y + .1, z.z, z.r, [1, .9, .3], 22); const q = Math.random() * 6.28, d = Math.random() * z.r; G.particles('dust', z.x + Math.cos(q) * d, z.y + .2 + Math.random() * .6, z.z + Math.sin(q) * d, 2, [.6, .85, 1]); }
+      if (a % 20 !== 10 || G.phase !== 'game') continue;
+      const inside = t => Math.hypot(t.x - z.x, t.z - z.z) <= z.r && t.y > z.y - 1.5 && t.y < z.y + 2;
+      for (const t of [G.me, ...G.bots]) { if (!t || !t.alive || t.spectator || t.id === z.by || G.sameTeam(t.id, z.by) || !inside(t)) continue; if (t.hurt(2, { type: 'magic', by: z.by, nokb: true, noinvul: true })) { t.addEff('slowness', 0, 1.2); G.particles('glow', t.x, t.y + 1, t.z, 4); } }
+      for (const m of G.mobs) { if (m.alive && m.owner !== z.by && !G.sameTeam(m.owner, z.by) && inside(m)) m.hurt(2, { type: 'magic', by: z.by, nokb: true }); }
+    }
+    G.zones = G.zones.filter(z => G.tick - z.t0 < 80);
+  },
   // ---------- policer ----------
   baton(p) {
     const warned = otherPlayers(p, 15);
@@ -241,7 +254,7 @@ const SK = {
   bilTick(p) { // followers +1~2 every second; at 100: 1 heart per second until death (ignores armor and resistance)
     p.st.folT = (p.st.folT || 0) + 1; if (p.st.folT % 20 === 0 && p.alive && !p.spectator) SK.addFollowers(p, randi(1, 2));
     if (!p.st.follow100 || p.st.awaken) return; p.st.dotT++;
-    if (p.st.dotT % 20 === 0) { p.hurt(2, { type: 'follower', exact: true, noinvul: true, nokb: true }); G.particles('red', p.x, p.y + p.h * .6, p.z); }
+    if (p.st.dotT % 20 === 0) { p.hurt(2, { type: 'follower', exact: true, noinvul: true, nokb: true }); G.particles('red', p.x, p.y + p.h * .6, p.z); G.sound('changchan_follower_hurt', p); } // 팔로워 100명 지속 피해 효과음 (tools/sounds)
   },
   // death while the 100-follower curse is active: 10% totem-like awakening
   bilRevive(p) {
@@ -578,6 +591,7 @@ class Mob {
   hurt(a, src) {
     if (!this.alive) return false;
     if (src.by && G.sameTeam(src.by, this.owner)) return false;
+    if (this.type !== 'dog' && src.by && !src.mob && G.players().some(p => p.id === src.by)) a = Math.max(a, this.hp); // 스파이더's spiders die in one hit from a player
     if (this.invul > 10) return false; this.invul = 20; this.hurtTime = 10; this.hp -= a;
     if (!src.nokb && src.dx !== undefined) { const one = s => { this.vx = this.vx / 2 + src.dx * s; this.vz = this.vz / 2 + src.dz * s; if (this.onGround) this.vy = Math.min(.4, this.vy / 2 + s); }; one(.4); if (src.kbx) one(src.kbx * .5); }
     if (this.type === 'dog') AU.sfx(PACK.on ? 'wolfhurt' : 'hurt', this, .5, PACK.on ? 1 : 1.7); else AU.sfx('spider', this, .6, 1.4);

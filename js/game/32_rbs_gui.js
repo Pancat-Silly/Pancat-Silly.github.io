@@ -192,7 +192,7 @@ Object.assign(RUI, {
     } else if (type === 'host') {
       const lev = (i, k, title, lore) => A(i, ic('lever'), (O[k] ? '§a' : '§c') + title + ': ' + (O[k] ? '허용' : '비허용'), lore, () => this.hostSet(k, O[k] ? 0 : 1, title), !!O[k]);
       A(10, ic('menu_ready'), '§a게임시간: ' + RV.TIME[O.time], '노트블럭 음을 올려 게임시간을 조정하자!\n클릭: +1 · 우클릭: −1 (0~24)', b => { let t = O.time; do t = (t + (b === 2 ? 24 : 1)) % 25; while (t === 23); this.hostSet('time', t, '§a게임시간'); }, false, '−1');
-      A(9, ic('menu_ready'), (O.big ? '§c' : '§a') + '경기장 인원: ' + (O.big ? '25명 (끔찍하게 느림!)' : '9명'), '수용 가능한 경기장 인원수를 선택하자!\n9명: 33×33 · 준비 약 13초 / 25명: 53×53 · 준비 약 20초 · 25인 데스매치', () => this.hostSet('big', O.big ? 0 : 1, '경기장 인원'), !!O.big);
+      A(9, ic('menu_ready'), (O.big ? '§c' : '§a') + '경기장 인원: ' + (O.big ? '25명' : '9명'), '수용 가능한 경기장 인원수를 선택하자!\n9명: 33×33 / 25명: 53×53 · 25인 데스매치 (경기장은 한 번에 만들어져요)', () => this.hostSet('big', O.big ? 0 : 1, '경기장 인원'), !!O.big);
       lev(11, 'brk', '시작시 주변블록 파괴', '게임시작시 주변블록 파괴 유무를 결정하자!'); lev(12, 'build', '데스매치 건축', '데스매치시 건축 허용 유무를 선택하자!'); lev(13, 'lava', '데스매치 용암', '켜면 독가스 대신 45초에 용암이 올라와요'); lev(14, 'pvp', '경기장 PvP', ''); lev(15, 'shield', '방패 제작', ''); lev(16, 'kit', '기본템 지급', '경기 시작 때 돌 곡괭이 · 돌 도끼 · 돌 검 + 치유 물약 4개를 줘요 (봇 포함)');
       A(19, ic('blk:sponge'), '§d§l블록 커스텀', RG.palInfo() + '\n경기장에 나올 블록 종류 · 개수 · 확률을 마음대로 정해요', () => this.open('palette'));
       if (RG.bots.length) A(21, ic('lever'), (this.botAI ? '§a' : '§c') + '봇 AI ' + (this.botAI ? '켜짐' : '꺼짐'), '끄면 봇이 가만히 서 있어요 (테스트용)', () => { if (!host) return; this.botAI = !this.botAI; }, this.botAI);
@@ -331,7 +331,7 @@ Object.assign(RUI, {
   hostSet(k, v, title) {
     if (!RG.isHost()) { this.chat('§c호스트 외 설정 불가능'); RAU.play('anvil_land', 1, true); return; }
     RG.gs.opts[k] = v; try { localStorage.setItem('rbs_host2', JSON.stringify(RG.gs.opts)); } catch (e) { }
-    const val = k === 'time' ? RV.TIME[v] : k === 'bots' ? v + '명' : k === 'big' ? (v ? '§c25명 (끔찍하게 느림!)' : '§a9명') : v ? '§a허용' : '§c비허용';
+    const val = k === 'time' ? RV.TIME[v] : k === 'bots' ? v + '명' : k === 'big' ? (v ? '§c25명' : '§a9명') : v ? '§a허용' : '§c비허용';
     this.title(title, k === 'time' ? (v >= 21 || v <= 3 ? '§c' : v >= 15 ? '§6' : '§a') + val : val); RAU.play(v ? 'piston_out' : 'piston_in', 1, true);
     this.render();
   },

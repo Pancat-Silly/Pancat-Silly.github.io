@@ -237,7 +237,7 @@ const RBOT = {
       const see = this.los(b, tg), atk = b.lastBy && RG.tick - b.lastByT < 100 ? RG.byId(b.lastBy) : null;
       if (atk && atk.alive !== false && RG.area(atk) === ar) foe = atk; // hit back
       else if (late || geared) foe = tg; // hunt, digging through walls if needed
-      else if (see && ((bd < 5 && w >= 6.5) || (ready && bd < 16))) foe = tg; // no bare-handed brawls: only with a real weapon
+      else if (see && ((bd < 5 && w >= 7.5) || (ready && bd < 16))) foe = tg; // early on only with a good weapon (iron+); the stone-sword kit alone doesn't start fights
       // low and nothing to heal with: back off unless cornered at the end
       if (foe && b.hp < 6 && !late && bd < 8 && !b.count('splash_potion')) A.flee = RG.tick + 40;
     }

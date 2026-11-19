@@ -19,6 +19,7 @@ const ITEMS = {
   fist: { name: '맨손', icon: '✊', dmg: 1, spd: 4 },
   breeze_rod: { name: '바람 막대기', icon: '🌀', dmg: 1, spd: 4, sharp: 3, kb: 3, reach: .2, col: [.9, .85, .5], lore: '밀치기 III · 날카로움 III · 사거리 +20%' },
   rush: { name: '러셔', icon: '⚡', use: 'skill', cd: 10, group: 'rush', cast: 'rush', lore: '신속 X 1.5초' },
+  rzone: { name: '번개 장판', icon: '🌩️', use: 'skill', cd: 14, group: 'rzone', cast: 'rzone', lore: '발밑 반경 3칸에 4초 동안 번개 장판 · 안에 있는 적에게 1초마다 2 피해 + 구속 I' },
   baton: { name: '진압봉', icon: '🏏', dmg: 6, spd: 2, use: 'skill', cd: 7, group: 'baton', cast: 'baton', step: .4, col: [.15, .15, .2], lore: '공격력 +5 · "경찰이 온다"' },
   riot_shield: { name: '진압 방패', icon: '🛡️', use: 'shield', kb: 1, col: [.6, .45, .3] },
   colony: { name: '군락', icon: '🕷️', use: 'skill', cd: 20, group: 'colony', cast: 'colony', lore: '거미 4마리 → 3.35초 뒤 동굴거미 13마리(약 3초)' },
@@ -63,7 +64,7 @@ const ITEMS = {
   aglet: { name: '애글릿', icon: '🔗', aglet: true, lore: '들고 있으면 이동속도 +0.05' },
   boots: { name: '돛새치 부츠', icon: '👢', use: 'skill', cd: 0, group: 'boots', cast: 'equipboots', consume: true, lore: '착용: 이동속도 +0.1' },
   fish: { name: '물고기', icon: '🐟', stack: true },
-  chang: { name: '창', icon: '💧', dmg: 4, spd: 1.6, chang: true, col: [.4, .75, 1], lore: '창녀찬 주무기 · 맞히면 주위에 "창!"' },
+  chang: { name: '창', icon: '💧', dmg: 4, spd: 1.6, chang: true, col: [.4, .75, 1], lore: '창찬 주무기 · 맞히면 주위에 "창!"' },
   gather: { name: '전원 집합', icon: '🕳️', use: 'skill', cd: 12, group: 'gather', cast: 'gather', lore: '7.5칸 안 적을 끌어모은 뒤 폭발(6)로 날려 보냄' },
   bdash: { name: '돌진', icon: '🏃', use: 'skill', cd: 5, group: 'bdash', cast: 'bdash', lore: '앞으로 10칸 돌진, 닿은 적에게 5 피해 + 약한 넉백' },
   squid: { name: '오징어튀김', icon: '🦑', use: 'skill', cd: 6, group: 'squid', cast: 'squid', lore: '체력 6 회복' },
@@ -84,7 +85,7 @@ const ITEMS = {
 // armor: [points, toughness, color]
 const ARMOR = { iron: [15, 0, [.8, .8, .82]], chain: [12, 0, [.45, .45, .5]], leather: [6, 0, [.227, .702, .855]] };
 const JOBS = {
-  rusher: { name: '러셔', icon: '⚡', desc: '돌진형 · 신속의 장화(이동속도 +30%)', kit: [['breeze_rod'], ['rush']], boots: 'dia', speedMul: 1.3, kbRes: -2, step: .4 },
+  rusher: { name: '러셔', icon: '⚡', desc: '돌진형 · 신속의 장화(이동속도 +30%) · 번개 장판', kit: [['breeze_rod'], ['rush'], ['rzone']], boots: 'dia', speedMul: 1.3, kbRes: -2, step: .4 },
   policer: { name: '폴리셔', icon: '🚓', desc: '경고 후 강화 · 철 갑옷 + 진압 방패', kit: [['baton']], off: 'riot_shield', armor: 'iron' },
   spider: { name: '스파이더', icon: '🕷️', desc: '소환형 · 사슬 갑옷 · 벽 타기', kit: [['colony'], ['egg']], armor: 'chain' },
   '360': { name: '360', icon: '🎰', desc: '도박형 · 3/6/0', kit: [['xbow3'], ['rod6'], ['rod0'], null, null, null, null, null, ['arrow', 1]] },
@@ -97,7 +98,7 @@ const JOBS = {
   seryong: { name: '세룡이', icon: '🐷', desc: '미완성 직업 · 근접형 · 성진이 낙하 + 레이저 스턴 + 귀멸의 감옥', kit: [['sr_sword'], ['sr_pig'], ['sr_laser'], ['sr_domain']], wip: true },
   ai: { name: 'Ai', icon: '🤖', desc: '미완성 직업 · 해킹형 · 프롬프트 + 능력 훔치기 레이저 + 순간이동', kit: [['ai_prompt'], ['ai_glasses'], ['big_data']], wip: true },
   summoner: { name: '소환사', icon: '🐕', desc: '미완성 직업 · 지팡이 + 개 2마리 / 송곳니(직선·원형)', kit: [['sstaff'], ['dogs'], ['fangl'], ['fangc']], wip: true },
-  bilcorner: { name: '창녀찬', icon: '📱', desc: '미완성 직업 · 스킬마다 팔로워↑ · 100명이면 자멸 · 50% 쉰팝 각성', kit: [['chang'], ['gather'], ['bdash'], ['squid'], ['drug']], wip: true },
+  bilcorner: { name: '창찬', icon: '📱', desc: '미완성 직업 · 스킬마다 팔로워↑ · 100명이면 자멸 · 50% 쉰팝 각성', kit: [['chang'], ['gather'], ['bdash'], ['squid'], ['drug']], wip: true },
   dude: { name: 'dude', icon: '🎣', desc: '미완성 직업 · 철퇴 + 낚시 크레이트', kit: [['mace'], ['rodwood']], maxHp: 40, wip: true },
 };
 const JOB_ORDER = ['rusher', 'policer', 'spider', '360', 'ice_wizard', 'randomizer', 'suno', 'mefab3', 'slime', 'viggle', 'summoner', 'seryong', 'ai', 'bilcorner', 'dude'];

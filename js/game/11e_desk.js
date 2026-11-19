@@ -12,6 +12,13 @@ const SITE = {
   p2pNow() { const v = window.SITE_P2PQ !== undefined ? String(window.SITE_P2PQ) : this.q.get('p2p'); if (this._p2p !== undefined) return this._p2p; if (v === '0' || v === '1') return v === '1'; const s = this.getP2P(); return s ? s.allow !== false : true; },
   setP2PNow(v) { this._p2p = !!v; this.setP2P(!!v); },
   toParent(m) { if (this.inFrame) try { parent.postMessage(Object.assign({ site: 1 }, m), '*'); } catch (e) { } },
+  // 가로 전체화면 끄기 (phones): turn back to portrait while still in fullscreen (orientation locks only work there), then leave fullscreen and release the lock
+  landOff() {
+    const d = document, o = screen.orientation;
+    const exit = () => { try { if (d.fullscreenElement || d.webkitFullscreenElement) { const ex = d.exitFullscreen || d.webkitExitFullscreen; const p = ex && ex.call(d); if (p && p.catch) p.catch(() => { }); } } catch (e) { } setTimeout(() => { try { o && o.unlock && o.unlock(); } catch (e) { } }, 400); };
+    try { const q = o && o.lock && (d.fullscreenElement || d.webkitFullscreenElement) && o.lock('portrait'); if (q && q.then) { q.then(() => setTimeout(exit, 250), exit); return; } } catch (e) { }
+    exit();
+  },
   isMobile() { return matchMedia('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent); },
   // ---------- site version ----------
   // SITE_VER (js/data/version.js) = the version this page was loaded with; version.json on the site is bumped on every commit
@@ -98,7 +105,7 @@ const DESK = {
   },
   land(on) {
     const lock = () => { try { const q = screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape'); if (q && q.catch) q.catch(() => { }); } catch (e) { } };
-    if (!on) { try { screen.orientation && screen.orientation.unlock && screen.orientation.unlock(); } catch (e) { } return; }
+    if (!on) { SITE.landOff(); return; }
     if (document.fullscreenElement) { lock(); return; } const el = document.documentElement, rq = el.requestFullscreen || el.webkitRequestFullscreen; try { const p = rq && rq.call(el, { navigationUI: 'hide' }); if (p && p.then) p.then(lock).catch(lock); else lock(); } catch (e) { lock(); }
   },
   kLock() { if (!(navigator.keyboard && navigator.keyboard.lock)) return; try { const q = navigator.keyboard.lock(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyT', 'KeyN', 'KeyR', 'KeyQ', 'KeyE', 'KeyF', 'KeyV', 'Tab', 'Space', 'ControlLeft', 'ControlRight', 'Escape']); if (q && q.catch) q.catch(() => { }); } catch (x) { } },

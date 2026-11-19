@@ -54,7 +54,8 @@ const RW = {
     [-20, -20], [20, -20], [-20, 20], [0, -20], [0, 20], [20, 0], [-20, 0], [10, -20], [-20, -10], [-10, 20], [20, 10], [-10, -20], [-20, 10], [10, 20], [20, -10], [20, 20]], // s10..s24 + s10f (25 players)
   R(big) { return big ? 26 : 16; },
   spawns(big) { return big ? this.SPAWNS : this.SPAWNS.slice(0, 9); },
-  genTicks(big) { return (this.R(big) + 1) * 15; }, // 255 / 405 ticks like the original sweep
+  genTicks(big) { return (this.R(big) + 1) * 15; }, // 255 / 405 steps of the original sweep (genAll runs them all at once)
+  PREP_MS: 2000, // prep phase length: the arena is built at once, this only gives every client time to get the round
   rng(seed) { let s = seed >>> 0 || 1; return () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; },
   clearArena() { this.fill(-27, 216, -28, 27, 220, 27, 0); this.fill(-26, 201, -26, 26, 215, 26, 0); for (const k of [...RG.be.keys()]) { const y = +k.split(',')[1]; if (y >= 200 && y <= 216) RG.be.delete(k); } RG.chestType.clear(); },
   // 9-player walls (the original fills bedrock at ±17 when a 9-player round starts; 25 players use the whole box)

@@ -169,7 +169,7 @@ const ITEM_ART = {
   _bow0: { l: [['item/bow_pulling_0']], h: 1 }, _bow1: { l: [['item/bow_pulling_1']], h: 1 }, _bow2: { l: [['item/bow_pulling_2']], h: 1 },
   ai_prompt: { l: [['item/amethyst_shard']], h: 1 }, ai_glasses: { l: [['item/spyglass']] }, big_data: { l: [['item/recovery_compass_00']] },
   sr_sword: { l: [['item/iron_sword']], h: 1 }, sr_pig: { l: [['item/porkchop']] }, sr_laser: { l: [['item/amethyst_shard']] }, sr_domain: { l: [['item/nether_star']] },
-  sstaff: { l: [['item/blaze_rod']], h: 1 }, dogs: { l: [['item/bone']] }, fangl: { l: [['item/totem_of_undying']] }, fangc: { l: [['item/echo_shard']] }, drug: POT(0x8932B8),
+  sstaff: { l: [['item/blaze_rod']], h: 1 }, dogs: { l: [['item/bone']] }, fangl: { l: [['item/totem_of_undying']] }, rzone: { l: [['item/glowstone_dust']] }, fangc: { l: [['item/echo_shard']] }, drug: POT(0x8932B8),
 };
 const ITEM_TEX_PATHS = () => [...new Set(Object.values(ITEM_ART).flatMap(a => a.cube ? a.cube : a.l.map(l => l[0])))];
 // 360's 3 / 6 / 0 are white banners with blue banner patterns (applied in order) - drawn here, no texture needed

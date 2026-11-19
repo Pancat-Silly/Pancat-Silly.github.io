@@ -363,9 +363,8 @@ const UI = {
     const d = document, el = d.documentElement; const fs = d.fullscreenElement || d.webkitFullscreenElement;
     if (this.land) {
       this.land = false;
-      try { if (fs) { const ex = d.exitFullscreen || d.webkitExitFullscreen; const p = ex && ex.call(d); if (p && p.catch) p.catch(() => { }); } } catch (e) { }
-      try { screen.orientation && screen.orientation.unlock && screen.orientation.unlock(); } catch (e) { }
-      this.layout(); return;
+      SITE.landOff(); // back to portrait, out of fullscreen
+      this.layout(); setTimeout(() => this.layout(), 700); return;
     }
     this.land = true;
     try {

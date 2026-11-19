@@ -24,6 +24,7 @@ ability_pvp/, randomblock/, ability_pvp_dev/ (+ 각 nodesktop/)  바로 들어�
 css/site.css          모든 스타일 (4중인격 + 데스크톱; 랜덤블록 CSS는 31_rbs_ui.js 안의 RUI_CSS 문자열)
 js/data/              생성된 데이터 (손으로 고치지 말고 tools/ 스크립트로 다시 생성)
   apvp_assets.js      4중인격 맵 복셀 + 사운드 (mkassets.py)
+  apvp_extra_snd.js   원본 패키지 이후에 추가한 4중인격 효과음 → SOUNDS (mkextrasnd.py, 원본 tools/sounds/*)
   rbs_data.js         랜덤블록 월드: RB_KEYS, RB_DIM, RB_WORLD(16비트 RLE), RB_SIGNS, RB_BE, RB_ARENA, RB_MINI, RB_FURN, RB_MARK (rbsconv.py)
   rbs_assets.js       랜덤블록 원작 팩 효과음 RB_SFX, 아이콘 RB_IMG (rbsassets.py)
   rbs_icon.js         바탕화면 아이콘 RB_ICON (SVG)
@@ -70,7 +71,7 @@ tools/                mkentry.py, bump_version.py, hooks/pre-commit, build_singl
 
 ## 4중인격 능력 PvP (G / UI)
 - **기본 진행:** 팀전 또는 개인전, 부활 10회. 직업 선택 → 경기, 연습 모드(봇)도 있다.
-- **직업:** `JOB_ORDER`에 있다(러셔, 폴리셔, 스파이더, 360, 얼빙, 랜더마이져, 수노, 그랩, 슬라임, 비글, 소환사, 세룡이, Ai, 창녀찬, dude).
+- **직업:** `JOB_ORDER`에 있다(러셔, 폴리셔, 스파이더, 360, 얼빙, 랜더마이져, 수노, 그랩, 슬라임, 비글, 소환사, 세룡이, Ai, 창찬, dude).
   - 내장 미완성 직업: 젬웬티, 윤톰맨(jobs_builtin).
   - `DEV_JOBS`는 "개발중" 구분선 아래에 표시된다.
 - **모드 API·개발 도구:** 직업 코드는 `new Function('APVP','api', code)`로 실행된다. 프롬프트 버전은 `DEV_VER`이고, 프롬프트를 바꾸면 하나 올린다.
@@ -99,7 +100,7 @@ tools/                mkentry.py, bump_version.py, hooks/pre-commit, build_singl
   - 9명: 경기장 -16..16, ±17에 기반암 벽(`RW.walls`), 스폰 9곳.
   - 25명: 경기장 -26..26, 영구 상자 안, 스폰 25곳.
   - 데스매치: 9명 Y73, 25명 Y61. 가스는 `fatal_poison`이다.
-- **경기장 생성:** `RW.genTick`이 V2.1 방식으로 양 끝에서 벽 단면이 가운데로 쓸어온다(9명 255틱, 25명 405틱).
+- **경기장 생성:** prep 시작 때 `RW.genAll`로 한 번에 만든다(예전 V2.1 쓸어오기 255/405틱은 렉이 커서 바꿈). prep은 `RW.PREP_MS`(2초).
   - 칸 내용은 `(seed, x, y, z)`로 결정돼서 모든 클라이언트가 같은 경기장을 만든다.
   - 팔레트: 기본은 `RB_ARENA`(V2.1, 33칸)이다. 호스트 커스텀은 `opts.pal`(`[key, 가중치, 상자종류]`)이고, `opts.palN`=1이면 정확한 개수 모드다.
 - **미니 랜덤블록 (놀이터, 1:1):**
@@ -134,6 +135,8 @@ tools/                mkentry.py, bump_version.py, hooks/pre-commit, build_singl
 python3 tools/rbsconv.py <V2P2 맵 폴더(markers.json, voxels/)> js/data/rbs_data.js <V2.1 변경점 패키지 폴더>
 python3 tools/rbsassets.py <원작 리소스팩 폴더> <sfx 폴더> js/data/rbs_assets.js
 python3 tools/mkmodjobs.py          # tools/modjobs/*.txt -> js/data/jobs_builtin.js (ffmpeg 필요)
+python3 tools/mkextrasnd.py         # tools/sounds/*.wav|mp3 -> js/data/apvp_extra_snd.js (ffmpeg 필요, G.sound('<파일 이름>'))
+python3 tools/mkentry.py            # 바로 들어가기 페이지 6개
 python3 tools/build_single.py       # 저장소 -> dist/index.html (한 파일 배포용)
 ```
 사용자에게 원본 zip(맵 패키지, 리소스팩)을 받아야 다시 만들 수 있다.

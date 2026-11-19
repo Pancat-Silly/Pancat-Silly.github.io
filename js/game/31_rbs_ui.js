@@ -1,12 +1,12 @@
 // ===================== Random Block Survival: UI (HUD, chat, containers, menu chest) =====================
 const RUI = {
-  name: '', skin: '', sens: 1, fov: 70, vol: .8, mvol: 1, res: 1, bob: true, musicOn: true, sfxOn: true, gmuc: 0, winSnd: 'sfx_win_yay', lobbyMusic: false, // BGM / win sound / lobby music choices removed for now (defaults only) autoFs: true, room: 'main',
+  name: '', skin: '', sens: 1, fov: 70, vol: .8, mvol: 1, res: 1, bob: true, musicOn: true, sfxOn: true, gmuc: 0, winSnd: 'sfx_win_yay', lobbyMusic: false, autoFs: true, room: 'main', // BGM / win sound / lobby music choices removed for now (defaults only). room: 기본 멀티 방 이름
   mobile: false, god: false, botAI: true, gui: null, paused: false, chatOpen: false, promptOpen: false, follow: null, followThird: false, hideHud: false, started: false, cursor: null, iconCache: {},
   load() {
     let s = {}; try { s = JSON.parse(localStorage.getItem('rbs_set') || '{}'); } catch (e) { }
     let ap = {}; try { ap = JSON.parse(localStorage.getItem('apvp') || '{}'); } catch (e) { }
     this.name = s.name || ap.name || ('플레이어' + randi(100, 999)); this.skin = s.skin !== undefined ? s.skin : (ap.skin || '');
-    for (const k of ['sens', 'fov', 'vol', 'mvol', 'res', 'bob', 'sfxOn', 'autoFs', 'room']) if (s[k] !== undefined) this[k] = s[k];
+    for (const k of ['sens', 'fov', 'vol', 'mvol', 'res', 'bob', 'sfxOn', 'autoFs', 'room']) if (s[k] !== undefined) this[k] = s[k]; if (!this.room) this.room = 'main';
   },
   save() { try { const o = {}; for (const k of ['name', 'skin', 'sens', 'fov', 'vol', 'mvol', 'res', 'bob', 'musicOn', 'sfxOn', 'gmuc', 'winSnd', 'lobbyMusic', 'autoFs', 'room']) o[k] = this[k]; localStorage.setItem('rbs_set', JSON.stringify(o)); } catch (e) { } },
   // ---------- § colour codes ----------
@@ -36,7 +36,7 @@ const RUI = {
   toggleLand() { this.land = !this.land; const b = $('rtLand'); if (b) b.classList.toggle('lit', this.land);
     if (SITE.inFrame) { SITE.toParent({ t: 'land', on: this.land }); return; }
     const lock = () => { try { const q = screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape'); if (q && q.catch) q.catch(() => { }); } catch (e) { } };
-    if (this.land) { const el = document.documentElement; try { const p = el.requestFullscreen && el.requestFullscreen({ navigationUI: 'hide' }); if (p && p.then) p.then(lock).catch(lock); else lock(); } catch (e) { lock(); } } else { try { screen.orientation.unlock(); } catch (e) { } } },
+    if (this.land) { const el = document.documentElement; try { const p = el.requestFullscreen && el.requestFullscreen({ navigationUI: 'hide' }); if (p && p.then) p.then(lock).catch(lock); else lock(); } catch (e) { lock(); } } else SITE.landOff(); },
   // ---------- chat / title / actionbar ----------
   chat(m) { const box = $('rbChat'); if (!box) return; for (const line of String(m).split('\n')) { const d = document.createElement('div'); d.className = 'rcl'; d.innerHTML = this.fmt(line); d.dataset.t = performance.now(); box.appendChild(d); } while (box.children.length > 60) box.firstChild.remove(); box.scrollTop = 1e9; },
   sendChat(v) { const m = '<' + this.name + '> ' + v; this.chat(m); RG.emit({ k: 'chat', m }); },
