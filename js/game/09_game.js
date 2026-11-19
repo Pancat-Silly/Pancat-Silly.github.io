@@ -125,7 +125,7 @@ const G = {
       case 'ice': this.placeIce(ev.x, ev.y, ev.z, ev.by); break;
       case 'iceb': this.breakIce(ev.x, ev.y, ev.z, false); break;
       case 'fang': SK.fangSpawn(ev); break;
-      case 'rzone': this.zones.push({ x: ev.x, y: ev.y, z: ev.z, r: 3, by: ev.by, t0: this.tick }); break;
+      case 'rmark': this.zones.push({ x: ev.x, y: ev.y, z: ev.z, r: SK.MARK_R, by: ev.by, t0: this.tick }); break; // 러셔 번개 자국
       case 'srpig': this.pigs.push({ x: ev.x, y: ev.y, z: ev.z, by: ev.by, yaw: ev.yaw || 0, t0: this.tick }); break;
       case 'srbeam': SK.srLine({ x: ev.a[0], y: ev.a[1], z: ev.a[2] }, { x: ev.b[0], y: ev.b[1], z: ev.b[2] }, ev.c || [1, .15, .15], .3); this.particles('glow', ev.b[0], ev.b[1], ev.b[2]); break;
       case 'srdomain': this.domains = this.domains.filter(d => d.by !== ev.by); this.domains.push({ x: ev.x, y: ev.y, z: ev.z, r: 5, by: ev.by, tid: ev.tid, t0: this.tick }); break;

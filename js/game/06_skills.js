@@ -7,6 +7,7 @@ const SK = {
   // ---------- generic ----------
   passive(p) {
     if (p.job === 'bilcorner') SK.bilTick(p);
+    if (p.st.trailUntil > G.tick) SK.trailTick(p);
     if (p.st.droneUp && p.vy <= 0) { p.st.droneUp = false; if (p.st.spinArmed) SK.spinStart(p); }
     if (p.st.spin) SK.spinTick(p);
     if (p.job === 'mefab3' || (p.st.aiSteal && p.st.aiSteal.ids.grab !== undefined)) SK.grabPassive(p); // stolen grab charges too
@@ -22,18 +23,25 @@ const SK = {
   onDeath(p) { if (p === G.me) AU.loop('360song', false); },
   // ---------- rusher ----------
   rush(p) { p.addEff('speed', 9, 1.5); AU.sfx('firework', p, .6); return true; },
-  // 번개 장판: a 3-block field at the feet for 4 s; every client damages its own players / bots / mobs standing in it (2 per second + slowness I)
-  rzone(p) { G.emitAndApply({ k: 'rzone', x: r1(p.x), y: r1(p.y), z: r1(p.z), by: p.id }); AU.sfx('firework', p, .8, .6); p.swingT = 6; return true; },
+  // 번개 자국: for 5 s the rusher leaves a mark every block it runs (each mark lasts 5 s). Enemies standing on a mark get
+  // slowness II + weakness I (refreshed while they stay on it). Marks are network events; every client applies them to its own players / bots
+  TRAIL_T: 100, MARK_T: 100, MARK_R: .9,
+  rzone(p) { p.st.trailUntil = G.tick + SK.TRAIL_T; p.st.trailLast = null; AU.sfx('firework', p, .8, .6); p.swingT = 6; if (p.msg) p.msg('§e번개 자국 §f5초 동안 지나간 자리에 자국이 남아요'); return true; },
+  trailTick(p) {
+    if (!p.alive || p.spectator) return; const L = p.st.trailLast;
+    if (L && Math.hypot(p.x - L.x, p.z - L.z) < 1 && Math.abs(p.y - L.y) < 1) return;
+    const gy = Math.floor(p.y + .01); p.st.trailLast = { x: p.x, y: p.y, z: p.z };
+    G.emitAndApply({ k: 'rmark', x: r1(p.x), y: gy, z: r1(p.z), by: p.id });
+  },
   zoneTick() {
     for (const z of G.zones) {
-      const a = G.tick - z.t0;
-      if (a % 3 === 0) { SK.srRing(z.x, z.y + .1, z.z, z.r, [1, .9, .3], 22); const q = Math.random() * 6.28, d = Math.random() * z.r; G.particles('dust', z.x + Math.cos(q) * d, z.y + .2 + Math.random() * .6, z.z + Math.sin(q) * d, 2, [.6, .85, 1]); }
-      if (a % 20 !== 10 || G.phase !== 'game') continue;
-      const inside = t => Math.hypot(t.x - z.x, t.z - z.z) <= z.r && t.y > z.y - 1.5 && t.y < z.y + 2;
-      for (const t of [G.me, ...G.bots]) { if (!t || !t.alive || t.spectator || t.id === z.by || G.sameTeam(t.id, z.by) || !inside(t)) continue; if (t.hurt(2, { type: 'magic', by: z.by, nokb: true, noinvul: true })) { t.addEff('slowness', 0, 1.2); G.particles('glow', t.x, t.y + 1, t.z, 4); } }
-      for (const m of G.mobs) { if (m.alive && m.owner !== z.by && !G.sameTeam(m.owner, z.by) && inside(m)) m.hurt(2, { type: 'magic', by: z.by, nokb: true }); }
+      const a = G.tick - z.t0, fade = 1 - a / SK.MARK_T;
+      if (a % 4 === 0) { for (let i = 0; i < 2; i++) { const q = Math.random() * 6.28, d = Math.random() * z.r; G.particles('dust', z.x + Math.cos(q) * d, z.y + .08, z.z + Math.sin(q) * d, 1, [1, .85 * fade + .1, .2]); } if (a % 12 === 0) G.particles('glow', z.x, z.y + .15, z.z, 1); }
+      if (a % 5 !== 0 || G.phase !== 'game') continue;
+      const on = t => Math.hypot(t.x - z.x, t.z - z.z) <= z.r && t.y > z.y - .6 && t.y < z.y + 1.2;
+      for (const t of [G.me, ...G.bots]) { if (!t || !t.alive || t.spectator || t.id === z.by || G.sameTeam(t.id, z.by) || !on(t)) continue; t.addEff('slowness', 1, 1.5); t.addEff('weakness', 0, 1.5); }
     }
-    G.zones = G.zones.filter(z => G.tick - z.t0 < 80);
+    G.zones = G.zones.filter(z => G.tick - z.t0 < SK.MARK_T);
   },
   // ---------- policer ----------
   baton(p) {

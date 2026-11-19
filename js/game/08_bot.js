@@ -45,7 +45,7 @@ function botThink(b) {
   if (ai.t < ai.react) return;
   const r = Math.random();
   switch (b.job) {
-    case 'rusher': if (dist > 6 && dist < 25) botUse(b, 'rush'); if (dist < 2.5) botUse(b, 'rzone'); break;
+    case 'rusher': if (dist > 6 && dist < 25) botUse(b, 'rush'); if (dist < 10) botUse(b, 'rzone'); break;
     case 'policer': if (dist < 10) botUse(b, 'baton'); break;
     case 'spider': if (dist < 14) botUse(b, 'colony'); if (dist < 8) botUse(b, 'egg'); break;
     case '360':

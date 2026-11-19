@@ -19,7 +19,7 @@ const ITEMS = {
   fist: { name: '맨손', icon: '✊', dmg: 1, spd: 4 },
   breeze_rod: { name: '바람 막대기', icon: '🌀', dmg: 1, spd: 4, sharp: 3, kb: 3, reach: .2, col: [.9, .85, .5], lore: '밀치기 III · 날카로움 III · 사거리 +20%' },
   rush: { name: '러셔', icon: '⚡', use: 'skill', cd: 10, group: 'rush', cast: 'rush', lore: '신속 X 1.5초' },
-  rzone: { name: '번개 장판', icon: '🌩️', use: 'skill', cd: 14, group: 'rzone', cast: 'rzone', lore: '발밑 반경 3칸에 4초 동안 번개 장판 · 안에 있는 적에게 1초마다 2 피해 + 구속 I' },
+  rzone: { name: '번개 자국', icon: '🌩️', use: 'skill', cd: 14, group: 'rzone', cast: 'rzone', lore: '5초 동안 지나간 자리에 번개 자국을 남김 (자국 5초 유지) · 자국을 밟은 적은 구속 II + 나약함 I' },
   baton: { name: '진압봉', icon: '🏏', dmg: 6, spd: 2, use: 'skill', cd: 7, group: 'baton', cast: 'baton', step: .4, col: [.15, .15, .2], lore: '공격력 +5 · "경찰이 온다"' },
   riot_shield: { name: '진압 방패', icon: '🛡️', use: 'shield', kb: 1, col: [.6, .45, .3] },
   colony: { name: '군락', icon: '🕷️', use: 'skill', cd: 20, group: 'colony', cast: 'colony', lore: '거미 4마리 → 3.35초 뒤 동굴거미 13마리(약 3초)' },
@@ -85,7 +85,7 @@ const ITEMS = {
 // armor: [points, toughness, color]
 const ARMOR = { iron: [15, 0, [.8, .8, .82]], chain: [12, 0, [.45, .45, .5]], leather: [6, 0, [.227, .702, .855]] };
 const JOBS = {
-  rusher: { name: '러셔', icon: '⚡', desc: '돌진형 · 신속의 장화(이동속도 +30%) · 번개 장판', kit: [['breeze_rod'], ['rush'], ['rzone']], boots: 'dia', speedMul: 1.3, kbRes: -2, step: .4 },
+  rusher: { name: '러셔', icon: '⚡', desc: '돌진형 · 신속의 장화(이동속도 +30%) · 번개 자국', kit: [['breeze_rod'], ['rush'], ['rzone']], boots: 'dia', speedMul: 1.3, kbRes: -2, step: .4 },
   policer: { name: '폴리셔', icon: '🚓', desc: '경고 후 강화 · 철 갑옷 + 진압 방패', kit: [['baton']], off: 'riot_shield', armor: 'iron' },
   spider: { name: '스파이더', icon: '🕷️', desc: '소환형 · 사슬 갑옷 · 벽 타기', kit: [['colony'], ['egg']], armor: 'chain' },
   '360': { name: '360', icon: '🎰', desc: '도박형 · 3/6/0', kit: [['xbow3'], ['rod6'], ['rod0'], null, null, null, null, null, ['arrow', 1]] },
