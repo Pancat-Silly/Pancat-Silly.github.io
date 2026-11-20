@@ -10,7 +10,7 @@ const RAU = {
     if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
     const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return; try { this.ctx = new AC(); } catch (e) { return; }
     this.master = this.ctx.createGain(); this.master.gain.value = RUI.vol; this.master.connect(this.ctx.destination);
-    for (const k in RB_SFX) { const bin = atob(RB_SFX[k]); const a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); this.ctx.decodeAudioData(a.buffer).then(b => this.buf[k] = b).catch(() => { }); }
+    for (const k in RB_SFX) sndBytes(RB_SFX[k]).then(a => this.ctx.decodeAudioData(a)).then(b => this.buf[k] = b).catch(() => { }); // sounds/rbs/*.mp3
     RPACK.decode();
   },
   setVol() { if (this.master) this.master.gain.value = RUI.vol; if (this.bgm) this.bgm.volume = .5 * RUI.mvol; },

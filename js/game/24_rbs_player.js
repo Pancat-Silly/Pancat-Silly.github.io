@@ -79,7 +79,8 @@ class RPlayer {
     const W = RW.w, inp = this.inp;
     const inLava = aabbBlocks(W, this, d => d.lava), inWater = aabbBlocks(W, this, d => d.liquid === 'water');
     const fx = Math.floor(this.x), fz = Math.floor(this.z);
-    const onLadder = BL[W.get(fx, Math.floor(this.y + .01), fz)].ladder || BL[W.get(fx, Math.floor(this.y + 1), fz)].ladder;
+    const B0 = BL[W.get(fx, Math.floor(this.y + .01), fz)], B1 = BL[W.get(fx, Math.floor(this.y + 1), fz)];
+    const onLadder = B0.ladder || B1.ladder, inScaf = B0.scaf || B1.scaf;
     let f = inp.f, s = inp.s; const ml = Math.hypot(f, s); if (ml > 1) { f /= ml; s /= ml; }
     if (this.sneaking) { f *= .3; s *= .3; } if (this.useT || this.blocking) { f *= .2; s *= .2; } f *= .98; s *= .98;
     if (inp.jump) {
@@ -91,13 +92,13 @@ class RPlayer {
     if (inWater || inLava) acc = .02; if (this.sprinting) acc *= g0 ? 1.3 : 1;
     const sy = Math.sin(this.yaw), cy = Math.cos(this.yaw);
     this.vx += (-sy * f - cy * s) * acc; this.vz += (cy * f - sy * s) * acc;
-    if (onLadder) { this.vx = clamp(this.vx, -.15, .15); this.vz = clamp(this.vz, -.15, .15); this.vy = Math.max(this.vy, -.15); if (this.sneaking) this.vy = Math.max(this.vy, 0); this.fallDist = 0; }
+    if (onLadder) { this.vx = clamp(this.vx, -.15, .15); this.vz = clamp(this.vz, -.15, .15); this.vy = Math.max(this.vy, -.15); if (inScaf) { if (this.sneaking) this.vy = -.15; else if (inp.jump) this.vy = .2; } else if (this.sneaking) this.vy = Math.max(this.vy, 0); this.fallDist = 0; } // scaffolding: jump climbs, sneak goes down
     let mx = this.vx, my = this.vy, mz = this.vz;
     if (this.sneaking && this.onGround && my <= 0) { // sneak edge guard
-      const sup = (dx, dz) => W.boxes(this.x + dx - .29, this.y - .61, this.z + dz - .29, this.x + dx + .29, this.y - .001, this.z + dz + .29, []).some(b => b[4] > this.y - .61 && b[4] <= this.y + .001);
-      if (!sup(mx, mz)) { if (sup(mx, 0)) mz = 0; else if (sup(0, mz)) mx = 0; else { mx = 0; mz = 0; } }
+      W.scafEnt = this; const sup = (dx, dz) => W.boxes(this.x + dx - .29, this.y - .61, this.z + dz - .29, this.x + dx + .29, this.y - .001, this.z + dz + .29, []).some(b => b[4] > this.y - .61 && b[4] <= this.y + .001);
+      if (!sup(mx, mz)) { if (sup(mx, 0)) mz = 0; else if (sup(0, mz)) mx = 0; else { mx = 0; mz = 0; } } W.scafEnt = null;
     }
-    const prevY = this.y; const r = moveAABB(W, this, mx, my, mz, .6);
+    const prevY = this.y; W.scafEnt = this; let r; try { r = moveAABB(W, this, mx, my, mz, .6); } finally { W.scafEnt = null; }
     this.hx = r.hx || r.hz; if (r.hx) this.vx = 0; if (r.hz) this.vz = 0;
     const was = this.onGround; this.onGround = r.ground;
     if (onLadder && this.hx) this.vy = .2;

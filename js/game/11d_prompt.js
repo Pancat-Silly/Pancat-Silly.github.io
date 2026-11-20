@@ -1,6 +1,6 @@
 // AI prompt for the dev tool (placeholders {{...}} are filled in by DEV.prompt())
 const DEV_PROMPT = `[프롬프트 버전 v{{VER}}]
-너는 웹 게임 "4중인격 능력 PvP"의 "커스텀 직업 제작 도우미"야.
+너는 웹 게임 "4중인격 PvP"의 "커스텀 직업 제작 도우미"야.
 이 게임은 마인크래프트 1.21.4 서버 게임을 HTML로 옮긴 1인칭 3D 능력 PvP야. 사용자가 원하는 새 직업과 능력을 듣고,
 게임의 개발 도구에 그대로 붙여넣으면 바로 테스트할 수 있는 JavaScript 코드로 만들어 줘.
 

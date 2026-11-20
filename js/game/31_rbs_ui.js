@@ -78,7 +78,7 @@ const RUI = {
       const h = '<div class="rsh">랜덤블록 서바이벌 V2 파트2</div>' + rows.map(r => '<div><span>' + r[0] + '</span><b>' + r[1] + '</b></div>').join(''); if (h !== this._sb) { this._sb = h; $('rbSide').innerHTML = h; }
       const ef = Object.entries(me.effects).filter(([n]) => n !== 'saturation').map(([n, e]) => (this.EFN[n] || n) + ' ' + RITEM.ROMAN[e.amp + 1 > 5 ? 5 : e.amp + 1] + ' <small>' + Math.ceil(e.t / 20) + 's</small>').join('<br>'); if (ef !== this._ef) { this._ef = ef; $('rbEff').innerHTML = ef; }
       if (this.gui) this.guiTick();
-      if (me.spectator) { const f = this.follow ? RG.byId(this.follow) : null; $('rbSpecT').innerHTML = '👁 관전 중' + (f ? ' · <b>' + esc(f.name) + '</b> 시점' + (this.followThird ? ' (3인칭)' : '') : ' · 자유 시점') + '<br><small>' + (this.mobile ? '탭: 다음 플레이어 · 웅크리기: 자유 시점 · 메뉴(▤)에서 관전 끝내기' : '클릭: 다음 / 우클릭: 이전 플레이어 · 숫자: 바로 선택 · Shift: 자유 시점 · V: 1/3인칭 · M: 메뉴 (관전 끝내기)') + '</small>'; }
+      if (me.spectator) { const f = this.follow ? RG.byId(this.follow) : null; $('rbSpecT').innerHTML = '👁 관전 중' + (f ? ' · <b>' + esc(f.name) + '</b> 시점' + (this.followThird ? ' (3인칭)' : '') : ' · 자유 시점') + '<br><small>' + (this.mobile ? '탭: 다음 플레이어 · 웅크리기: 자유 시점 · 메뉴(☰)에서 관전 끝내기' : '클릭: 다음 / 우클릭: 이전 플레이어 · 숫자: 바로 선택 · Shift: 자유 시점 · V: 1/3인칭 · M: 메뉴 (관전 끝내기)') + '</small>'; }
       RAU.lobbyMusic();
     }
   },
@@ -104,15 +104,93 @@ const RUI = {
     if (h !== this._tg) { this._tg = h; box.innerHTML = h; }
   },
   tab(on) { const t = $('rbTab'); if (!on) { t.classList.add('hide'); return; } const L = RG.players(); t.innerHTML = '<div class="rth">플레이어 · 이긴횟수</div>' + L.map(p => '<div><span>' + esc(p.name) + (p.isBot ? ' <small>봇</small>' : '') + (p === RG.me ? ' <small>(나)</small>' : '') + '</span><b>' + (p === RG.me ? RG.wins : p.wins || 0) + '</b></div>').join(''); t.classList.remove('hide'); },
-  // ---------- pause ----------
-  pause(on) {
-    if (on && (this.gui || this.chatOpen)) return; this.paused = on; $('rbPause').classList.toggle('hide', !on);
-    if (on) { if (document.pointerLockElement) document.exitPointerLock(); $('rbPause').innerHTML = '<div class="rpin"><h2>게임 메뉴</h2><button data-p="resume">게임으로 돌아가기</button><button data-p="menu">📦 메뉴 상자 열기</button><button data-p="set">⚙️ 설정</button><button data-p="view">👁 시점 전환</button>' + (SITE.inFrame && !this.mobile ? '<button data-p="win">🪟 창 모드로</button>' : '') + (this.mobile ? '<button data-p="land">📱 가로 전체화면: ' + (this.land ? '켜짐' : '꺼짐') + '</button>' : '') + (SITE.inFrame ? '<button data-p="desk">🖥️ 게임 끄고 바탕화면으로</button>' : '') + '<button data-p="help">❓ 조작법</button><div id="rbHelp" class="hide">' + this.HELP + '</div><div class="rpnet">' + esc(NET.status || '') + '</div></div>'; }
+  // ---------- the one menu (Esc · ☰ · M): 게임 메뉴 -> 설정 -> 화면 · 조작 / 조작법, 호스트 설정. Minecraft-style stone buttons
+  // like 4중인격's pause screen; replaces the old menu chest, the lobby hotbar items and the separate settings chests.
+  pg: 'main',
+  MPAGE: { main: ['게임 메뉴', null], set: ['설정', 'main'], video: ['화면 · 조작 설정', 'set'], help: ['조작법', 'set'], host: ['호스트 설정', 'main'] },
+  pause(on, pg) {
+    if (on && (this.gui || this.chatOpen)) return; this.paused = !!on; $('rbPause').classList.toggle('hide', !on);
+    if (on) { if (document.pointerLockElement) document.exitPointerLock(); this.pg = pg || 'main'; this.menuDraw(); }
     else if (!this.mobile) RIN.lock();
   },
-  pauseAct(a) { if (a === 'resume') this.pause(false); if (a === 'menu') { this.pause(false); this.open('menu'); } if (a === 'set') { this.pause(false); this.open('settings'); } if (a === 'view') RR.third = (RR.third + 1) % 3; if (a === 'win') { SITE.toParent({ t: 'win' }); } if (a === 'help') $('rbHelp').classList.toggle('hide'); if (a === 'land') { this.toggleLand(); this.pause(true); }
-    if (a === 'desk') { RAU.stopBgm(); SITE.toParent({ t: 'close' }); } },
-  HELP: 'PC: WASD 이동 · 마우스 시점 · 좌클릭(누르고 있기) 공격/블록 캐기 · 우클릭 놓기/사용/상자 열기 · Space 점프 · Shift 웅크리기(방패) · Ctrl 또는 W 두 번 달리기 · E 인벤토리 · Q 버리기(Ctrl+Q 묶음) · F 왼손 교체 · 1~9/휠 핫바 · T 채팅 · Tab 플레이어 목록 · V/F5 시점 · M 메뉴 상자<br>모바일: 왼쪽 드래그 이동 · 오른쪽 드래그 시점 · 탭 공격/놓기 · 길게 누르기 블록 캐기',
+  menuGo(pg) { this.pg = pg; this.menuDraw(); const g = $('rbPause').querySelector('.rmgrid'); if (g) g.scrollTop = 0; },
+  menuBack() { const up = this.MPAGE[this.pg] && this.MPAGE[this.pg][1]; if (up) this.menuGo(up); else this.pause(false); },
+  // leave the menu for another screen (book, block palette, bot picker) without grabbing the mouse in between
+  // (re-locking and unlocking in the same click left the cursor hidden in fullscreen)
+  menuTo(fn) { this.paused = false; $('rbPause').classList.add('hide'); fn(); },
+  refresh() { if (this.gui) this.render(); else if (this.paused) this.menuDraw(); },
+  menuDraw() {
+    if (!this.paused) return; const me = RG.me, host = RG.isHost(), O = RG.gs.opts, ph = RG.gs.ph, pg = this.pg, M = this._mi = [];
+    const reg = o => { M.push(o); return M.length - 1; };
+    const B = (txt, act, cls, tip) => '<button class="rmb' + (cls ? ' ' + cls : '') + '" data-m="' + reg({ act }) + '"' + (tip ? ' title="' + esc(tip) + '"' : '') + '>' + this.fmt(txt) + '</button>';
+    const T = (name, v, act, cls, tip) => B(name + ': ' + (v ? '켜짐' : '꺼짐'), act, (v ? 'on ' : '') + (cls || ''), tip);
+    const R = (name, min, max, step, v, show, set) => { const i = reg({ set, show, name }); return '<label class="rmb rmr"><input type="range" min="' + min + '" max="' + max + '" step="' + step + '" value="' + v + '" data-mr="' + i + '"><i class="rmfill" data-mf="' + i + '" style="width:' + ((v - min) / (max - min) * 100) + '%"></i><span data-mv="' + i + '">' + esc(name + ': ' + show(v)) + '</span></label>'; };
+    const X = (name, v, max, set, hint) => '<label class="rmb rmt"><span>' + esc(name) + '</span><input type="text" maxlength="' + max + '" value="' + esc(v || '') + '" placeholder="' + esc(hint || '') + '" data-mt="' + reg({ set }) + '" autocapitalize="off" autocorrect="off" spellcheck="false"></label>';
+    const H = (k, v, title) => { if (!host) { this.chat('§c호스트 외 설정 불가능'); RAU.play('anvil_land', 1, true); return; } this.hostSet(k, v, title); };
+    const lock = host ? '' : ' dis';
+    let h = '';
+    if (pg === 'main') {
+      const a = RG.area(me), inGame = (a === 'arena' || a === 'dm') && !me.spectator;
+      h += B('게임으로 돌아가기', () => this.pause(false), 'full');
+      h += B(RG.rd ? '§aReady: 준비 완료' : ph === 'lobby' ? 'Ready: 준비하기' : '§7Ready (게임 진행 중)', () => this.ready(), RG.rd ? 'on' : '', '준비한 플레이어가 2명 이상이면 시작돼요 · 혼자면 함께할 봇 수를 골라요');
+      h += B('놀이터', () => { if (inGame) return; this.menuAct('playground'); this.pause(false); }, inGame ? 'dis' : '', '대기실 · 맨손 PvP · 미니 랜덤블록(1:1) · 숨겨진 던전 · 돌아올 때는 출구에서 웅크리기');
+      h += B(me.spectator ? '관전 끝내기' : '관전하기', () => { this.pause(false); this.spec(!me.spectator); }, me.spectator ? 'on' : '', '날아다니며 경기를 보거나 플레이어 시점으로 따라가요 (관전 중에는 다음 게임에 참가하지 않아요)');
+      h += B('로비로 이동', () => { if (inGame) return; if (me.spectator) this.spec(false); else RG.toSpawn(me); this.pause(false); }, inGame ? 'dis' : '', '스폰 지점으로 돌아가요 (경기 중 경기장에서는 안 돼요)');
+      h += B('튜토리얼 & 정보', () => this.menuTo(() => this.open('book', { p: 0 })));
+      h += B('시점: ' + ['1인칭', '3인칭 (뒤)', '3인칭 (앞)'][RR.third | 0], () => { RR.third = (RR.third + 1) % 3; this.menuDraw(); });
+      h += B('설정...', () => this.menuGo('set'));
+      h += B('호스트 설정...', () => this.menuGo('host'), 'full', host ? '게임 시간 · 옵션 · 봇 난이도 · 블록 커스텀' : '호스트 외 설정 불가능 (보기만 가능)');
+      if (SITE.inFrame) h += B('§c게임 끄고 바탕화면으로', () => { RAU.stopBgm(); SITE.toParent({ t: 'close' }); }, 'full');
+    } else if (pg === 'set') {
+      h += R('효과음 볼륨', 0, 1, .05, this.vol, v => Math.round(v * 100) + '%', v => { this.vol = v; RAU.setVol(); });
+      h += R('음악 볼륨', 0, 1, .05, this.mvol, v => Math.round(v * 100) + '%', v => { this.mvol = v; RAU.setVol(); });
+      h += T('효과음', this.sfxOn, () => { this.sfxOn = !this.sfxOn; this.save(); this.menuDraw(); });
+      h += B('P2P 멀티플레이: ' + (SITE.p2pNow() ? '허용' : '꺼짐'), () => { const v = !SITE.p2pNow(); SITE.setP2PNow(v); if (v) NET.connect(this.room); else { NET.disconnect(); NET.status = 'P2P 꺼짐 (혼자 플레이 · Ready를 누르면 봇 수를 골라요)'; RG.remotes.clear(); } this.menuDraw(); }, SITE.p2pNow() ? 'on' : '', '다른 플레이어와 직접 연결해서 함께 플레이 (PeerJS · WebRTC)');
+      if (!this.mobile) h += T('자동 전체화면', SITE.autoFs(), () => { SITE.setAutoFs(!SITE.autoFs()); this.menuDraw(); }, '', '게임 화면을 클릭하면 브라우저를 전체화면으로 바꿔요 (게임 창 크기는 그대로) · 바탕화면 설정과 같은 값');
+      h += B('리소스팩: ' + RPACK.label(), () => RPACK.click(0), RPACK.on ? 'on' : '', '마인크래프트 1.21.4 바닐라 텍스처 · 사운드를 이 기기의 브라우저가 공식 미러에서 직접 받아요 (게임에 포함 안 됨)');
+      if (RPACK.has) h += B('리소스팩 다시 받기', () => RPACK.click(2));
+      h += X('닉네임', this.name, 16, v => { this.name = v || this.name; RG.me.name = this.name; this.save(); });
+      h += X('스킨', this.skin, 16, v => { this.skin = v; RG.me.skin = v; SKIN.retry(v); this.save(); }, '마크 닉네임 (영문, 비우면 기본)');
+      h += X('방 코드', this.room, 30, v => { const r = (v || 'main').toLowerCase(); if (r === this.room) return; this.room = r; this.save(); if (SITE.p2pNow()) { RG.remotes.clear(); NET.connect(this.room); } });
+      h += B('화면 · 조작 설정...', () => this.menuGo('video'));
+      h += B('조작법...', () => this.menuGo('help'), 'full');
+    } else if (pg === 'video') {
+      h += R(this.mobile ? '터치 감도' : '마우스 감도', .3, 3, .05, this.sens, v => (+v).toFixed(2), v => { this.sens = v; });
+      h += R('시야각', 50, 110, 1, this.fov, v => String(Math.round(v)), v => { this.fov = v; });
+      const RES = [[1, '기본'], [.75, '낮게 (빠름)'], [.5, '매우 낮게']]; const ri = Math.max(0, RES.findIndex(r => r[0] === this.res));
+      h += B('해상도: ' + RES[ri][1], () => { this.res = RES[(ri + 1) % RES.length][0]; this.save(); this.menuDraw(); });
+      h += T('화면 흔들림', this.bob, () => { this.bob = !this.bob; this.save(); this.menuDraw(); });
+      h += T('HUD 숨기기 (F1)', this.hideHud, () => { this.hideHud = !this.hideHud; this.menuDraw(); });
+      if (this.mobile) h += T('가로 전체화면', this.land, () => { this.toggleLand(); this.menuDraw(); });
+    } else if (pg === 'help') {
+      h += '<div class="rmhelp">' + this.HELP + '</div>';
+    } else if (pg === 'host') {
+      if (!host) h += '<div class="rmnote">호스트(가장 먼저 들어온 사람)만 바꿀 수 있어요 · 보기만 가능</div>';
+      else if (ph !== 'lobby') h += '<div class="rmnote">경기 중에 바꾼 설정은 다음 판부터 적용돼요</div>';
+      const lev = (k, title, tip) => B(title + ': ' + (O[k] ? '§a허용' : '§c비허용'), () => H(k, O[k] ? 0 : 1, title), (O[k] ? 'on' : '') + lock, tip);
+      const step = d => { let t = O.time; do t = (t + d + 25) % 25; while (t === 23); return t; };
+      h += '<div class="rmb rmpair' + lock + '"><button data-m="' + reg({ act: () => H('time', step(-1), '§a게임시간') }) + '">◀</button><span>' + this.fmt('게임시간: ' + RV.TIME[O.time]) + '</span><button data-m="' + reg({ act: () => H('time', step(1), '§a게임시간') }) + '">▶</button></div>';
+      h += B('경기장 인원: ' + (O.big ? '25명' : '9명'), () => H('big', O.big ? 0 : 1, '경기장 인원'), lock, '9명: 33×33 / 25명: 53×53 · 25인 데스매치');
+      const LV = ['쉬움', '보통', '어려움'], lv = O.botLv === undefined ? 1 : O.botLv | 0;
+      h += B('봇 난이도: ' + ['§a', '§e', '§c'][lv] + LV[lv], () => H('botLv', (lv + 1) % 3, '봇 난이도'), lock, '어려움: 지금까지의 봇 · 보통 / 쉬움: 판단 · 반응 · 공격이 느려요');
+      h += lev('kit', '기본템 지급', '경기 시작 때 돌 곡괭이 · 돌 도끼 · 돌 검 + 치유 물약 4개 (봇 포함)');
+      h += lev('brk', '시작시 주변블록 파괴', '게임 시작 때 주변 블록을 부숴요');
+      h += lev('pvp', '경기장 PvP');
+      h += lev('shield', '방패 제작');
+      h += lev('build', '데스매치 건축');
+      h += lev('lava', '데스매치 용암', '켜면 독가스 대신 45초에 용암이 올라와요');
+      if (RG.bots.length) h += T('봇 AI', this.botAI, () => { if (!host) return; this.botAI = !this.botAI; this.menuDraw(); }, lock, '끄면 봇이 가만히 서 있어요 (테스트용)');
+      h += B('블록 커스텀...', () => this.menuTo(() => this.open('palette')), '', RG.palInfo().replace(/§./g, '') + ' · 경기장에 나올 블록 종류 · 개수 · 확률');
+      h += B('§c게임 초기화', () => { if (!host) return; RG.hostReset(); this.pause(false); }, 'full' + lock, '진행 중인 라운드를 끝내고 모두 로비로 보내요');
+    }
+    const P = this.MPAGE[pg];
+    const el = $('rbPause'); el.innerHTML = '<div class="rmin"><h2>' + P[0] + (pg === 'host' && !host ? ' <small>(보기만 가능)</small>' : '') + '</h2><div class="rmgrid">' + h + '</div>'
+      + (pg === 'main' ? '<div class="rmnote">' + esc(NET.status || '') + '</div>' : '<button class="rmb rmdone" data-m="' + reg({ act: () => this.menuBack() }) + '">완료</button>') + '</div>';
+    for (const b of el.querySelectorAll('button[data-m]')) b.onclick = e => { e.stopPropagation(); if (b.classList.contains('dis') || b.closest('.dis')) { RAU.play('anvil_land', 1, true, .3); return; } RAU.play('click', 1, false, .4); const o = M[+b.dataset.m]; if (o && o.act) o.act(); };
+    for (const r of el.querySelectorAll('[data-mr]')) { const i = +r.dataset.mr, o = M[i]; r.oninput = () => { const v = +r.value; o.set(v); el.querySelector('[data-mv="' + i + '"]').textContent = o.name + ': ' + o.show(v); el.querySelector('[data-mf="' + i + '"]').style.width = ((v - +r.min) / (+r.max - +r.min) * 100) + '%'; }; r.onchange = () => this.save(); }
+    for (const t of el.querySelectorAll('[data-mt]')) { const o = M[+t.dataset.mt]; const commit = () => o.set(t.value.trim()); t.onchange = commit; t.onkeydown = e => { e.stopPropagation(); if (e.key === 'Enter') { commit(); t.blur(); } if (e.key === 'Escape') { t.blur(); this.menuDraw(); } }; t.onkeyup = e => e.stopPropagation(); }
+  },
+  HELP: '<b>PC</b><br>WASD 이동 · 마우스 시점 · 좌클릭(누르고 있기) 공격/블록 캐기 · 우클릭 놓기/사용/상자 열기 · Space 점프 · Shift 웅크리기(방패) · Ctrl 또는 W 두 번 달리기 · E 인벤토리 · Q 버리기(Ctrl+Q 묶음) · F 왼손 교체 · 1~9/휠 핫바 · T 채팅 · Tab 플레이어 목록 · V/F5 시점 · Esc 또는 M 메뉴 · F1 HUD 숨기기<br><br><b>모바일</b><br>왼쪽 드래그 이동 · 오른쪽 드래그 시점 · 탭 공격/놓기 · 길게 누르기 블록 캐기 · ☰ 메뉴',
   // ---------- spectator (관전) ----------
   spec(on, quiet) {
     const me = RG.me;
@@ -125,7 +203,6 @@ const RUI = {
   // ---------- interaction with blocks (right click) ----------
   interact(x, y, z) {
     const id = RW.getM(x, y, z), B = BL[id];
-    if (x === 0 && y === 31 && z === 6) { this.open('menu'); RAU.play('chest_open', 1, false, .6); return true; }
     if (B.use === 'chest') { this.open('chest', { x, y, z }); RAU.play('chest_open', 1, false, .6); return true; }
     if (B.use === 'furnace') { this.open('furnace', { x, y, z }); return true; }
     if (B.use === 'craft') { this.open('craft'); return true; }
@@ -171,7 +248,15 @@ body.rbsapp #app,body.rbsapp #newJobPop{display:none!important}body.rbsapp{backg
 #rbPause{position:absolute;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:30}#rbPause.hide{display:none}
 .rpin{display:flex;flex-direction:column;gap:8px;width:min(400px,90vw);color:#fff}.rpin h2{text-align:center;margin:0 0 8px}
 .rpin button,.rbtn{background:#6f6f6f;border:2px solid;border-color:#aaa #333 #333 #aaa;color:#fff;font-size:16px;padding:9px;cursor:pointer;text-shadow:1px 1px 0 #333}.rpin button:hover,.rbtn:hover{background:#7f86c0}
-#rbHelp{font-size:13px;line-height:1.5;color:#ddd}.rpnet{font-size:12px;color:#aaa;text-align:center}
+#rbPause{cursor:default}.rmin{display:flex;flex-direction:column;width:min(620px,94vw);max-height:94vh;color:#fff}.rmin h2{text-align:center;margin:0 0 10px;font-size:20px;font-weight:normal;text-shadow:2px 2px 0 #3f3f3f}.rmin h2 small{font-size:13px;color:#ccc}
+.rmgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px 8px;overflow:auto;padding:2px;min-height:0}.rmgrid .full,.rmgrid .rmpair,.rmgrid .rmhelp,.rmgrid .rmnote{grid-column:1/-1}
+.rmb{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;min-height:40px;box-sizing:border-box;background:#6f6f6f;border:2px solid;border-color:#aaa #333 #333 #aaa;outline:2px solid #000;outline-offset:-1px;color:#fff;font:15px system-ui,'Malgun Gothic',sans-serif;padding:6px 10px;cursor:pointer;text-shadow:2px 2px 0 #3f3f3f;text-align:center;margin:0}
+button.rmb:hover,.rmpair button:hover{background:#7f86c0}.rmb.on{box-shadow:inset 0 -3px 0 #3d9e3d}.rmb.dis,.rmb.dis button{color:#a0a0a0;cursor:default}button.rmb.dis:hover,.rmb.dis button:hover{background:#6f6f6f}
+.rmr{padding:0;overflow:hidden;background:#3c3c3c}.rmr input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer;z-index:2}.rmr span{position:relative;pointer-events:none}.rmfill{position:absolute;left:0;top:0;bottom:0;background:#6f6f6f;border-right:4px solid #c8c8c8}
+.rmt{justify-content:space-between;cursor:text}.rmt input{flex:1;min-width:0;background:#000;border:2px solid #a0a0a0;color:#fff;font-size:15px;padding:4px 6px}.rmt input:focus{border-color:#fff;outline:none}
+.rmpair{padding:0;justify-content:space-between;cursor:default}.rmpair button{background:#5a5a5a;border:0;border-right:2px solid #333;color:#fff;font-size:15px;width:56px;align-self:stretch;cursor:pointer}.rmpair button:last-child{border:0;border-left:2px solid #333}
+.rmhelp{font-size:14px;line-height:1.6;color:#ddd;background:rgba(0,0,0,.35);padding:10px}.rmnote{font-size:12px;color:#bbb;text-align:center;padding:4px}.rmdone{margin-top:10px;width:min(300px,100%);align-self:center}
+@media (max-width:560px){.rmgrid{grid-template-columns:1fr}}
 .rbook{width:min(420px,92vw);background:#f6efd8;color:#222;padding:18px 22px;font-size:14px;line-height:1.6;min-height:340px;display:flex;flex-direction:column;border-radius:4px;box-shadow:0 0 0 3px #6b4f2a}.rbook .rbp{flex:1;white-space:pre-wrap}.rbook .rbn{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
 .rform{display:flex;flex-direction:column;gap:8px;min-width:280px}.rform label{display:flex;justify-content:space-between;align-items:center;gap:10px}.rform input[type=text]{flex:1;padding:6px;font-size:15px}
 #rbTouch{position:absolute;inset:0;display:none;z-index:10}body.rbmob #rbTouch{display:block}body.rbguiopen #rbTouch{display:none}
@@ -214,5 +299,5 @@ const RUI_HTML = `<canvas id="rcv"></canvas>
 <form id="rbChatF" class="hide" autocomplete="off"><input id="rbChatIn" maxlength="120" placeholder="메시지 입력" enterkeyhint="send"><button class="rbtn">전송</button><button type="button" class="rbtn" id="rbChatX">✕</button></form>
 <div id="rbHeld"></div><div id="rbTab" class="hide"></div>
 <div id="rbBottom"><canvas id="rbBars"></canvas><div id="rbXp"><i></i><span id="rbLvl"></span></div><div id="rbHotW"><div id="rbOff"></div><div id="rbHot"></div></div></div></div>
-<div id="rbTouch"><div id="rbJoy"><div id="rbKnob"></div></div><div class="rtb" id="rtJump">⤒</div><div class="rtb" id="rtSneak">⇩</div><div class="rtb" id="rtAtk">⚔</div><div class="rtb" id="rtUse">✋</div><div class="rtb" id="rtInv">…</div><div class="rtb" id="rtDrop">⇣</div><div class="rtb" id="rtPause">☰</div><div class="rtb" id="rtMenu">▤</div><div class="rtb" id="rtChat">💬</div><div class="rtb" id="rtView">👁</div><div class="rtb" id="rtTab">👥</div><div class="rtb" id="rtLand">⛶</div></div><div id="rbRot">📱 가로 화면 권장 · 탭해서 가로 전체화면</div>
+<div id="rbTouch"><div id="rbJoy"><div id="rbKnob"></div></div><div class="rtb" id="rtJump">⤒</div><div class="rtb" id="rtSneak">⇩</div><div class="rtb" id="rtAtk">⚔</div><div class="rtb" id="rtUse">✋</div><div class="rtb" id="rtInv">…</div><div class="rtb" id="rtDrop">⇣</div><div class="rtb" id="rtPause">☰</div><div class="rtb" id="rtChat">💬</div><div class="rtb" id="rtView">👁</div><div class="rtb" id="rtTab">👥</div><div class="rtb" id="rtLand">⛶</div></div><div id="rbRot">📱 가로 화면 권장 · 탭해서 가로 전체화면</div>
 <div id="rbGui"></div><div id="rbCursor"></div><div id="rbTip"></div><div id="rbPause" class="hide"></div>`;

@@ -2,10 +2,10 @@
 
 이 저장소는 마인크래프트 맵 두 개를 웹으로 옮긴 사이트다. 빌드 도구 없이 정적 파일만으로 돌아가고, GitHub Pages에 그대로 올린다.
 
-- **4중인격 능력 PvP (apvp):** 사용자가 만든 Java 1.21.4 서버 맵이다.
+- **4중인격 PvP (apvp):** 사용자가 만든 Java 1.21.4 서버 맵이다.
 - **랜덤블록 서바이벌 V2 P2 + V2.1 (rbs, 베타):** LemonyMEF의 Bedrock 맵이다.
 
-사이트 첫 화면은 "가상 데스크톱"이다. 기본 주소로 열면 게임 창 없이 바탕화면만 뜬다(아이콘으로 연다).
+사이트 첫 화면은 "가상 데스크톱"이다(페이지 제목: 팬캣실리의 프로젝트). 기본 주소로 열면 게임 창 없이 바탕화면만 뜬다(아이콘으로 연다).
 
 ## 사용자 규칙 (항상 지킬 것)
 - **답변과 UI 문구:** 답변은 **한국어**로 한다. UI 문구도 한국어이고 마인크래프트 톤을 따른다.
@@ -23,15 +23,16 @@ index.html            페이지 뼈대(HTML만) + <script src> 목록 (이 순�
 ability_pvp/, randomblock/, ability_pvp_dev/ (+ 각 nodesktop/)  바로 들어가기 페이지: 루트 index.html을 받아 <base href> + SITE_OPEN(데스크톱) 또는 SITE_APP(nodesktop)을 넣고 그린다. tools/mkentry.py로 만든다 (모듈 추가 때 손볼 일 없음)
 css/site.css          모든 스타일 (4중인격 + 데스크톱; 랜덤블록 CSS는 31_rbs_ui.js 안의 RUI_CSS 문자열)
 js/data/              생성된 데이터 (손으로 고치지 말고 tools/ 스크립트로 다시 생성)
-  apvp_assets.js      4중인격 맵 복셀 + 사운드 (mkassets.py)
+  apvp_assets.js      4중인격 맵 복셀 + 사운드 이름→파일 경로 SOUNDS (mkassets.py → split_sounds.py)
   apvp_extra_snd.js   원본 패키지 이후에 추가한 4중인격 효과음 → SOUNDS (mkextrasnd.py, 원본 tools/sounds/*)
   rbs_data.js         랜덤블록 월드: RB_KEYS, RB_DIM, RB_WORLD(16비트 RLE), RB_SIGNS, RB_BE, RB_ARENA, RB_MINI, RB_FURN, RB_MARK (rbsconv.py)
-  rbs_assets.js       랜덤블록 원작 팩 효과음 RB_SFX, 아이콘 RB_IMG (rbsassets.py)
+  rbs_assets.js       랜덤블록 원작 팩 효과음 RB_SFX(파일 경로), 아이콘 RB_IMG(base64 PNG) (rbsassets.py → split_sounds.py)
   rbs_icon.js         바탕화면 아이콘 RB_ICON (SVG)
   jobs_builtin.js     개발 도구로 만든 내장 직업 BUILTIN_JOBS (mkmodjobs.py)
 js/game/              게임 코드. 파일 이름 순서로 로드하는 일반 <script>들 (전역 공유)
 rbs/music/            랜덤블록 BGM mp3 (선택)
-tools/                mkentry.py, bump_version.py, hooks/pre-commit, build_single.py, rbsconv.py, rbsassets.py, mkmodjobs.py, mkassets.py, modjobs/*.txt
+sounds/               효과음 파일 (apvp/, rbs/, jobs/<직업>/). 예전에 js/data 안에 base64로 있던 것 (tools/split_sounds.py)
+tools/                [로컬 전용 · .gitignore로 저장소에 안 올림] mkentry.py, split_sounds.py, bump_version.py, hooks/pre-commit, build_single.py, rbsconv.py, rbsassets.py, mkmodjobs.py, mkassets.py, modjobs/*.txt
 ```
 모듈을 새로 추가하면 **index.html에 `<script src>`도 추가**해야 한다. 순서는 파일 이름 순이다.
 
@@ -62,15 +63,17 @@ tools/                mkentry.py, bump_version.py, hooks/pre-commit, build_singl
   - 한 파일 빌드: `SELF_HTML`(자기 HTML 복사본)에 앱 플래그를 넣어 `srcdoc`으로 띄운다.
   - 분할 빌드(`window.SITE_MULTI=1`, index.html head): `index.html?app=rbs&p2p=0|1`을 `src`로 띄운다.
 - **창 ↔ 데스크톱 통신:** `postMessage {site:1, t:'fs'|'unfs'|'win'|'close'|'land'|'title'}`.
+- **자동 전체화면 (PC):** 게임 화면을 클릭하면 **브라우저만** 전체화면이 되고 게임 창 크기는 그대로다(`{t:'fs', auto:1}` → `DESK.onMsg`가 창 모드는 안 바꿈). 켜고 끄기는 localStorage `site_autofs` 하나(`SITE.autoFs()`)를 데스크톱 설정·4중인격 설정·랜덤블록 설정이 같이 쓴다. 제목줄 ⛶ 버튼(꽉 찬 화면)은 따로다.
 - **모바일:** 게임 창은 항상 전체 화면이고, 가로 모드 버튼(`land`)이 있다.
 - **바로 들어가기:** `사이트주소/ability_pvp`, `사이트주소/randomblock` → 가상 데스크톱 위에 그 게임 창만 연다(`SITE_OPEN`). 뒤에 `/nodesktop`을 붙이면 바탕화면 없이 단독 실행한다(`SITE_APP`). 단독 실행(창 밖, `p2p=` 없음)이면 `SITE_ASK_P2P`(99_boot.js)가 같은 동의 화면을 먼저 띄운다.
 - **사이트 버전·새 버전 알림:** 커밋할 때마다 pre-commit 훅(`tools/hooks/pre-commit`, `git config core.hooksPath tools/hooks`)이 `tools/bump_version.py`로 버전(`YYYY.MM.DD-N`)을 올린다. 바뀌는 파일은 `version.json`, `js/data/version.js`(`SITE_VER`), index.html의 css·js `?v=`(Pages 10분 캐시 회피)이다. 열려 있는 최상위 페이지는 `SITE.watchVer()`가 3분마다 `version.json`을 확인하고, 바뀌면 "새 버전이 나왔어요 · 새로고침" 알림을 띄운다. 버전명은 4중인격 메뉴 부제와 랜덤블록 오른쪽 위에 표시된다. GitHub 웹에서 직접 커밋하면 버전이 안 올라가니 주의한다.
 - **P2P 동의:** 게임 아이콘을 누르면 "P2P 멀티플레이 허용" 화면이 뜬다. 결정은 localStorage `site_p2p`에 저장되고 게임 안 설정에서 바꿀 수 있다.
-- **개발 도구 창:** 4중인격의 "🛠 개발 도구 창 열기"(`SITE.openDev`)는 데스크톱 안이면 `{t:'dev'}`를 보내서 숨은 앱 `apvp_dev`(아이콘 없음, 오프라인 전용이라 P2P 질문 없음) 창을 열고 게임 창과 좌우로 나란히 놓는다(`DESK.tile`, 모바일은 앞으로 가져오기만). 단독 실행이면 새 탭으로 `사이트주소/ability_pvp_dev/nodesktop`을 연다. 분할 빌드의 개발 도구 창은 `index.html?app=apvp&dev=1`이고, 01_core.js가 `dev=1`을 `APVP_DEV`로 바꾼다.
+- **개발 도구 창:** 4중인격의 "🛠 개발 도구 창 열기"(`SITE.openDev`)는 데스크톱 안이면 `{t:'dev'}`를 보내서 숨은 앱 `apvp_dev`(아이콘 없음, 오프라인 전용이라 P2P 질문 없음) 창을 보통 앱처럼 새 창으로 연다(게임 창 옆으로 조금 비켜서, 게임 창은 그대로; 예전 좌우 2분할 `DESK.tile`은 없앰). 단독 실행이면 새 탭으로 `사이트주소/ability_pvp_dev/nodesktop`을 연다. 분할 빌드의 개발 도구 창은 `index.html?app=apvp&dev=1`이고, 01_core.js가 `dev=1`을 `APVP_DEV`로 바꾼다.
 - **개발 도구 다운로드:** (사이트 파일 없이 디스크에서 연 한 파일 빌드에서만 `devDownload` 대체) 분할 빌드에서는 `devToolHTMLMulti()`가 index.html과 css, js를 fetch해서 한 파일로 인라인한다. 한 파일 빌드에서는 `SELF_HTML`에 `APVP_DEV`를 넣는다.
 
-## 4중인격 능력 PvP (G / UI)
+## 4중인격 PvP (G / UI)
 - **기본 진행:** 팀전 또는 개인전, 부활 10회. 직업 선택 → 경기, 연습 모드(봇)도 있다.
+- **연습 봇 난이도:** 메뉴의 "봇 난이도"(`UI.botLv`, 저장 `apvp`): 2 어려움 = 원래 봇, 1 보통 / 0 쉬움은 `BOT_LV`(08_bot.js)대로 판단 주기·조준·공격·스킬 사용이 느리다.
 - **직업:** `JOB_ORDER`에 있다(러셔, 폴리셔, 스파이더, 360, 얼빙, 랜더마이져, 수노, 그랩, 슬라임, 비글, 소환사, 세룡이, Ai, 창찬, dude).
   - 내장 미완성 직업: 젬웬티, 윤톰맨(jobs_builtin).
   - `DEV_JOBS`는 "개발중" 구분선 아래에 표시된다.
@@ -107,19 +110,23 @@ tools/                mkentry.py, bump_version.py, hooks/pre-commit, build_singl
   - 상태: 호스트 `miniHost` + 모든 클라이언트의 `miniTick`/`onMini`. `gs.mini`의 ph는 idle → cage → gen → count → fight → end.
   - 팔레트는 `RB_MINI`이다.
 - **UI:**
-  - 로비 핫바 메뉴 아이템은 `RG.KIT`이다. 칸에 잠겨 있고 우클릭(`RUI.menuAct`)으로 쓴다. 메뉴는 PC·모바일 같은 목록 UI다.
+  - **메뉴는 하나뿐이다:** Esc · M · 모바일 ☰ → `RUI.pause(true, 페이지)`. 4중인격 ESC 메뉴처럼 마크식 돌 버튼(`menuDraw`, `MPAGE`): 게임 메뉴(Ready·놀이터·관전·로비·튜토리얼·시점) → 설정(볼륨·효과음·P2P·자동 전체화면·리소스팩·닉네임·스킨·방 코드) → 화면·조작 / 조작법, 그리고 호스트 설정(게임시간·인원·봇 난이도·옵션·블록 커스텀·초기화). Esc는 한 단계 뒤로(`menuBack`).
+  - 예전 메뉴 상자(0,31,6)·로비 핫바 메뉴 아이템(`RG.KIT`은 빈 배열, `kitTick`은 남은 메뉴 아이템만 지운다)·설정 상자 목록은 없앴다. 메뉴에서 책·팔레트·봇 선택 화면으로 갈 때는 `menuTo()`로 포인터 잠금 없이 넘어간다(잠갔다 바로 푸는 게 전체화면에서 커서가 안 보이던 원인).
   - 인벤토리와 제작대에는 페이지식 제작법 책(`rbHTML`/`rbCraft`)과 CSS 3D 스킨 인형(`dollHTML`)이 있다.
   - 호스트 블록 커스텀은 `palHTML`이다.
 - **놀이터 장치:**
   - 던전 레버 회로: 레버 → 램프 → 철창. 레드스톤 횃불도 반대로 바뀐다.
   - 자폭 열쇠 화로: `KEYCHAIN`이 원작 단계를 재생한다(3초 단계 생략 버그 유지).
   - 벽 폭파, 웅크리면 출구로 복귀, 회복 구역, 토템 파티클.
+- **표지판:** 벽 표지판은 키의 방향대로. 서 있는 표지판은 변환 때 회전값이 깨져 있어서(`rbsconv.py`의 축 계산 버그) 런타임 `RR.signFix()`가 방향을 정한다(바로 옆 벽 반대쪽, 아니면 가장 트인 쪽). 판 블록도 돌리고 글자는 판 양면에 그린다.
+- **대나무 발판:** 위에 서고, 웅크리면 뚫고 내려가고, 안에서 점프하면 올라간다(`RWorld.boxes`의 `scafEnt`, `B.scaf`).
 - **블록 상호작용:**
   - 문·다락문·울타리 문·레버·버튼·감압판이 동작한다(`RG.useBlock`, `plateTick`, `power`). 토글 대상 키는 rbsconv.py `flip()`이 미리 등록한다.
   - 모래·자갈·모루는 떨어지는 블록 엔티티(`RG.falls`)다.
   - 금 간 표시(`destroy_stage_0..9`)는 다른 사람의 진행도까지 presence `dg`로 보여 준다.
 - **봇 (26_rbs_bot.js, 호스트가 시뮬레이션):**
   - 싱글 플레이에서 Ready를 누를 때 봇 수를 고르고, 멀티에서는 빠진다.
+  - 난이도(호스트 설정 `opts.botLv`, 기본 1): 2 어려움 = 원래 봇, 1 보통 / 0 쉬움은 2틱 / 4틱마다 판단하고(사이에는 마지막 입력 유지, 캐던 블록은 계속 캠) 회전·공격·반격이 느리다(`RBOT.LV`).
   - 시작 아이템이 없다. 시작할 때 플레이어처럼 주변 블록이 부서진다(`RG.breakAround`). 드롭 아이템을 줍는다(`itemTick`).
   - 경기장(`RBOT.brain`): 필요한 블록을 점수로 골라(`desire`/`scan`) 맞는 도구로 캔다 → 상자를 턴다 → 제작대에서 만든다(`WISH` 순서: 나무→돌→철→다이아 도구·무기·갑옷, 3x3 제작법은 근처 제작대가 필요하고 없으면 만들어 놓는다) → 원석은 화로에 굽는다(`smelt`) → 갑옷을 입는다(`equip`). 가방이 차면 쓸모없는 것을 버린다(`tidy`).
   - 싸움: 맞으면 반격, 무기가 있을 때만 가까운 적과 싸운다, 장비가 갖춰지거나(`ready`/`geared`) 남은 시간 70초 이하·데스매치면 벽을 파고 사냥한다. 체력이 낮으면 치유 물약, 없으면 잠깐 도망. 시야(`RBOT.los`)가 막히면 공격하지 않는다.
@@ -136,8 +143,9 @@ python3 tools/rbsconv.py <V2P2 맵 폴더(markers.json, voxels/)> js/data/rbs_da
 python3 tools/rbsassets.py <원작 리소스팩 폴더> <sfx 폴더> js/data/rbs_assets.js
 python3 tools/mkmodjobs.py          # tools/modjobs/*.txt -> js/data/jobs_builtin.js (ffmpeg 필요)
 python3 tools/mkextrasnd.py         # tools/sounds/*.wav|mp3 -> js/data/apvp_extra_snd.js (ffmpeg 필요, G.sound('<파일 이름>'))
+python3 tools/split_sounds.py       # 위 스크립트들이 넣은 base64 효과음 -> sounds/*.mp3 (생성 스크립트 다음에 항상 실행)
 python3 tools/mkentry.py            # 바로 들어가기 페이지 6개
-python3 tools/build_single.py       # 저장소 -> dist/index.html (한 파일 배포용)
+python3 tools/build_single.py       # 저장소 -> dist/index.html (한 파일 배포용, sounds/는 다시 base64로 넣음)
 ```
 사용자에게 원본 zip(맵 패키지, 리소스팩)을 받아야 다시 만들 수 있다.
 
@@ -157,4 +165,4 @@ python3 tools/build_single.py       # 저장소 -> dist/index.html (한 파일 �
 - localStorage 키:
   - `apvp`, `apvp_keys`: 4중인격 설정·키 설정.
   - `rbs_*`, `rbs_host2`: 랜덤블록 설정, `rbs_host2`는 호스트 옵션·팔레트.
-  - `site_p2p`: P2P 동의.
+  - `site_p2p`: P2P 동의. `site_autofs`: 자동 전체화면('0'이면 꺼짐).

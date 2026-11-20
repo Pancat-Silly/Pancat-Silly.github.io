@@ -8,6 +8,9 @@ class RWorld extends World {
     out.length = 0;
     for (let y = Math.floor(y0) - 1; y <= Math.floor(y1); y++) for (let z = Math.floor(z0); z <= Math.floor(z1); z++) for (let x = Math.floor(x0); x <= Math.floor(x1); x++) {
       const id = this.get(x, y, z); if (!id) continue; const d = BL[id]; if (!d.solid) continue;
+      // scaffolding (MC): a player stands on its top unless sneaking (then drops through to climb down); inside it there is no
+      // collision (climbable). Everything else (items, arrows, a world query without a mover) treats it as a full block.
+      if (d.scaf && this.scafEnt) { const e = this.scafEnt; if (!e.sneaking && e.y >= y + 1 - .02) out.push([x, y + .875, z, x + 1, y + 1, z + 1]); continue; }
       if (d.full) out.push([x, y, z, x + 1, y + 1, z + 1]);
       else { const hh = d.colH || 1; for (const b of this.shape(x, y, z, d)) out.push([x + b[0], y + b[1], z + b[2], x + b[3], y + (b[4] >= 1 ? hh : b[4]), z + b[5]]); }
     }

@@ -205,3 +205,8 @@ function aabbBlocks(world, e, pred) {
   return false;
 }
 function rayAABB(o, d, e, maxT, grow = 0) { const hw = e.w / 2 + grow; const h = rayBox(o, d, e.x - hw, e.y - grow, e.z - hw, e.x + hw, e.y + e.h + grow, e.z + hw); return h && h.t <= maxT ? h.t : null; }
+// sound data: a file path next to index.html (sounds/..., what GitHub Pages serves) or base64 (one-file build, old data)
+function sndBytes(v) {
+  if (/\.(mp3|ogg|wav)$/i.test(v)) return fetch(new URL(v, document.baseURI)).then(r => { if (!r.ok) throw new Error(r.status + ' ' + v); return r.arrayBuffer(); });
+  const bin = atob(v); const u = new Uint8Array(bin.length); for (let i = 0; i < u.length; i++) u[i] = bin.charCodeAt(i); return Promise.resolve(u.buffer);
+}

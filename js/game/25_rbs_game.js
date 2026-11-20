@@ -12,7 +12,7 @@ const RV = { // markers.json points (minecraft coords)
 const RG = {
   tick: 0, me: null, nid: null, remotes: new Map(), bots: [], items: new Map(), projs: [], parts: [], be: new Map(), chestType: new Map(),
   since: Date.now(), hostOff: 0, seq: 0, mods: [], rd: 0, wins: 0,
-  gs: { ph: 'lobby', t: 0, seed: 1, rnd: 0, end: 0, sp: {}, win: null, dmp: [], big: 0, mini: { ph: 'idle', t: 0 }, opts: { time: 11, kit: 1, brk: 1, build: 0, lava: 1, pvp: 1, shield: 0, typo: 0, bots: 0 } },
+  gs: { ph: 'lobby', t: 0, seed: 1, rnd: 0, end: 0, sp: {}, win: null, dmp: [], big: 0, mini: { ph: 'idle', t: 0 }, opts: { time: 11, kit: 1, brk: 1, build: 0, lava: 1, pvp: 1, shield: 0, typo: 0, bots: 0, botLv: 1 } },
   lp: { ph: 'lobby', key: '' }, // local copy of the phase being played + fired steps
   init() {
     RW.init(); this.nid = uid(8);
@@ -219,7 +219,7 @@ falls: [], // falling block entities (sand, gravel, anvil) — animated on every
   palDefault() { const m = new Map(); for (const e of RB_ARENA) { const k = e.fixed + (e.loot ? '#' + e.r : ''); m.set(k, (m.get(k) || 0) + 1); } return [...m].map(([k, w]) => { const [b, r] = k.split('#'); return r ? [b, w, +r] : [b, w]; }); },
   palInfo() { const P = this.gs.opts.pal; if (!P || !P.length) return '§7기본 (원작 33칸 · 각 1/33)'; return '§a커스텀 ' + P.filter(e => +e[1] > 0).length + '종 · ' + (this.gs.opts.palN ? '개수 지정' : '확률'); },
   // ---------- hotbar menu items in the lobby (locked in their slots like Bedrock's lock_in_slot; the menu chest still works too) ----------
-  KIT: ['menu_ready', 'menu_playground', 'menu_spec', null, 'written_book', null, 'menu_host', 'menu_settings', 'menu_more'],
+  KIT: [], // the lobby hotbar menu items are gone (everything is in the Esc menu); kitTick just strips leftovers
   kitTick() {
     const me = this.me; const a = this.area(me); const want = me.alive && !me.spectator && me.mode === 'adventure' && (a === 'lobby' || a === 'playground' || a === 'winner');
     for (let i = 0; i < me.inv.length; i++) { const s = me.inv[i]; if (s && RIT[s.id] && RIT[s.id].menu && (!want || this.KIT[i] !== s.id)) me.inv[i] = null; }

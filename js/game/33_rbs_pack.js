@@ -16,8 +16,8 @@ const RPACK = {
   MATS: { stone: 'stone', wood: 'wood', gravel: 'gravel', grass: 'grass', sand: 'sand', glass: 'glass', metal: 'metal', cloth: 'wool', nether: 'netherrack', ladder: 'ladder' },
   label() { return this.busy ? (this.msg || '받는 중…') : !this.has ? '받지 않음' : this.on ? '§a켜짐 (1.21.4 바닐라)' : '§7꺼짐'; },
   async boot() { try { const d = await IDB.get('rbs_pack'); if (d && d.tex) { this.data = d; this.has = true; this.on = localStorage.getItem('rbs_pack_on') !== '0'; if (this.on) await this.apply(); } } catch (e) { } },
-  click(b) { if (this.busy) return; if (!this.has || b === 2) { this.download(); return; } this.on = !this.on; try { localStorage.setItem('rbs_pack_on', this.on ? '1' : '0'); } catch (e) { } if (this.on) this.apply(); else this.off(); RUI.render(); },
-  status(m) { this.msg = m; if (RUI.gui && RUI.gui.type === 'settings') RUI.render(); },
+  click(b) { if (this.busy) return; if (!this.has || b === 2) { this.download(); return; } this.on = !this.on; try { localStorage.setItem('rbs_pack_on', this.on ? '1' : '0'); } catch (e) { } if (this.on) this.apply(); else this.off(); RUI.refresh(); },
+  status(m) { this.msg = m; if (RUI.paused && RUI.pg === 'set') RUI.menuDraw(); },
   path(name) { if (this.REN[name]) { const r = this.REN[name]; return 'textures/' + (r.includes('/') ? r : 'block/' + r) + '.png'; } if (name.startsWith('item/')) return 'textures/' + name + '.png'; return 'textures/block/' + name + '.png'; },
   async download() {
     this.busy = true; RAU.init(); this.status('연결하는 중…');

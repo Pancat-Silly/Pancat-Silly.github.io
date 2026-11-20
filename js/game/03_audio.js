@@ -9,13 +9,7 @@ const AU = {
     this.master = this.ctx.createGain(); this.master.gain.value = this.vol; this.master.connect(this.ctx.destination);
     const nb = this.ctx.createBuffer(1, this.ctx.sampleRate, this.ctx.sampleRate); const d = nb.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; this.noise = nb;
     setTimeout(() => { PACK.decode(); MOD.decodeAll(); }, 0);
-    for (const k in SOUNDS) {
-      try {
-        const bin = atob(SOUNDS[k]); const u = new Uint8Array(bin.length); for (let i = 0; i < u.length; i++) u[i] = bin.charCodeAt(i);
-        const p = this.ctx.decodeAudioData(u.buffer, b => { this.buf[k] = b; }, () => { });
-        if (p && p.catch) p.catch(() => { });
-      } catch (e) { }
-    }
+    for (const k in SOUNDS) sndBytes(SOUNDS[k]).then(a => this.ctx.decodeAudioData(a)).then(b => { this.buf[k] = b; }).catch(() => { }); // sounds/apvp/*.mp3
   },
   gainFor(pos, vol = 1, range = 16) {
     if (!pos || !G.me) return vol; const e = G.camPos || G.me; const d = dist3(pos, e); return vol * clamp(1 - d / (range * Math.max(1, vol)), 0, 1);

@@ -127,19 +127,42 @@ const RR = {
     if (me.off && RIT[me.off.id] && RIT[me.off.id].shield) { let o = M4.T(M4.id(), -.62, -.45 + (me.blocking ? .2 : 0), -.85); o = M4.RY(o, me.blocking ? .9 : 1.3); this.sprite(b, M4.S(o, .7, .7, .7), RTEX.T('item/shield')); }
     g.drawBatch(b);
   },
-  // wall signs: text drawn into a small canvas texture per sign, quad just in front of the board
+  // sign texts: drawn into a small canvas texture per sign, a quad just in front of the board.
+  // Wall signs face the side stored in their key. Standing signs lost their rotation in the map conversion (every straight
+  // one came out as the same axis), so their facing is worked out here once: away from a wall right next to them, else toward
+  // the side with the most room; the board block is turned to match and the text goes on both faces of the board.
+  signFix() {
+    const D = { n: [0, -1], s: [0, 1], w: [-1, 0], e: [1, 0] }, seen = new Set(), out = [];
+    for (const s of RB_SIGNS) {
+      const [x, y, z] = s, k = x + ',' + y + ',' + z; if (seen.has(k)) continue; seen.add(k);
+      const key = RB_KEYS[RW.getM(x, y, z)] || ''; const p = key.split('|');
+      if (p[0] === 'wsign') { out.push({ s, f: p[2], stand: false }); continue; }
+      if (p[0] !== 'ssign') continue;
+      const open = f => { let d = 0; for (; d < 6; d++) { const B = BL[RW.getM(x + D[f][0] * (d + 1), y, z + D[f][1] * (d + 1))]; if (B.solid) break; } return d; };
+      const r = { n: open('n'), s: open('s'), w: open('w'), e: open('e') }; const opp = { n: 's', s: 'n', w: 'e', e: 'w' };
+      let f = Object.keys(r).find(d => r[d] === 0 && r[opp[d]] > 0); f = f ? opp[f] : Object.keys(r).sort((a, b) => r[b] - r[a])[0];
+      const want = 'ssign|' + p[1] + '|' + (f === 'e' || f === 'w' ? 'x' : 'z'), id = RBLK.K(want); if (id && want !== key) RW.setM(x, y, z, id);
+      out.push({ s, f, stand: true });
+    }
+    return out;
+  },
   drawSigns() {
-    if (!this.signTex.length) for (const s of RB_SIGNS) { const c = document.createElement('canvas'); c.width = 128; c.height = 64; const x = c.getContext('2d'); x.fillStyle = '#000'; x.textAlign = 'center'; x.textBaseline = 'middle';
-      const lines = s[4].split('\n').slice(0, 4); while (lines.length < 4) lines.push(''); lines.forEach((l, i) => { const t = l.replace(/§./g, ''); x.font = 'bold ' + (t.length > 12 ? 11 : 13) + 'px sans-serif'; x.fillText(t, 64, 9 + i * 15); });
-      this.signTex.push({ s, tex: this.gfx.makeTex(c) }); }
-    const g = this.gfx, gl = g.gl; const b = this.bs;
-    for (const { s, tex } of this.signTex) { const [x, y, z, f] = s; const P = RW.P(x, y, z); if (Math.hypot(P.x - this.cam.eye.x, P.y - this.cam.eye.y, P.z - this.cam.eye.z) > 24) continue;
-      b.reset(); const y0 = P.y + .3, y1 = P.y + .85; const o = 2 / 16 + .004; let q;
-      if (f === 'n') q = [[P.x + 1, y0, P.z + 1 - o], [P.x, y0, P.z + 1 - o], [P.x, y1, P.z + 1 - o], [P.x + 1, y1, P.z + 1 - o]];
-      else if (f === 's') q = [[P.x, y0, P.z + o], [P.x + 1, y0, P.z + o], [P.x + 1, y1, P.z + o], [P.x, y1, P.z + o]];
-      else if (f === 'w') q = [[P.x + 1 - o, y0, P.z], [P.x + 1 - o, y0, P.z + 1], [P.x + 1 - o, y1, P.z + 1], [P.x + 1 - o, y1, P.z]];
-      else q = [[P.x + o, y0, P.z + 1], [P.x + o, y0, P.z], [P.x + o, y1, P.z], [P.x + o, y1, P.z + 1]];
-      b.quadUV(q[0], q[1], q[2], q[3], 0, 0, 1, 1, [1, 1, 1]); g.bind(tex); g.drawBatch(b); }
+    if (!this.signTex.length) { for (const o of this.signs || (this.signs = this.signFix())) { const c = document.createElement('canvas'); c.width = 128; c.height = 64; const x = c.getContext('2d'); x.fillStyle = '#000'; x.textAlign = 'center'; x.textBaseline = 'middle';
+      const lines = o.s[4].split('\n').slice(0, 4); while (lines.length < 4) lines.push(''); lines.forEach((l, i) => { const t = l.replace(/§./g, ''); let fs = 13; do { x.font = 'bold ' + fs + 'px sans-serif'; } while (fs-- > 7 && x.measureText(t).width > 122); x.fillText(t, 64, 9 + i * 15); }); // long lines shrink to fit the board
+      if (o.s[4].trim()) this.signTex.push(Object.assign(o, { tex: this.gfx.makeTex(c) })); } if (!this.signTex.length) this.signTex.push({ none: true }); }
+    const g = this.gfx; const b = this.bs;
+    // quad on the face of a board that faces f: wall board = back 2/16 of the cell (y .3-.85), standing board = middle (y .5-1)
+    const quad = (P, f, d, y0, y1) => { const o = d + .004;
+      if (f === 'n') return [[P.x + 1, y0, P.z + 1 - o], [P.x, y0, P.z + 1 - o], [P.x, y1, P.z + 1 - o], [P.x + 1, y1, P.z + 1 - o]];
+      if (f === 's') return [[P.x, y0, P.z + o], [P.x + 1, y0, P.z + o], [P.x + 1, y1, P.z + o], [P.x, y1, P.z + o]];
+      if (f === 'w') return [[P.x + 1 - o, y0, P.z], [P.x + 1 - o, y0, P.z + 1], [P.x + 1 - o, y1, P.z + 1], [P.x + 1 - o, y1, P.z]];
+      return [[P.x + o, y0, P.z + 1], [P.x + o, y0, P.z], [P.x + o, y1, P.z], [P.x + o, y1, P.z + 1]]; };
+    const opp = { n: 's', s: 'n', w: 'e', e: 'w' };
+    for (const o of this.signTex) { if (o.none) continue; const [x, y, z] = o.s; const P = RW.P(x, y, z); if (Math.hypot(P.x - this.cam.eye.x, P.y - this.cam.eye.y, P.z - this.cam.eye.z) > 24) continue;
+      b.reset();
+      if (!o.stand) { const q = quad(P, o.f, 2 / 16, P.y + .3, P.y + .85); b.quadUV(q[0], q[1], q[2], q[3], 0, 0, 1, 1, [1, 1, 1]); }
+      else for (const f of [o.f, opp[o.f]]) { const q = quad(P, f, 9 / 16, P.y + .52, P.y + .98); b.quadUV(q[0], q[1], q[2], q[3], 0, 0, 1, 1, [1, 1, 1]); } // board 7/16..9/16: text 1/16 off its faces
+      g.bind(o.tex); g.drawBatch(b); }
     g.bind();
   },
   // screen projection for name tags / floating texts

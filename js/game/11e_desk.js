@@ -11,6 +11,10 @@ const SITE = {
   // inside a game frame: the answer given on the consent screen (URL), changed later by the in-game toggle
   p2pNow() { const v = window.SITE_P2PQ !== undefined ? String(window.SITE_P2PQ) : this.q.get('p2p'); if (this._p2p !== undefined) return this._p2p; if (v === '0' || v === '1') return v === '1'; const s = this.getP2P(); return s ? s.allow !== false : true; },
   setP2PNow(v) { this._p2p = !!v; this.setP2P(!!v); },
+  // 자동 전체화면 (PC): clicking into a game makes the BROWSER fullscreen (+ keyboard lock against Ctrl+W); the game window keeps
+  // its own size. One site-wide switch (localStorage site_autofs, default on) shared by the desktop settings and both games.
+  autoFs() { try { return localStorage.getItem('site_autofs') !== '0'; } catch (e) { return true; } },
+  setAutoFs(v) { try { localStorage.setItem('site_autofs', v ? '1' : '0'); } catch (e) { } },
   toParent(m) { if (this.inFrame) try { parent.postMessage(Object.assign({ site: 1 }, m), '*'); } catch (e) { } },
   // 가로 전체화면 끄기 (phones): leave fullscreen right away, inside the tap (waiting for the rotation first left some phones
   // turned portrait but still fullscreen). Ask for portrait at the same moment, retry the exit once, then release the lock.
@@ -89,21 +93,15 @@ const DESK = {
   },
   onMsg(e) {
     const m = e.data; if (!m || !m.site) return; const W = Object.values(this.wins).find(w => w.frame && w.frame.contentWindow === e.source); if (!W) return;
-    if (m.t === 'fs') { this.setMode(W.id, 'full'); if (!document.fullscreenElement) this.goFs(m.lock); else if (m.lock) this.kLock(); }
+    if (m.t === 'fs') {
+      if (m.auto && !this.mobile) { if (!SITE.autoFs()) return; if (!document.fullscreenElement) this.goFs(m.lock); else if (m.lock) this.kLock(); return; } // browser only, window untouched
+      this.setMode(W.id, 'full'); if (!document.fullscreenElement) this.goFs(m.lock); else if (m.lock) this.kLock(); }
     else if (m.t === 'unfs') { if (W.mode === 'full') this.setMode(W.id, this.mobile ? 'max' : 'normal'); if (document.fullscreenElement) try { document.exitFullscreen(); } catch (x) { } }
     else if (m.t === 'win') { this.setMode(W.id, this.mobile ? 'max' : 'normal'); }
     else if (m.t === 'land') { if (m.on) this.setMode(W.id, 'full'); this.land(!!m.on); }
-    else if (m.t === 'dev') { this.open('apvp_dev'); this.tile(W.id, 'apvp_dev'); }
+    else if (m.t === 'dev') { const D = this.wins.apvp_dev, fresh = !D || D.closed; if (fresh && !this.mobile && !this.saved.apvp_dev) { const r = this.defRect(this.APPS.find(a => a.id === 'apvp_dev')); const w = this.mkWin('apvp_dev'); Object.assign(w, r, { mode: 'normal', x: (W.mode === 'normal' ? W.x : r.x) + 48, y: (W.mode === 'normal' ? W.y : r.y) + 36 }); } this.open('apvp_dev'); } // a new window like any app (no side-by-side tiling)
     else if (m.t === 'title') { W.el.querySelector('.dktt').textContent = m.title; }
     else if (m.t === 'close') { this.close(W.id); if (document.fullscreenElement && !Object.values(this.wins).some(w => !w.closed && w.mode === 'full')) try { document.exitFullscreen(); } catch (x) { } }
-  },
-  // two windows side by side (PC); on phones every game window is full screen, so the second one just comes to the front
-  tile(a, b) {
-    const A = this.wins[a], B = this.wins[b]; if (!A || !B) return; if (this.mobile) { this.focus(b); return; }
-    if (document.fullscreenElement && A.mode === 'full') try { document.exitFullscreen(); } catch (e) { }
-    const SW = innerWidth, SH = innerHeight - this.TB, w = Math.floor(SW / 2), h = SH - this.TITLE;
-    Object.assign(A, { mode: 'normal', min: false, x: 0, y: 0, w, h }); Object.assign(B, { mode: 'normal', min: false, x: w, y: 0, w: SW - w, h });
-    this.focus(b); this.sync(); this.save();
   },
   land(on) {
     const lock = () => { try { const q = screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape'); if (q && q.catch) q.catch(() => { }); } catch (e) { } };
@@ -210,21 +208,24 @@ const DESK = {
   setWall(d) { this.wall = d || null; const w = $('dkWall'); if (w) w.style.backgroundImage = 'url(' + (this.wall || WALLPAPER) + ')'; },
 };
 // ---------- apps ----------
-DESK.addApp({ id: 'apvp', icon: '⚔️', label: '4중인격<br>능력 PvP', title: '4중인격 능력 PvP', game: true, w: 1280, h: 800, bg: 'linear-gradient(#5b8a3a,#3c6a24)' });
+DESK.addApp({ id: 'apvp', icon: '⚔️', label: '4중인격<br>PvP', title: '4중인격 PvP', game: true, w: 1280, h: 800, bg: 'linear-gradient(#5b8a3a,#3c6a24)' });
 DESK.addApp({ id: 'rbs', icon: '🧱', img: (typeof RB_ICON !== 'undefined' ? RB_ICON : ''), label: '랜덤블록<br>서바이벌 <b class="dkbeta">베타</b>', title: '랜덤블록 서바이벌 V2 파트 2 · 베타', game: true, w: 1280, h: 800, bg: 'linear-gradient(#3a7bd5,#22427a)' });
 // 개발 도구: the 4중인격 game with APVP_DEV, offline only. No icon; opened from the game's '개발 도구 창 열기' or 사이트주소/ability_pvp_dev
 DESK.addApp({ id: 'apvp_dev', app: 'apvp', dev: true, offline: true, hidden: true, icon: '🛠', title: '4중인격 개발 도구', game: true, w: 1280, h: 800 });
-DESK.addApp({ id: 'settings', icon: '⚙️', label: '설정', title: '설정', w: 460, h: 440, bg: 'linear-gradient(#6a7480,#3f4650)',
+DESK.addApp({ id: 'settings', icon: '⚙️', label: '설정', title: '설정', w: 460, h: 520, bg: 'linear-gradient(#6a7480,#3f4650)',
   build(body) { body.classList.add('dkApp'); this.onOpen(body); },
   onOpen(body) {
     const p = SITE.getP2P();
     body.innerHTML = '<h3>🌐 P2P 멀티플레이</h3>'
       + '<label><input type="checkbox" id="setP2P"' + (!p || p.allow !== false ? ' checked' : '') + '> P2P 멀티플레이 허용 <small>게임 창을 새로 열 때부터 적용돼요. 열려 있는 게임은 게임 안 설정에서 바꿔요</small></label>'
       + '<label><input type="checkbox" id="setAsk"' + (!p || !p.remember ? ' checked' : '') + '> 게임을 열 때마다 허용할지 물어보기</label>'
+      + '<h3>🖥️ 화면</h3>'
+      + '<label><input type="checkbox" id="setFs"' + (SITE.autoFs() ? ' checked' : '') + '> 자동 전체화면 <small>게임 화면을 클릭하면 브라우저를 전체화면으로 바꿔요 (게임 창 크기는 그대로 · PC)</small></label>'
       + '<h3>🖼️ 바탕화면 그림</h3><div class="row"><label class="dkbtn">사진 고르기<input type="file" id="setWallF" accept="image/*" style="display:none"></label><button class="dkbtn" id="setWallR">기본 그림으로</button></div>'
       + '<h3>🪟 창 위치</h3><div class="row"><button class="dkbtn" id="setWinR">모든 창 위치 · 크기 초기화</button></div>'
       + '<p class="dkhint">게임 아이콘을 ' + (DESK.mobile ? '탭' : '더블클릭') + '하면 창으로 열려요. 게임 창 제목줄의 ⛶ 로 꽉 찬 화면을 쓸 수 있어요.</p>';
     body.querySelector('#setP2P').onchange = e => SITE.setP2P(e.target.checked);
+    body.querySelector('#setFs').onchange = e => { SITE.setAutoFs(e.target.checked); if (!e.target.checked && document.fullscreenElement) try { document.exitFullscreen(); } catch (x) { } };
     body.querySelector('#setAsk').onchange = e => SITE.setP2P((SITE.getP2P() || {}).allow !== false, !e.target.checked);
     body.querySelector('#setWallF').onchange = e => { const f = e.target.files[0]; if (!f) return; const img = new Image(); img.onload = () => { const c = document.createElement('canvas'), k = Math.min(1, 1600 / img.width); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); DESK.setWall(c.toDataURL('image/jpeg', .6)); DESK.save(); }; img.src = URL.createObjectURL(f); };
     body.querySelector('#setWallR').onclick = () => { DESK.setWall(null); DESK.save(); };

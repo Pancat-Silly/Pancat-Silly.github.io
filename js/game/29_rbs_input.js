@@ -9,17 +9,18 @@ const RIN = {
     cv.addEventListener('contextmenu', e => e.preventDefault());
     addEventListener('mousemove', e => { if (document.pointerLockElement !== cv || RUI.gui) return; const k = .0022 * RUI.sens; const me = RG.me; me.yaw += e.movementX * k; me.pitch = clamp(me.pitch + e.movementY * k, -1.55, 1.55); });
     addEventListener('wheel', e => { if (e.ctrlKey) { e.preventDefault(); return; } if (RUI.gui || !document.pointerLockElement) return; const me = RG.me; if (me.spectator) { RUI.specNext(e.deltaY > 0 ? 1 : -1); return; } me.sel = (me.sel + (e.deltaY > 0 ? 1 : 8)) % 9; }, { passive: false });
-    document.addEventListener('pointerlockchange', () => { if (!document.pointerLockElement && !RUI.gui && !RUI.chatOpen && !RUI.mobile && RUI.started) RUI.pause(true); });
+    document.addEventListener('pointerlockchange', () => { if (document.pointerLockElement && (RUI.gui || RUI.paused || RUI.chatOpen)) { document.exitPointerLock(); return; } // a late lock must never hide the cursor over a screen
+      if (!document.pointerLockElement && !RUI.gui && !RUI.chatOpen && !RUI.mobile && RUI.started) RUI.pause(true); });
     addEventListener('blur', () => { this.keys = {}; this.lmb = this.rmb = false; });
     addEventListener('message', e => { const m = e.data; if (m && m.site && m.t === 'blur') { this.keys = {}; this.lmb = this.rmb = false; if (document.pointerLockElement) document.exitPointerLock(); } });
   },
-  lock() { const cv = $('rcv'); try { const p = cv.requestPointerLock && cv.requestPointerLock(); if (p && p.catch) p.catch(() => { }); } catch (e) { } if (RUI.autoFs && !RUI.mobile) SITE.toParent({ t: 'fs', lock: true }); },
+  lock() { const cv = $('rcv'); try { const p = cv.requestPointerLock && cv.requestPointerLock(); if (p && p.catch) p.catch(() => { }); } catch (e) { } if (!RUI.mobile && SITE.autoFs()) SITE.toParent({ t: 'fs', lock: true, auto: 1 }); }, // browser fullscreen only (the window keeps its size)
   key(e, down) {
     if (e.ctrlKey && ['Equal', 'Minus', 'Digit0', 'NumpadAdd', 'NumpadSubtract', 'KeyW', 'KeyS', 'KeyD', 'KeyF'].includes(e.code)) e.preventDefault();
     if (RUI.chatOpen || RUI.promptOpen) { if (down && e.code === 'Escape') RUI.closeChat(); return; }
     const c = e.code; if (down && (c === 'Tab' || c === 'Space' || c === 'F5' || c === 'F1' || c.startsWith('Arrow'))) e.preventDefault();
     if (RUI.gui) { if (down && (c === 'Escape' || c === 'KeyE')) { RUI.close(); e.preventDefault(); } if (down && /^Digit[1-9]$/.test(c)) RUI.hotkey(+c.slice(5) - 1); if (down && c === 'KeyQ') RUI.dropHover(e.ctrlKey); return; }
-    if (RUI.paused) { if (down && c === 'Escape') RUI.pause(false); return; }
+    if (RUI.paused) { if (down && c === 'Escape') RUI.menuBack(); return; }
     this.keys[c] = down; const me = RG.me;
     if (!down) { if (c === 'Tab') RUI.tab(false); return; }
     if (c === 'KeyW' && !e.repeat) { const n = performance.now(); if (n - this.wTap < 280) this.sprintT = true; this.wTap = n; }
@@ -31,7 +32,7 @@ const RIN = {
     if (c === 'KeyT' || c === 'Enter') { e.preventDefault(); RUI.openChat(); }
     if (c === 'Slash') { e.preventDefault(); RUI.openChat('/'); }
     if (c === 'Tab') RUI.tab(true);
-    if (c === 'KeyM') RUI.open('menu');
+    if (c === 'KeyM') RUI.pause(true);
     if (c === 'Escape') RUI.pause(true);
     if (c === 'F1') RUI.hideHud = !RUI.hideHud;
   },
@@ -128,7 +129,7 @@ const RIN = {
     btn('rtSneak', () => { T.sneak = !T.sneak; $('rtSneak').classList.toggle('lit', T.sneak); });
     btn('rtAtk', () => this.atkQ++);
     btn('rtUse', () => { this.useQ++; T.use = true; }, () => T.use = false);
-    btn('rtInv', () => RUI.open('inv')); btn('rtDrop', () => this.drop(false)); btn('rtChat', () => RUI.openChat()); btn('rtPause', () => RUI.pause(true)); btn('rtMenu', () => RUI.open('menu'));
+    btn('rtInv', () => RUI.open('inv')); btn('rtDrop', () => this.drop(false)); btn('rtChat', () => RUI.openChat()); btn('rtPause', () => RUI.pause(true));
     btn('rtView', () => { if (RG.me.spectator && RUI.follow) RUI.followThird = !RUI.followThird; else RR.third = (RR.third + 1) % 3; });
     btn('rtTab', () => RUI.tab(true), () => RUI.tab(false));
     btn('rtLand', () => RUI.toggleLand());

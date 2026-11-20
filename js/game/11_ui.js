@@ -22,12 +22,12 @@ function mcfmt(s, user) {
 const UI = {
   name: '', persona: 0, job: null, mobile: false, deathMode: 'simple', pcLock: true, assist: true, ASSIST: { grow: .4, cone: .3 }, sens: 1, bob: true, showHp: true, resScale: 1, keys: {}, menuDirty: true,
   mouse: { l: false, r: false }, touch: { f: 0, s: 0, use: false, jump: false, sneak: false, attackHold: false }, sneakToggle: false, sprintToggle: false, lastW: 0,
-  titleS: null, abS: null, chatLines: [], tagPool: [], botCount: 3,
+  titleS: null, abS: null, chatLines: [], tagPool: [], botCount: 3, botLv: 1,
   init() {
     this.kbLoad(); setTimeout(() => this.mcPause(), 0);
     this.mobile = matchMedia('(pointer: coarse)').matches || ('ontouchstart' in window && navigator.maxTouchPoints > 0);
     document.body.classList.toggle('mobile', this.mobile);
-    try { const s = JSON.parse(localStorage.getItem('apvp') || '{}'); this.name = s.name || ''; this.skinName = s.skin || ''; this.deathMode = s.death || 'simple'; this.persona = s.persona | 0; this.sens = s.sens || 1; this.pcLock = s.pcLock !== false; R.fov = clamp(+s.fov || 70, 30, 110); this.vol = s.vol === undefined ? .8 : s.vol; this.room = s.room || 'main'; } catch (e) { this.room = 'main'; this.vol = .8; }
+    try { const s = JSON.parse(localStorage.getItem('apvp') || '{}'); this.name = s.name || ''; this.skinName = s.skin || ''; this.deathMode = s.death || 'simple'; this.persona = s.persona | 0; this.sens = s.sens || 1; this.pcLock = s.pcLock !== false; R.fov = clamp(+s.fov || 70, 30, 110); this.vol = s.vol === undefined ? .8 : s.vol; this.room = s.room || 'main'; this.botLv = s.botLv === undefined ? 1 : clamp(s.botLv | 0, 0, 2); } catch (e) { this.room = 'main'; this.vol = .8; }
     if (!this.name) this.name = '플레이어' + randi(100, 999);
     $('nick').value = this.name; $('skinName').value = this.skinName || ''; $('room').value = this.room; $('sens').value = this.sens; $('pFov').value = R.fov; $('fovv').textContent = R.fov; $('vol').value = this.vol;
     this.buildMenu(); this.bindInput(); this.buildHotbar(); this.layout();
@@ -93,7 +93,7 @@ const UI = {
     if (c === b.fwd) { const n = performance.now(); if (n - this.lastW < 280) this.sprintW = true; this.lastW = n; }
   },
   release(c) { const b = this.kb; if (c === b.attack) this.mouse.l = false; if (c === b.use) this.mouse.r = false; if (c === b.list) { this.tabOpen = false; $('tab').classList.add('hide'); } },
-  save() { try { localStorage.setItem('apvp', JSON.stringify({ name: this.name, skin: this.skinName, death: this.deathMode, persona: this.persona, sens: this.sens, pcLock: this.pcLock, fov: R.fov, vol: this.vol, room: this.room })); } catch (e) { } },
+  save() { try { localStorage.setItem('apvp', JSON.stringify({ name: this.name, skin: this.skinName, death: this.deathMode, persona: this.persona, sens: this.sens, pcLock: this.pcLock, botLv: this.botLv, fov: R.fov, vol: this.vol, room: this.room })); } catch (e) { } },
   // ---------- menu ----------
   buildMenu() {
     const pe = $('personas'); pe.innerHTML = '';
@@ -110,6 +110,7 @@ const UI = {
     $('room').onchange = e => { this.room = e.target.value.trim().toLowerCase() || 'main'; this.save(); this.connect(); };
     $('btnPlay').onclick = () => this.enter(false);
     $('btnPractice').onclick = () => this.enter(true);
+    $('botLv').value = String(this.botLv); $('botLv').onchange = e => { this.botLv = +e.target.value; this.save(); };
     $('botn').oninput = e => { this.botCount = +e.target.value; $('botv').textContent = this.botCount; };
     $('btnHelp').onclick = () => $('help').classList.toggle('hide');
     $('sens').oninput = e => { this.sens = +e.target.value; this.save(); };
@@ -128,9 +129,9 @@ const UI = {
     $('pHp').onchange = e => { this.showHp = e.target.checked; };
     $('pBob').onchange = e => { this.bob = e.target.checked; };
     $('pAssist').onchange = e => { this.assist = e.target.checked; };
-    $('pLock').checked = this.pcLock; $('pLock').onchange = e => this.setAutoFs(e.target.checked);
+    this.pcLock = SITE.autoFs(); $('pLock').checked = this.pcLock; $('pLock').onchange = e => this.setAutoFs(e.target.checked);
     // 자동 전체화면: entering the game goes browser-fullscreen + keyboard lock (Ctrl+W protection). Off: never forced
-    this.setAutoFs = v => { this.pcLock = !!v; this.save(); for (const id of ['pLock', 'setFs']) { const c = $(id); if (c) c.checked = this.pcLock; } if (typeof DESK !== 'undefined') DESK.refreshStart(); if (!this.pcLock) { try { navigator.keyboard && navigator.keyboard.unlock(); } catch (x) { } if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => { }); } };
+    this.setAutoFs = v => { this.pcLock = !!v; SITE.setAutoFs(this.pcLock); this.save(); for (const id of ['pLock', 'setFs']) { const c = $(id); if (c) c.checked = this.pcLock; } if (typeof DESK !== 'undefined') DESK.refreshStart(); if (!this.pcLock) { try { navigator.keyboard && navigator.keyboard.unlock(); } catch (x) { } if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => { }); } };
     document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) { try { navigator.keyboard && navigator.keyboard.unlock(); } catch (x) { } } });
     $('pHelp').onclick = () => $('help2').classList.toggle('hide');
     // settings from the job selection screen (⚙️) reuse the pause panel without the in-game rows
@@ -248,8 +249,8 @@ const UI = {
   resume() { $('pause').classList.add('hide'); this.paused = false; if (!this.mobile) this.lock(); },
   lock() { const cv = $('cv'); this.keyLock(); try { const p = cv.requestPointerLock && cv.requestPointerLock(); if (p && p.catch) p.catch(() => { }); } catch (e) { } },
   keyLock() {
-    if (SITE.inFrame) { if (!this.mobile && this.pcLock) SITE.toParent({ t: 'fs', lock: true }); return; } // the desktop window goes full screen + keyboard lock (Ctrl+W protection)
-    if (this.mobile || !this.pcLock || !(navigator.keyboard && navigator.keyboard.lock)) return;
+    if (SITE.inFrame) { if (!this.mobile && SITE.autoFs()) SITE.toParent({ t: 'fs', lock: true, auto: 1 }); return; } // the top page goes browser-fullscreen + keyboard lock (Ctrl+W protection); the window keeps its size
+    if (this.mobile || !SITE.autoFs() || !(navigator.keyboard && navigator.keyboard.lock)) return;
     const keys = [...new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyT', 'KeyN', 'KeyR', 'KeyQ', 'KeyE', 'KeyF', 'KeyV', 'Tab', 'Space', 'ControlLeft', 'ControlRight', 'Escape', ...Object.values(this.kb || {}).filter(c => !c.startsWith('Mouse'))])];
     const doLock = () => { try { const q = navigator.keyboard.lock(keys); if (q && q.catch) q.catch(() => { }); } catch (e) { } };
     const d = document, el = d.documentElement;
@@ -344,7 +345,7 @@ const UI = {
   },
   drawTab() {
     const rows = G.players().map(p => ({ n: p.name, pe: p.persona, j: p.job, d: p.deaths, k: G.kills[p.id] || 0, sp: p.spectator, me: p === G.me }));
-    $('tab').innerHTML = '<div class="th">4중인격 능력 PvP' + (G.match ? ' · 경기 중' : ' · 자유 대전') + '</div><table><tr><th>플레이어</th><th>직업</th><th>처치</th><th>사망</th></tr>' + rows.map(r => '<tr' + (r.me ? ' class="me"' : '') + '><td>' + mcfmt('§x' + PERSONAS[r.pe].color + '[' + PERSONAS[r.pe].name + '] §f') + esc(r.n) + (r.sp ? ' <small>(관전)</small>' : '') + '</td><td>' + (JOBS[r.j] ? JOBS[r.j].name : '') + '</td><td>' + r.k + '</td><td>' + r.d + '</td></tr>').join('') + '</table>';
+    $('tab').innerHTML = '<div class="th">4중인격 PvP' + (G.match ? ' · 경기 중' : ' · 자유 대전') + '</div><table><tr><th>플레이어</th><th>직업</th><th>처치</th><th>사망</th></tr>' + rows.map(r => '<tr' + (r.me ? ' class="me"' : '') + '><td>' + mcfmt('§x' + PERSONAS[r.pe].color + '[' + PERSONAS[r.pe].name + '] §f') + esc(r.n) + (r.sp ? ' <small>(관전)</small>' : '') + '</td><td>' + (JOBS[r.j] ? JOBS[r.j].name : '') + '</td><td>' + r.k + '</td><td>' + r.d + '</td></tr>').join('') + '</table>';
   },
   setSpawn() { const me = G.me; if (!me || !me.onPad) return; me.pad = PAD_ORDER.indexOf(me.onPad); this.chat('§a' + PAD_KO[me.onPad] + ' 패드에 스폰포인트를 설정했습니다'); AU.sfx('levelup', null, .5); },
   atkOpt() { return this.mobile && this.assist ? this.ASSIST : {}; },

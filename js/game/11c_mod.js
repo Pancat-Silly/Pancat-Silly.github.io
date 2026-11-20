@@ -77,7 +77,7 @@ const MOD = {
   },
   async addSound(name, dataURL) {
     name = String(name).replace(/[^a-zA-Z0-9_가-힣]/g, '_').slice(0, 40); this.sounds[name] = dataURL; if (!AU.ctx) return name;
-    try { const b = await (await fetch(dataURL)).arrayBuffer(); AU.buf[name] = await AU.ctx.decodeAudioData(b); DEV.log('ok', '효과음 준비됨: ' + name + ' (' + AU.buf[name].duration.toFixed(2) + '초)'); } catch (e) { this.err('효과음 ' + name, e); }
+    try { const b = await (/^data:/.test(dataURL) ? (await fetch(dataURL)).arrayBuffer() : sndBytes(dataURL)); AU.buf[name] = await AU.ctx.decodeAudioData(b); DEV.log('ok', '효과음 준비됨: ' + name + ' (' + AU.buf[name].duration.toFixed(2) + '초)'); } catch (e) { this.err('효과음 ' + name, e); }
     return name;
   },
   async decodeAll() { for (const n in this.sounds) if (!AU.buf[n]) await this.addSound(n, this.sounds[n]); },
@@ -266,7 +266,7 @@ const DEV = {
   },
   result() {
     const jr = $('devJob').value.trim() || this.jobReq, sr = $('devSys').value.trim() || this.sysReq;
-    return '4중인격 능력 PvP · 커스텀 직업 결과물 (개발 도구 v' + DEV_VER + ' · 프롬프트 v' + DEV_VER + ' · 최신)\n만든 날짜: ' + new Date().toLocaleString() + '\n\n=====새 직업 요청 원문=====\n' + (jr || '(없음)') + '\n\n=====JS 코드=====\n```js\n' + (this.code || $('devResp').value.trim()) + '\n```\n\n=====기존 직업·시스템 변경 요청 원문=====\n' + (sr || '없음') + '\n\n=====구현 메모=====\n' + this.memoText() + '\n\n=====필요했던 API (개발자용 메모)=====\n' + this.neededApi() + '\n\n=====효과음=====\n' + (Object.entries(MOD.sounds).map(([n, d]) => n + ': ' + d).join('\n') || '(없음)') + '\n\n=====개발 도구 로그 (오류 · 경고)=====\n' + (this.text(true) || '(없음)') + '\n=====끝=====\n';
+    return '4중인격 PvP · 커스텀 직업 결과물 (개발 도구 v' + DEV_VER + ' · 프롬프트 v' + DEV_VER + ' · 최신)\n만든 날짜: ' + new Date().toLocaleString() + '\n\n=====새 직업 요청 원문=====\n' + (jr || '(없음)') + '\n\n=====JS 코드=====\n```js\n' + (this.code || $('devResp').value.trim()) + '\n```\n\n=====기존 직업·시스템 변경 요청 원문=====\n' + (sr || '없음') + '\n\n=====구현 메모=====\n' + this.memoText() + '\n\n=====필요했던 API (개발자용 메모)=====\n' + this.neededApi() + '\n\n=====효과음=====\n' + (Object.entries(MOD.sounds).map(([n, d]) => n + ': ' + d).join('\n') || '(없음)') + '\n\n=====개발 도구 로그 (오류 · 경고)=====\n' + (this.text(true) || '(없음)') + '\n=====끝=====\n';
   },
   save(name, text) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' })); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); },
   async copy(text, what) {
@@ -301,6 +301,8 @@ async function devToolHTMLMulti() {
   let h = await get('index.html');
   for (const m of [...h.matchAll(/<link rel="stylesheet" href="([^"]+)">/g)]) h = h.split(m[0]).join('<style>\n' + await get(m[1]) + '<\/style>');
   const tags = [...h.matchAll(/<script src="([^"]+)"><\/script>\n?/g)]; let code = ''; for (const m of tags) code += await get(m[1]) + '\n';
+  for (const q of new Set(code.match(/"sounds\/[^"]+\.(?:mp3|ogg|wav)"/g) || [])) { // sound files -> base64 again, so the saved file works from disk
+    const r = await fetch(new URL(JSON.parse(q), base)); if (!r.ok) continue; const b = new Uint8Array(await r.arrayBuffer()); let s = ''; for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); code = code.split(q).join('"' + btoa(s) + '"'); }
   h = h.split('<script>window.SITE_MULTI=1<\/script>').join(''); tags.forEach((m, i) => { h = h.split(m[0]).join(i === 0 ? '@@CODE@@' : ''); });
   h = h.split('@@CODE@@').join('<script>\n' + code + '<\/script>\n');
   return h.replace(/<head([^>]*)>/i, m => m + '<script>window.APVP_DEV=1<\/script>');

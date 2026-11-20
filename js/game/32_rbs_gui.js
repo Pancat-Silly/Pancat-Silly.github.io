@@ -69,7 +69,6 @@ Object.assign(RUI, {
         const r = this.anvilOut(); h = '<div class="rgw"><h4>모루 · 수리 및 합치기</h4><div class="rgflex">' + this.slotEl(this.addS({ get: () => g.a[0], set: v => g.a[0] = v, one: true })) + '<span class="rarrow">+</span>' + this.slotEl(this.addS({ get: () => g.a[1], set: v => g.a[1] = v, one: true })) + '<span class="rarrow">➜</span>'
           + out(() => r ? r.out : null, () => this.anvilTake()) + '</div><div class="rgnote">' + (r ? '<b style="color:' + (me.lvl >= r.cost ? '#2a2' : '#c33') + '">마법 부여 비용: ' + r.cost + ' 레벨</b>' : '같은 아이템 두 개(수리) 또는 아이템 + 마법이 부여된 책') + '</div>' + this.invSlots() + '</div>'; break;
       }
-      case 'menu': case 'settings': case 'host': h = this.menuHTML(g.type); break;
       case 'palette': h = this.palHTML(); break;
       case 'book': { const P = this.BOOK; const p = g.ctx.p || 0; h = '<div class="rbook"><div class="rbp">' + this.fmt(P[p]) + '</div><div class="rbn"><button class="rbtn" data-bk="-1"' + (p ? '' : ' disabled') + '>◀</button><span>' + (p + 1) + ' / ' + P.length + '</span><button class="rbtn" data-bk="1"' + (p < P.length - 1 ? '' : ' disabled') + '>▶</button><button class="rbtn" data-bk="x">닫기</button></div></div>'; break; }
       case 'form': h = g.ctx.html; break;
@@ -165,49 +164,6 @@ Object.assign(RUI, {
     const dt = e.target.closest && e.target.closest('[data-tip]'); if (dt) { tip.innerHTML = this.fmt(dt.dataset.tip).replace(/\n/g, '<br>'); tip.style.display = 'block'; tip.style.left = Math.min(innerWidth - 310, e.clientX + 14) + 'px'; tip.style.top = (e.clientY - 10) + 'px'; return; } const el = e.target.closest && e.target.closest('.rs'); const S = el && g.S[+el.dataset.s]; if (!S) { tip.style.display = 'none'; return; }
     let txt = ''; if (S.tip) txt = S.tip; else { const s = S.get && S.get(); if (s) txt = RITEM.name(s) + (RITEM.lore(s).length ? '\n' + RITEM.lore(s).join('\n') : ''); }
     if (!txt) { tip.style.display = 'none'; return; } tip.innerHTML = this.fmt(txt).replace(/\n/g, '<br>'); tip.style.display = 'block'; tip.style.left = Math.min(innerWidth - 310, e.clientX + 14) + 'px'; tip.style.top = (e.clientY - 10) + 'px'; },
-  // ---------- the menu chest (the original lobby chest: 설정 / Ready / 놀이터 / 튜토리얼 & 정보) + its sub-chests ----------
-  menuHTML(type) {
-    const me = RG.me; const host = RG.isHost(); const O = RG.gs.opts; const ph = RG.gs.ph; const cells = new Array(27).fill(null);
-    const A = (i, icon, name, lore, act, on, alt) => { cells[i] = { icon, name, lore, act, on, alt }; };
-    const ic = id => this.iconURL(id);
-    if (type === 'menu') {
-      A(1, RB_IMG.ready, '§f§lReady', RG.rd ? '§a준비 완료! (다시 누르면 취소)' : ph === 'lobby' ? '준비한 플레이어가 2명 이상이면 시작돼요' + (this.humans() < 2 ? ' · 혼자면 함께할 봇 수를 골라요' : '') : '§7게임 진행 중', () => this.menuAct('ready'), !!RG.rd);
-      A(2, RB_IMG.playground, '§a§l놀이터', '대기실 · 맨손 PvP · 미니 랜덤블록(1:1) · 숨겨진 던전 · 돌아올 때는 출구에서 웅크리기', () => this.menuAct('playground'));
-      A(3, ic('menu_spec'), me.spectator ? '§b§l관전 끝내기' : '§b§l관전하기', me.spectator ? '로비로 돌아가요' : '날아다니며 경기를 보거나 플레이어 시점으로 따라가요 (관전 중에는 다음 게임에 참가하지 않아요)', () => this.menuAct('spec'), me.spectator);
-      A(4, ic('written_book'), '튜토리얼 & 정보', '읽기', () => this.menuAct('book'));
-      A(5, RB_IMG.settings, '§c§l설정', '효과음 · P2P · 리소스팩 · 닉네임 · 스킨 · 방 코드', () => this.menuAct('settings'));
-      A(6, ic('menu_host'), '§6§l호스트 설정', host ? '게임 시간 · 옵션 · 블록 커스텀' : '§c호스트 외 설정 불가능 (보기만 가능)', () => this.menuAct('host'));
-      A(7, ic('ender_eye'), '§e로비로 이동', '스폰 지점으로 돌아가요 (경기 중 경기장에서는 안 돼요)', () => { const a = RG.area(me); if ((a === 'arena' || a === 'dm') && !me.spectator) return; if (me.spectator) this.spec(false); else RG.toSpawn(me); this.close(); });
-      if (SITE.inFrame) A(26, ic('oak_door'), '§c게임 끄고 바탕화면으로', '이 게임 창을 닫아요', () => { this.close(true); RAU.stopBgm(); SITE.toParent({ t: 'close' }); });
-    } else if (type === 'settings') {
-      A(0, ic('note'), (this.sfxOn ? '§a' : '§c') + '효과음 ' + (this.sfxOn ? '켜짐' : '꺼짐'), '효과음 듣기 / 듣지 않기', () => { this.sfxOn = !this.sfxOn; this.save(); this.chat(this.sfxOn ? '§a효과음 듣기가 활성화되었습니다.' : '§a효과음 듣기가 비활성화되었습니다.'); }, this.sfxOn);
-      A(10, ic('ender_eye'), (SITE.p2pNow() ? '§a' : '§c') + 'P2P 멀티플레이 ' + (SITE.p2pNow() ? '허용' : '꺼짐'), '다른 플레이어와 직접 연결해서 함께 플레이\n' + esc(NET.status || ''), () => { const v = !SITE.p2pNow(); SITE.setP2PNow(v); if (v) NET.connect(this.room); else { NET.disconnect(); NET.status = 'P2P 꺼짐 (혼자 플레이 · 봇은 호스트 설정에서)'; RG.remotes.clear(); } }, SITE.p2pNow());
-      A(11, ic('bookshelf'), '리소스팩: ' + RPACK.label(), RPACK.has ? (RPACK.on ? '클릭: 끄기 (기본 텍스처)' : '클릭: 켜기') + '\n우클릭: 다시 받기' : '마인크래프트 1.21.4 바닐라 텍스처 · 사운드를\n이 기기의 브라우저가 공식 미러에서 직접 받아요 (게임에 포함 안 됨)', (b) => RPACK.click(b), RPACK.on, RPACK.has ? '다시 받기' : null);
-      A(12, ic('name_tag'), '닉네임: ' + esc(this.name), '클릭해서 바꾸기', () => this.prompt('닉네임', this.name, 16, v => { this.name = v || this.name; RG.me.name = this.name; this.save(); }));
-      A(13, ic('head'), '스킨: ' + (this.skin ? esc(this.skin) : '기본'), '마인크래프트 닉네임으로 스킨 불러오기', () => this.prompt('마크 스킨 닉네임 (영문, 비우면 기본)', this.skin, 16, v => { this.skin = v.trim(); RG.me.skin = this.skin; SKIN.retry(this.skin); this.save(); }));
-      A(14, ic('crafting_table'), '방 코드: ' + esc(this.room), '같은 방 코드끼리 함께 플레이해요', () => this.prompt('방 코드 (영문 · 숫자)', this.room, 30, v => { this.room = (v || 'main').toLowerCase(); this.save(); if (SITE.p2pNow()) { RG.remotes.clear(); NET.connect(this.room); } }));
-      A(15, ic('lever'), '세부 설정', '감도 · 시야각 · 볼륨 · 해상도 · 화면 흔들림', () => this.detail());
-      A(16, ic('ender_eye'), (this.autoFs ? '§a' : '§7') + '자동 전체화면 ' + (this.autoFs ? '켜짐' : '꺼짐'), '게임 화면을 클릭하면 꽉 찬 화면 + Ctrl+W 보호 (PC)', () => { this.autoFs = !this.autoFs; this.save(); }, this.autoFs);
-      A(18, ic('oak_door'), '뒤로', '', () => this.open('menu'));
-    } else if (type === 'host') {
-      const lev = (i, k, title, lore) => A(i, ic('lever'), (O[k] ? '§a' : '§c') + title + ': ' + (O[k] ? '허용' : '비허용'), lore, () => this.hostSet(k, O[k] ? 0 : 1, title), !!O[k]);
-      A(10, ic('menu_ready'), '§a게임시간: ' + RV.TIME[O.time], '노트블럭 음을 올려 게임시간을 조정하자!\n클릭: +1 · 우클릭: −1 (0~24)', b => { let t = O.time; do t = (t + (b === 2 ? 24 : 1)) % 25; while (t === 23); this.hostSet('time', t, '§a게임시간'); }, false, '−1');
-      A(9, ic('menu_ready'), (O.big ? '§c' : '§a') + '경기장 인원: ' + (O.big ? '25명' : '9명'), '수용 가능한 경기장 인원수를 선택하자!\n9명: 33×33 / 25명: 53×53 · 25인 데스매치 (경기장은 한 번에 만들어져요)', () => this.hostSet('big', O.big ? 0 : 1, '경기장 인원'), !!O.big);
-      lev(11, 'brk', '시작시 주변블록 파괴', '게임시작시 주변블록 파괴 유무를 결정하자!'); lev(12, 'build', '데스매치 건축', '데스매치시 건축 허용 유무를 선택하자!'); lev(13, 'lava', '데스매치 용암', '켜면 독가스 대신 45초에 용암이 올라와요'); lev(14, 'pvp', '경기장 PvP', ''); lev(15, 'shield', '방패 제작', ''); lev(16, 'kit', '기본템 지급', '경기 시작 때 돌 곡괭이 · 돌 도끼 · 돌 검 + 치유 물약 4개를 줘요 (봇 포함)');
-      A(19, ic('blk:sponge'), '§d§l블록 커스텀', RG.palInfo() + '\n경기장에 나올 블록 종류 · 개수 · 확률을 마음대로 정해요', () => this.open('palette'));
-      if (RG.bots.length) A(21, ic('lever'), (this.botAI ? '§a' : '§c') + '봇 AI ' + (this.botAI ? '켜짐' : '꺼짐'), '끄면 봇이 가만히 서 있어요 (테스트용)', () => { if (!host) return; this.botAI = !this.botAI; }, this.botAI);
-      A(22, ic('tnt'), '§c게임 초기화', '진행 중인 라운드를 끝내고 모두 로비로 보내요', () => { if (!host) return; RG.hostReset(); this.close(); });
-      A(18, ic('oak_door'), '뒤로', '', () => this.open('menu'));
-    }
-    const TT = { menu: '메뉴', settings: '설정', host: '호스트 설정' + (host ? '' : ' (호스트 외 설정 불가능)') }[type];
-    // one list UI on every device (no hover needed): icon · name · description · current state
-    const L = cells.map((C, i) => C && Object.assign({ i }, C)).filter(Boolean); this.gui.cells = L; this.gui.back = 'menu';
-    let m = '<div class="rgw rlist"><div class="rlhead"><b>' + TT + '</b>' + (type !== 'menu' ? '<button class="rbtn" data-lb="back">◀ 뒤로</button>' : '') + '<button class="rbtn" data-lb="x">✕ 닫기</button></div>';
-    for (const C of L) { if (C.name === '뒤로' || C.name.includes('바탕화면으로')) continue; const tip = (C.lore || '').replace(/\n/g, ' · '); m += '<div class="rli' + (C.on ? ' on' : '') + '" data-li="' + C.i + '"><img src="' + C.icon + '"><div class="rlt"><b>' + this.fmt(C.name) + '</b>' + (tip ? '<small>' + this.fmt('§7' + tip) + '</small>' : '') + '</div>' + (C.alt ? '<button class="rbtn" data-la="' + C.i + '">' + C.alt + '</button>' : '') + '</div>'; }
-    const dk = L.find(C => C.name.includes('바탕화면으로')); if (dk) m += '<div class="rli rdesk" data-li="' + dk.i + '"><img src="' + dk.icon + '"><div class="rlt"><b>' + this.fmt(dk.name) + '</b></div></div>';
-    if (type === 'menu') m += '<div class="rgnote">랜덤블록 서바이벌 V2 P2 by LemonyMEF · 로비에서는 핫바 아이템을 우클릭' + (this.mobile ? '(사용 버튼)' : '') + '해도 돼요 · M 키</div>';
-    return m + '</div>';
-  },
   // ---------- recipe book (Bedrock style, left of the inventory / crafting table): click a recipe to craft it from your inventory ----------
   TAGN: { '#planks': '판자 (아무거나)', '#log': '원목', '#coal': '석탄 또는 숯' },
   rbNeed(r) { const n = {}; for (const row of r.rows) for (const ch of row) if (ch !== '.') n[r.keys[ch]] = (n[r.keys[ch]] || 0) + 1; return n; },
@@ -313,8 +269,8 @@ Object.assign(RUI, {
     for (const b of q('[data-pk]')) b.onclick = () => { const C = this.palCands()[+b.dataset.pk]; const ex = g.pal.find(e => e[0] === C[0] && (e[2] || 0) === (C[2] || 0)); if (ex) ex[1] = (+ex[1] || 0) + (g.cnt ? 100 : 1); else g.pal.push([C[0], g.cnt ? 100 : 1].concat(C[2] ? [C[2]] : [])); this.render(); const L = $('rbGui').querySelector('.rplist'); if (L) L.scrollTop = 1e6; };
     const s = el.querySelector('[data-ps]'); if (s) s.onclick = () => { if (!RG.isHost() || RG.gs.ph !== 'lobby') return; const P = g.pal.filter(e => +e[1] > 0);
       const def = JSON.stringify(RG.palDefault()) === JSON.stringify(P) && !g.cnt; RG.gs.opts.pal = def ? null : P; RG.gs.opts.palN = def ? 0 : g.cnt ? 1 : 0; try { localStorage.setItem('rbs_host2', JSON.stringify(RG.gs.opts)); } catch (e) { }
-      this.title('§d블록 커스텀', def ? '§7원작 기본값' : '§a' + P.length + '종 저장됨'); RAU.play('levelup', 1, true); this.open('host'); };
-    for (const b of q('[data-lb]')) b.onclick = e => { e.stopPropagation(); if (b.dataset.lb === 'x') this.close(); else this.open('host'); };
+      this.title('§d블록 커스텀', def ? '§7원작 기본값' : '§a' + P.length + '종 저장됨'); RAU.play('levelup', 1, true); this.close(true); this.pause(true, 'host'); };
+    for (const b of q('[data-lb]')) b.onclick = e => { e.stopPropagation(); if (b.dataset.lb === 'x') this.close(); else { this.close(true); this.pause(true, 'host'); } };
   },
   menuAct(k) {
     const me = RG.me;
@@ -323,26 +279,24 @@ Object.assign(RUI, {
       case 'playground': { const a = RG.area(me); if (a === 'arena' || a === 'dm') return; if (me.spectator) me.mode = 'adventure'; RG.tp(me, RV.playground); this.close(); RAU.play('pop'); break; }
       case 'spec': this.close(true); this.spec(!me.spectator); break;
       case 'book': this.open('book', { p: 0 }); break;
-      case 'host': this.open('host'); break;
-      case 'settings': this.open('settings'); break;
-      case 'more': this.open('menu'); break;
+      case 'host': case 'settings': case 'more': this.close(true); this.pause(true, k === 'host' ? 'host' : k === 'settings' ? 'set' : 'main'); break;
     }
   },
   hostSet(k, v, title) {
     if (!RG.isHost()) { this.chat('§c호스트 외 설정 불가능'); RAU.play('anvil_land', 1, true); return; }
     RG.gs.opts[k] = v; try { localStorage.setItem('rbs_host2', JSON.stringify(RG.gs.opts)); } catch (e) { }
-    const val = k === 'time' ? RV.TIME[v] : k === 'bots' ? v + '명' : k === 'big' ? (v ? '§c25명' : '§a9명') : v ? '§a허용' : '§c비허용';
+    const val = k === 'time' ? RV.TIME[v] : k === 'botLv' ? ['§a쉬움', '§e보통', '§c어려움'][v] : k === 'bots' ? v + '명' : k === 'big' ? (v ? '§c25명' : '§a9명') : v ? '§a허용' : '§c비허용';
     this.title(title, k === 'time' ? (v >= 21 || v <= 3 ? '§c' : v >= 15 ? '§6' : '§a') + val : val); RAU.play(v ? 'piston_out' : 'piston_in', 1, true);
-    this.render();
+    this.refresh();
   },
   ready() {
     const ph = RG.gs.ph; const me = RG.me;
     if (me.spectator) { this.chat('§c관전 중에는 준비할 수 없어요'); return; }
-    if (RG.rd) { RG.rd = 0; this.chat('§7준비를 취소했어요'); this.render(); return; }
+    if (RG.rd) { RG.rd = 0; this.chat('§7준비를 취소했어요'); this.refresh(); return; }
     if (ph !== 'lobby') { this.chat('§7게임이 끝나면 다시 준비해 주세요'); return; }
-    if (this.humans() < 2 && RG.isHost() && !this._botAsked) { this.botPick(); return; } this._botAsked = false;
+    if (this.humans() < 2 && RG.isHost() && !this._botAsked) { if (this.paused) this.menuTo(() => this.botPick()); else this.botPick(); return; } this._botAsked = false;
     RG.rd = 1; if (RG.gs.opts.time === 24) { RAU.sfx('sfx_error'); this.chat('§c지금은 게임 시작 금지 상태예요 (호스트 설정)'); } else RAU.play('toast', 1.5);
-    this.chat('§a준비 완료! 준비한 플레이어가 2명 이상이면 시작됩니다.'); this.render();
+    this.chat('§a준비 완료! 준비한 플레이어가 2명 이상이면 시작됩니다.'); this.refresh();
   },
   humans() { return RG.players().filter(p => !p.isBot).length; },
   // single play: how many bots join the round (chosen when pressing Ready, not in the host settings). Bots start with nothing.
@@ -351,25 +305,15 @@ Object.assign(RUI, {
     this.open('form', { html: '<div class="rgw rform rbotp"><b>싱글 플레이 · 봇 몇 명과 할까요?</b><small>봇은 아무 아이템 없이 시작해서 블록을 캐며 싸워요. 2명 이상이 준비해야 시작돼요.</small><div class="rbnrow">' + b + '</div><div class="rgflex"><button class="rbtn" data-bn="0">봇 없이 준비</button><button class="rbtn" data-bn="x">취소</button></div></div>',
       bind: el => { for (const e of el.querySelectorAll('[data-bn]')) e.onclick = () => { const v = e.dataset.bn; if (v === 'x') { this.close(); return; } RG.gs.opts.bots = +v; RBOT.manage(); this.close(); this._botAsked = true; this.ready(); if (+v) this.chat('§a봇 ' + v + '명이 함께해요'); }; } });
   },
-  prompt(label, val, max, cb) {
-    this.open('form', { html: '<div class="rgw rform"><b>' + esc(label) + '</b><input type="text" id="rbPin" maxlength="' + max + '" value="' + esc(val || '') + '" autocapitalize="off" spellcheck="false"><div class="rgflex"><button class="rbtn" id="rbPok">확인</button><button class="rbtn" id="rbPno">취소</button></div></div>',
-      bind: el => { this.promptOpen = true; const i = el.querySelector('#rbPin'); setTimeout(() => i.focus(), 20); const done = ok => { this.promptOpen = false; if (ok) cb(i.value.trim()); this.open('settings'); }; el.querySelector('#rbPok').onclick = () => done(true); el.querySelector('#rbPno').onclick = () => done(false); i.onkeydown = e => { if (e.key === 'Enter') done(true); if (e.key === 'Escape') done(false); e.stopPropagation(); }; } });
-  },
-  detail() {
-    const r = (id, lab, min, max, step, v) => '<label>' + lab + ' <input type="range" id="' + id + '" min="' + min + '" max="' + max + '" step="' + step + '" value="' + v + '"></label>';
-    this.open('form', { html: '<div class="rgw rform"><b>세부 설정</b>' + r('rdSens', '감도', .3, 3, .05, this.sens) + r('rdFov', '시야각', 50, 110, 1, this.fov) + r('rdVol', '효과음 볼륨', 0, 1, .05, this.vol) + r('rdMv', '음악 볼륨', 0, 1, .05, this.mvol)
-      + '<label>해상도 <select id="rdRes"><option value="1">기본</option><option value=".75">낮게 (빠름)</option><option value=".5">매우 낮게</option></select></label><label>화면 흔들림 <input type="checkbox" id="rdBob"' + (this.bob ? ' checked' : '') + '></label><button class="rbtn" id="rdOk">확인</button></div>',
-      bind: el => { el.querySelector('#rdRes').value = String(this.res); const g = id => el.querySelector('#' + id); g('rdSens').oninput = e => this.sens = +e.target.value; g('rdFov').oninput = e => this.fov = +e.target.value; g('rdVol').oninput = e => { this.vol = +e.target.value; RAU.setVol(); }; g('rdMv').oninput = e => { this.mvol = +e.target.value; RAU.setVol(); }; g('rdRes').onchange = e => this.res = +e.target.value; g('rdBob').onchange = e => this.bob = e.target.checked; g('rdOk').onclick = () => { this.save(); this.open('settings'); }; } });
-  },
   // the original book had 18 pages that weren't in the export; this one is written from the analysed game rules
   BOOK: [
     '§l랜덤블록 서바이벌 V2 파트 2§r\n튜토리얼 & 정보\n\n최대 9명이 33×33×15 크기의 무작위 블록 큐브 안에서 캐고, 만들고, 싸워서 §c최후의 1명§r이 이기는 게임이에요.\n\n원작: LemonyMEF (마인크래프트 베드락 맵)',
-    '§l시작하기§r\n\n로비 앞 §6메뉴 상자§r에서 §fReady§r를 누르세요.\n준비한 플레이어가 §a2명 이상§r이면 경기장이 만들어지고 10초 뒤 시작해요.\n\n혼자라면 §6호스트 설정§r에서 봇을 추가할 수 있어요.',
+    '§l시작하기§r\n\n§6메뉴§r(Esc · 모바일은 ☰)에서 §fReady§r를 누르세요.\n준비한 플레이어가 §a2명 이상§r이면 경기장이 만들어지고 10초 뒤 시작해요.\n\n혼자라면 §6호스트 설정§r에서 봇을 추가할 수 있어요.',
     '§l경기장§r\n\n블록 33종이 무작위로 채워져요: 원목 · 돌 · 흙 · 자갈 · 각종 광석 · 책장 · 제작대 · 화로 · 용광로 · 유리 · 모루 · 상자.\n\n상자 3종류에는 조약돌, 투척용 치유의 물약 II, 경험치 병, 다이아몬드, 마법부여대 같은 아이템이 들어 있어요.',
     '§l생존 팁§r\n\n· 원목 → 판자 → 막대기 → 나무 곡괭이부터!\n· 철광석은 돌 곡괭이, 다이아몬드는 철 곡괭이가 필요해요.\n· 원석은 화로·용광로에서 녹여 주괴로.\n· 경험치 병 + 청금석 + 마법부여대 = 마법 부여.\n· 모든 플레이어는 항상 포만 상태라 체력이 빨리 차요.',
     '§l제한 시간 · 데스매치§r\n\n남은 시간은 화면 아래에 보여요. 1분 30초가 남으면 음악이 빨라져요.\n\n시간이 끝났는데 2명 이상 살아 있으면 §c데스매치§r! 네더 경기장으로 이동하고, 5초 뒤 PvP가 시작돼요. 45초 뒤에는 독가스(또는 용암), 60초 뒤에는 더 강한 독가스가 퍼져요.',
     '§l승리 · 업적§r\n\n마지막 1명이 승리 세리머니 방에서 축하를 받아요.\n\n업적: 달콤한 첫 승 · 5번째 승리 · 새로운 음악! · 1시간/2시간/6시간의 묘미 · 랜덤블록 중독자',
-    '§l관전 · 놀이터§r\n\n탈락하면 로비로 돌아와요. 메뉴 상자의 §b관전하기§r로 날아다니며 보거나 플레이어 시점으로 따라갈 수 있어요.\n\n§a놀이터§r는 기다리는 동안 맨손으로 싸우는 곳이에요. 어딘가에 숨겨진 던전과 §f소형 자폭 열쇠§r가 있다는 소문이…',
+    '§l관전 · 놀이터§r\n\n탈락하면 로비로 돌아와요. 메뉴의 §b관전하기§r로 날아다니며 보거나 플레이어 시점으로 따라갈 수 있어요.\n\n§a놀이터§r는 기다리는 동안 맨손으로 싸우는 곳이에요. 어딘가에 숨겨진 던전과 §f소형 자폭 열쇠§r가 있다는 소문이…',
     '§lV2.1 변경점§r\n\n· 호스트가 경기장 인원을 §a9명§r / §c25명§r 중에서 골라요 (25명: 53×53 경기장, 스폰 25곳, 새 25인 데스매치).\n· 경기장이 양쪽 끝에서 가운데로 쓸어오듯 만들어져요 (진행률 표시).\n· 데스매치 독가스가 §c치명적 독§r으로 바뀌었어요.\n· 로비는 가문비나무 테마, 로비에서는 나약함이 걸려요.',
     '§l미니 랜덤블록 서바이벌§r\n\n놀이터 안 미니 경기장 옆 §e대기 패드§r에 2명이 들어서면 1:1 경기가 시작돼요.\n\n5×5×11 크기의 무작위 블록(상자 · 모루 · 제작대 · 유리 · 판자 · 돌 · 다이아 광석 · 원목) 속에서 §c60초§r 동안 힘 I · 성급함 I로 싸워요. 상자에는 보호 · 날카로움 책이 들어 있어요.',
     '§l호스트 설정§r\n\n게임시간 (30초 단위 ~10분, 무한, 랜덤, 5분30초 + 기본템, 시작 금지)\n시작 시 주변 블록 파괴 · 데스매치 건축 · 데스매치 용암 · 경기장 PvP · 방패 제작\n\n호스트는 방에 가장 먼저 들어온 사람이에요.',

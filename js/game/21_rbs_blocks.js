@@ -127,7 +127,7 @@ const RBLK = {
       case 'rail': box([[0, 0, 0, 1, 1 / 16, 1]], 'rail'); B.solid = false; B.cut = true; break;
       case 'plant': { const n = p[1]; B.full = false; B.opaque = false; B.solid = false; B.cross = true; B.boxes = [[.15, 0, .15, .85, .8, .85]]; B.tiles = [T(n), 0, 0, 0, 0, 0]; mine(0, null, 0, 'grass'); B.repl = n.includes('grass') || n === 'fern'; B.noDrop = B.repl; B.name = '식물'; break; }
       case 'composter': full('composter_side', 'composter_top', 'composter_side'); mine(.6, 'axe', 0, 'wood'); break;
-      case 'scaffolding': full('scaffolding_side', 'scaffolding_top'); B.opaque = false; B.cut = true; B.ladder = true; mine(0, null, 0, 'wood'); break;
+      case 'scaffolding': full('scaffolding_side', 'scaffolding_top'); B.opaque = false; B.cut = true; B.ladder = true; B.scaf = true; /* collision: only the top, and not while sneaking (RWorld.boxes) */ mine(0, null, 0, 'wood'); break;
       case 'campfire': box([[0, 0, 0, 1, 7 / 16, 1]], 'campfire_log', 'campfire_log'); B.solid = true; B.emis = true; mine(2, 'axe', 0, 'wood'); break;
       case 'bell': box([[.25, .25, .25, .75, .9, .75]], 'bell'); B.solid = true; mine(5, 'pickaxe', 0, 'metal'); break;
       case 'sponge': full('sponge'); mine(.6, null, 0, 'grass'); B.name = '럭키 블록'; break;

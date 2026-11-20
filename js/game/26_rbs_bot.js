@@ -18,8 +18,15 @@ const RBOT = {
       const h = RW.w.ray(e, { x: dx / L, y: dy / L, z: dz / L }, L, B => B.solid && !B.liquid && !B.invisible); if (!h || h.t >= L - .05) return true; }
     return false;
   },
+  // 봇 난이도 (host option opts.botLv): 2 어려움 = the original speed. 1 보통 / 0 쉬움 make a decision only every 2nd / 4th
+  // tick (keeping the last inputs and the block being dug in between), turn slower, swing slower and hit back later.
+  LV: [{ every: 4, turn: .45, atk: 2, react: 16 }, { every: 2, turn: .7, atk: 1.5, react: 8 }, { every: 1, turn: 1, atk: 1, react: 0 }],
+  lv() { const v = RG.gs.opts.botLv; return this.LV[v === undefined ? 1 : clamp(v | 0, 0, 2)]; },
   think(b) {
-    const I = b.inp; I.f = 0; I.s = 0; I.jump = false; I.sneak = false; I.sprint = false; b.blocking = false;
+    const I = b.inp, L = this.lv(), A0 = b.ai;
+    if (A0 && A0.last && b.alive && RUI.botAI !== false && (RG.tick + A0.off) % L.every !== 0) { // between decisions: same inputs, keep digging the same block
+      Object.assign(I, A0.last); if (A0.digG && b.dig && b.dig.k === this.key(...A0.digG)) this.dig(b, A0.digG); return; }
+    this.L = L; I.f = 0; I.s = 0; I.jump = false; I.sneak = false; I.sprint = false; b.blocking = false;
     if (!b.alive) return; if (RUI.botAI === false) return;
     const ph = RG.gs.ph, ar = RG.area(b);
     if (ar === 'lobby' || ar === 'winner' || ar === 'dmspec' || ar === 'other') { // idle wander
@@ -30,7 +37,9 @@ const RBOT = {
     }
     if (ph !== 'game' && ph !== 'dm') return; // countdown / time over
     if (ph === 'dm' && RG.hostNow() < RG.gs.t + 7500) return; // frozen until "pvp!!"
+    if (b.ai) b.ai.digG = null;
     this.brain(b, I, ph, ar);
+    if (b.ai) b.ai.last = { f: I.f, s: I.s, jump: false, sneak: I.sneak, sprint: I.sprint };
   },
 
   // ---------- inventory helpers ----------
@@ -179,7 +188,7 @@ const RBOT = {
   dig(b, g) {
     const id = RW.getM(g[0], g[1], g[2]); if (!id) { b.dig = null; return; } const B = BL[id];
     if (B.tool) { const t = this.bestTool(b, B.tool); if (t.i >= 0) this.hold(b, t.i); }
-    const k = this.key(...g); if (!b.dig || b.dig.k !== k) b.dig = { k, p: 0 };
+    const k = this.key(...g); if (!b.dig || b.dig.k !== k) b.dig = { k, p: 0 }; if (b.ai) b.ai.digG = g;
     b.dig.p += b.breakSpeed(B) * 1.5 + .002; b.swingAnim();
     if (b.dig.p >= 1) { RG.breakBlock(b, g[0], g[1], g[2], true); b.dig = null; }
   },
@@ -188,7 +197,7 @@ const RBOT = {
   navTo(b, tx, ty, tz, I) {
     if (ty - b.y < -.5) { tx = Math.floor(tx) + .5; tz = Math.floor(tz) + .5; } // going down: aim at the middle of that cell so we drop into the hole instead of standing on its edge
     const dx = tx - b.x, dz = tz - b.z, dy = ty - b.y, hd = Math.hypot(dx, dz);
-    b.yaw = lerpA(b.yaw, Math.atan2(-dx, dz), .35); b.pitch = clamp(-Math.atan2(dy + .3, hd), -1.2, 1.2);
+    b.yaw = lerpA(b.yaw, Math.atan2(-dx, dz), .35 * (this.L || this.LV[2]).turn); b.pitch = clamp(-Math.atan2(dy + .3, hd), -1.2, 1.2);
     I.f = hd > (dy < -.5 ? .08 : .35) ? 1 : 0; I.sprint = hd > 5;
     if (b.mode !== 'survival') { if (b.hx) I.jump = true; return; }
     const fx = -Math.sin(b.yaw), fz = Math.cos(b.yaw), [mx, my, mz] = RG.mcOf(b);
@@ -209,7 +218,7 @@ const RBOT = {
     const c = RW.P(g[0] + .5, g[1] + .5, g[2] + .5), eye = { x: b.x, y: b.y + b.eye, z: b.z };
     const dx = c.x - eye.x, dy = c.y - eye.y, dz = c.z - eye.z, L = Math.hypot(dx, dy, dz);
     if (L <= 4.5) {
-      b.yaw = lerpA(b.yaw, Math.atan2(-dx, dz), .5); b.pitch = clamp(-Math.atan2(dy, Math.hypot(dx, dz)), -1.5, 1.5);
+      b.yaw = lerpA(b.yaw, Math.atan2(-dx, dz), .5 * (this.L || this.LV[2]).turn); b.pitch = clamp(-Math.atan2(dy, Math.hypot(dx, dz)), -1.5, 1.5);
       const h = RW.w.ray(eye, { x: dx / L, y: dy / L, z: dz / L }, L + .6, B => B.solid);
       if (h) {
         const m = RW.mc(h.x, h.y, h.z);
@@ -234,7 +243,7 @@ const RBOT = {
     const ready = w >= 6.5 && (ap >= 6 || w >= 7.5 || el > total * .5), geared = w >= 7.5 && ap >= 10;
     let foe = null;
     if (tg && RG.pvpAt(b)) {
-      const see = this.los(b, tg), atk = b.lastBy && RG.tick - b.lastByT < 100 ? RG.byId(b.lastBy) : null;
+      const see = this.los(b, tg), rt = RG.tick - b.lastByT, atk = b.lastBy && rt < 100 && rt >= (this.L || this.LV[2]).react ? RG.byId(b.lastBy) : null; // 보통/쉬움: notice the hit a little later
       if (atk && atk.alive !== false && RG.area(atk) === ar) foe = atk; // hit back
       else if (late || geared) foe = tg; // hunt, digging through walls if needed
       else if (see && ((bd < 5 && w >= 7.5) || (ready && bd < 16))) foe = tg; // early on only with a good weapon (iron+); the stone-sword kit alone doesn't start fights
@@ -265,9 +274,9 @@ const RBOT = {
     const dx = tg.x - b.x, dz = tg.z - b.z, dy = tg.y - b.y, hd = Math.hypot(dx, dz);
     const see = this.los(b, tg); b.seeT = see;
     if (bd < 3.1 && RG.pvpAt(b) && see) { // in reach and visible: hit, strafe, jump-crit, raise the shield now and then
-      b.yaw = lerpA(b.yaw, Math.atan2(-dx, dz), .35); b.pitch = clamp(-Math.atan2(dy + .3, hd), -1.2, 1.2);
+      b.yaw = lerpA(b.yaw, Math.atan2(-dx, dz), .35 * (this.L || this.LV[2]).turn); b.pitch = clamp(-Math.atan2(dy + .3, hd), -1.2, 1.2);
       I.f = bd > 1.6 ? 1 : 0; I.s = Math.sin((RG.tick + A.off * 7) / 14) * .7;
-      if (b.atkCd <= 0) { b.tryAttack(tg); b.atkCd = randi(6, 11); }
+      if (b.atkCd <= 0) { b.tryAttack(tg); b.atkCd = Math.round(randi(6, 11) * (this.L || this.LV[2]).atk); }
       else if (b.off && RIT[b.off.id].shield && tg.swingT > 0 && Math.random() < .5) b.blocking = true;
       if (b.onGround && Math.random() < .08) I.jump = true;
       return;
