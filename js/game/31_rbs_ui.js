@@ -65,7 +65,7 @@ const RUI = {
     const me = RG.me; const now = performance.now();
     if (this.titleUntil && now > this.titleUntil) { $('rbTitle').style.opacity = 0; this.titleUntil = 0; }
     for (const l of $('rbChat').children) { const age = now - +l.dataset.t; l.style.opacity = this.chatOpen ? 1 : age > 10000 ? 0 : age > 9000 ? 1 - (age - 9000) / 1000 : 1; }
-    document.body.classList.toggle('rbhide', this.hideHud); document.body.classList.toggle('rbspec', me.spectator); document.body.classList.toggle('rbguiopen', !!this.gui);
+    document.body.classList.toggle('rbhide', this.hideHud); document.body.classList.toggle('rbcut', RG.gs.ph === 'win'); document.body.classList.toggle('rbspec', me.spectator); document.body.classList.toggle('rbguiopen', !!this.gui);
     // hotbar (rebuilt only on change)
     const sig = me.inv.slice(0, 9).map(s => s ? s.id + s.n + (s.d || 0) + (s.en ? 'e' : '') + (s.glow ? 'g' : '') : '').join('|') + me.sel + (me.off ? me.off.id + (me.off.d || 0) : '');
     if (sig !== this._hs) { this._hs = sig; const H = $('rbHot').children; for (let i = 0; i < 9; i++) { H[i].innerHTML = this.slotHTML(me.inv[i]); H[i].classList.toggle('sel', i === me.sel); } $('rbOff').innerHTML = this.slotHTML(me.off); $('rbOff').style.display = me.off ? '' : 'none';
@@ -100,7 +100,7 @@ const RUI = {
   // name tags + floating texts (DOM over the canvas)
   tags(vp, W, H) {
     const box = $('rbTags'); let h = ''; const cam = RR.cam.eye; const me = RG.me;
-    if (RG.gs.opts.tags) for (const p of RG.players()) { if (p === me || p.spectator || p.alive === false || p.sneaking) continue; /* other players' name tags: host option (default off) */ if (RUI.follow === p.id && me.spectator && !this.followThird) continue; const d = Math.hypot(p.x - cam.x, p.y - cam.y, p.z - cam.z); if (d > 40) continue; const s = RR.project(p.x, p.y + 2.1, p.z); if (!s) continue; h += '<div class="rtag" style="left:' + (s[0] * W | 0) + 'px;top:' + (s[1] * H | 0) + 'px">' + esc(p.name) + (p.isBot ? ' <small>봇</small>' : '') + '</div>'; }
+    for (const p of RG.players()) { if (p === me || p.spectator || p.alive === false || p.sneaking) continue; const pa = RG.area(p); if (!RG.gs.opts.tags && pa !== 'lobby' && pa !== 'playground') continue; /* other players' name tags: always in the lobby / playground, in matches only with the host option (default off) */ if (RUI.follow === p.id && me.spectator && !this.followThird) continue; const d = Math.hypot(p.x - cam.x, p.y - cam.y, p.z - cam.z); if (d > 40) continue; const s = RR.project(p.x, p.y + 2.1, p.z); if (!s) continue; h += '<div class="rtag" style="left:' + (s[0] * W | 0) + 'px;top:' + (s[1] * H | 0) + 'px">' + esc(p.name) + (p.isBot ? ' <small>봇</small>' : '') + '</div>'; }
     for (const f of RB_MARK.floating_texts) { const P = RW.P(f.pos[0], f.pos[1] + 1.1, f.pos[2]); const d = Math.hypot(P.x - cam.x, P.y - cam.y, P.z - cam.z); if (d > 18) continue; const s = RR.project(P.x, P.y, P.z); if (!s) continue; h += '<div class="rtag rft" style="left:' + (s[0] * W | 0) + 'px;top:' + (s[1] * H | 0) + 'px">' + this.fmt(f.text) + '</div>'; }
     if (h !== this._tg) { this._tg = h; box.innerHTML = h; }
   },
@@ -110,7 +110,7 @@ const RUI = {
   pg: 'main',
   MPAGE: { main: ['게임 메뉴', null], set: ['설정', 'main'], video: ['화면 · 조작 설정', 'set'], help: ['조작법', 'set'], host: ['호스트 설정', 'main'], multi: ['멀티플레이', null] },
   pause(on, pg) {
-    if (on && (this.gui || this.chatOpen)) return; this.paused = !!on; $('rbPause').classList.toggle('hide', !on);
+    if (on && (this.gui || this.chatOpen || RG.gs.ph === 'win')) return; this.paused = !!on; $('rbPause').classList.toggle('hide', !on);
     if (on) { if (document.pointerLockElement) document.exitPointerLock(); this.pg = pg || 'main'; this.menuDraw(); }
     else if (!this.mobile) RIN.lock();
   },
@@ -224,7 +224,7 @@ const RUI = {
 const RUI_CSS = `
 body.rbsapp #app,body.rbsapp #newJobPop{display:none!important}body.rbsapp{background:#000;overflow:hidden;font-family:system-ui,'Malgun Gothic',sans-serif;user-select:none;-webkit-user-select:none}
 #rbs{position:fixed;inset:0}#rcv{position:absolute;inset:0;width:100%;height:100%;display:block}
-#rbHud{position:absolute;inset:0;pointer-events:none;color:#fff;text-shadow:2px 2px 0 #3f3f3f}body.rbhide #rbHud{display:none}
+#rbHud{position:absolute;inset:0;pointer-events:none;color:#fff;text-shadow:2px 2px 0 #3f3f3f}body.rbhide #rbHud{display:none}body.rbcut #rbHud>:not(#rbTitle),body.rbcut #rbBottom,body.rbcut #rbTouch,body.rbcut #rbRing,body.rbcut #rbHeld,body.rbcut #rbTab{display:none!important}
 #rbCross{position:absolute;left:50%;top:50%;width:18px;height:18px;margin:-9px;mix-blend-mode:difference}#rbCross:before,#rbCross:after{content:'';position:absolute;background:#ddd}#rbCross:before{left:8px;top:0;width:2px;height:18px}#rbCross:after{top:8px;left:0;height:2px;width:18px}
 #rbBottom{position:absolute;left:50%;bottom:4px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center}
 #rbBars{width:364px;height:46px;image-rendering:pixelated}#rbXp{width:364px;height:6px;background:#111;border:1px solid #000;margin:1px 0 3px;position:relative}#rbXp i{display:block;height:100%;background:#7efc20;width:0}

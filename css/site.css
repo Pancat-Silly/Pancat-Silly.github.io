@@ -102,6 +102,7 @@ body.mobile #chatbar{top:max(8px,env(safe-area-inset-top));bottom:auto}
 #hurt{inset:0;background:radial-gradient(ellipse at center,transparent 40%,rgba(200,0,0,.7));opacity:0}
 #tags{inset:0;overflow:hidden}
 .tag{position:absolute;left:0;top:0;text-align:center;font-size:13px;text-shadow:1px 1px 0 #000;white-space:nowrap}
+.tag em{display:block;font-style:normal;font-size:12px;color:#ffdf6e;background:rgba(0,0,0,.35);padding:0 4px;margin-bottom:1px;border-radius:2px}
 .tag.ally{color:#8f8}.tag.ally i b{background:#3c3}
 .tag i{display:block;width:44px;height:4px;background:#400;margin:1px auto 0;border:1px solid #000}.tag i b{display:block;height:100%;background:#e22}
 #tab{left:50%;top:40px;transform:translateX(-50%);background:rgba(0,0,0,.7);padding:8px 12px;min-width:min(520px,94vw);font-size:14px}

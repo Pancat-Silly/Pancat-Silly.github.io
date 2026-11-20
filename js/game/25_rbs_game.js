@@ -392,6 +392,7 @@ falls: [], // falling block entities (sand, gravel, anvil) — animated on every
       }
       case 'win': {
         RAU.stopBgm(); const w = gs.win || { ids: [], names: '' }; const iWon = w.ids.includes(me.id);
+        if (RUI.gui) RUI.close(true); if (RUI.chatOpen) RUI.closeChat(); RUI.paused = false; $('rbPause').classList.add('hide'); // the cutscene takes the whole screen (RR.cutCam)
         if (me.spectator) { RUI.follow = null; this.tp(me, RV.aud, 90); }
         if (!me.spectator) { if (iWon) this.tp(me, RV.podium, -90); else this.tp(me, RV.aud, 90); me.pitch = 0; me.mode = 'adventure'; me.clearInv(); me.clearEff(); }
         for (const b of this.bots) { if (w.ids.includes(b.id)) this.tp(b, RV.podium, -90); else this.tp(b, RV.aud, 90); b.clearInv(); }

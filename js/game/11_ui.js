@@ -332,14 +332,16 @@ const UI = {
   },
   tags() {
     let n = 0; const wrap = $('tags');
-    if (this.showHp) for (const p of G.players()) {
+    for (const p of G.players()) { // job above every head; hp + bar with the 체력 표시 setting
       if (p === G.me || p.spectator) continue; const sc = p.scale || 1; const hp = p.local ? p.hp : p.hp; const mx = p.local ? p.maxHp() : p.maxHp;
       const pr = R.project(p.x, p.y + p.h + .35 * sc, p.z); if (!pr || pr.d > 48) continue;
       const glow = p.local ? p.eff('glowing') : p.glowing;
       if (!glow) { const e = G.camPos; const d = { x: p.x - e.x, y: p.y + p.h - e.y, z: p.z - e.z }; const l = Math.hypot(d.x, d.y, d.z); if (G.world.ray(e, { x: d.x / l, y: d.y / l, z: d.z / l }, l - .3)) continue; }
-      let el = this.tagPool[n]; if (!el) { el = document.createElement('div'); el.className = 'tag'; el.innerHTML = '<span></span><i><b></b></i>'; wrap.appendChild(el); this.tagPool[n] = el; }
+      let el = this.tagPool[n]; if (!el) { el = document.createElement('div'); el.className = 'tag'; el.innerHTML = '<em></em><span></span><i><b></b></i>'; wrap.appendChild(el); this.tagPool[n] = el; }
       n++; el.style.display = 'block'; el.classList.toggle('ally', G.sameTeam(p.id, G.me.id)); el.style.transform = `translate(${pr.x}px,${pr.y}px) translate(-50%,-100%) scale(${clamp(8 / pr.d, .55, 1.2)})`;
-      el.firstChild.textContent = ((p.local ? G.tick < (p.prot || 0) : p.protF) ? '🛡 ' : '') + Math.ceil(hp) + ' ❤'; el.lastChild.firstChild.style.width = clamp(hp / mx, 0, 1) * 100 + '%';
+      const J = JOBS[p.job], jt = J ? J.icon + ' ' + J.name : ''; const em = el.firstChild; if (em.textContent !== jt) em.textContent = jt; em.style.display = jt ? '' : 'none';
+      const hs = el.children[1], hb = el.lastChild; hs.style.display = hb.style.display = this.showHp ? '' : 'none';
+      hs.textContent = ((p.local ? G.tick < (p.prot || 0) : p.protF) ? '🛡 ' : '') + Math.ceil(hp) + ' ❤'; hb.firstChild.style.width = clamp(hp / mx, 0, 1) * 100 + '%';
     }
     for (let i = n; i < this.tagPool.length; i++) this.tagPool[i].style.display = 'none';
   },

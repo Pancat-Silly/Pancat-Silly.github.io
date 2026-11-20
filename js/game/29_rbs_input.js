@@ -46,7 +46,9 @@ const RIN = {
       inp.sprint = !!(K.ControlLeft || K.ControlRight) || this.sprintT || T.sprint; if (inp.f <= 0) this.sprintT = false;
     }
     if (me.spectator) { if (inp.sneak && RUI.follow && !this._sn) { RUI.follow = null; } this._sn = inp.sneak; if (this.atkQ) { this.atkQ = 0; RUI.specNext(1); } if (this.useQ) { this.useQ = 0; RUI.specNext(-1); } return; }
-    this.target = this.pickTarget(me, RUI.mobile ? RTCTL.aimDir() : null);
+    if (RG.gs.ph === 'win') { inp.f = inp.s = 0; inp.jump = inp.sneak = inp.sprint = false; this.target = null; this.atkQ = this.useQ = 0; return; } // victory cutscene: no input
+    const aim = RUI.mobile ? RTCTL.aimDir() : null; // 마크 PE has no crosshair: nothing is selected until a finger touches the screen
+    this.target = RUI.mobile && RTCTL.scheme === 'pe' && !aim ? null : this.pickTarget(me, aim);
     // attack (one hit per click / tap; Bedrock has no attack cooldown)
     if (this.atkQ) { this.atkQ = 0; if (this.target && this.target.ent) me.tryAttack(this.target.ent); else me.swingAnim(); }
     // mining

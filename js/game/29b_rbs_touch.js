@@ -159,7 +159,7 @@ const RTCTL_CSS = `
 .rtdyn{position:absolute;touch-action:none;user-select:none;-webkit-user-select:none}
 .rtb.rtdyn{width:58px;height:58px;border-radius:10px;background:rgba(0,0,0,.35);border:2px solid rgba(255,255,255,.35);color:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;box-sizing:border-box}
 .rtb.rtsm{width:42px;height:42px;font-size:17px}
-#rbRing{position:absolute;display:none;width:76px;height:76px;margin:-38px 0 0 -38px;border-radius:50%;border:3px solid #fff;box-sizing:border-box;mix-blend-mode:difference;pointer-events:none;z-index:12}
+#rbRing{position:absolute;display:none;width:clamp(52px,19vmin,150px);height:clamp(52px,19vmin,150px);transform:translate(-50%,-50%);border-radius:50%;border:3px solid #fff;box-sizing:border-box;mix-blend-mode:difference;pointer-events:none;z-index:12}
 #rbRing i{position:absolute;inset:3px;border-radius:50%;background:#fff;transform:scale(.12);transition:transform .06s linear}body.rbmob.rbpe #rbCross{display:none}
 .rtb.on,.rtb.lock,.rdc.on,.rdc.lock{background:rgba(255,255,255,.4)}
 .rdpad{width:168px;height:168px;margin:0}.rdc{position:absolute;width:52px;height:52px;border-radius:8px;background:rgba(0,0,0,.35);border:2px solid rgba(255,255,255,.35);color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center}

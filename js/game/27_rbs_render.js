@@ -52,6 +52,15 @@ const RR = {
     armor(hm, -4.7, 4.2, -4.7, 4.7, 8.8, 4.7, ac(0));
   },
   // ---------- frame ----------
+  // victory cutscene (win phase): the camera stays straight in front of the winner on the podium and slowly moves in from far and high.
+  // Same timeline on every client (host clock); nobody is moved by it, the HUD hides (body.rbcut) and input is ignored.
+  cutCam() {
+    const gs = RG.gs; if (gs.ph !== 'win') return null; const t = clamp((RG.hostNow() - gs.t) / 7000, 0, 1), e = t * t * (3 - 2 * t);
+    const c = RW.P(RV.podium[0], RV.podium[1], RV.podium[2]); const hx = c.x, hy = c.y + 1.5, hz = c.z; // the winner's head; they face +x (the audience)
+    const a = 0, r = lerp(9, 3.4, e), h = lerp(3, .2, e); // always facing the winner head-on
+    const eye = { x: hx + Math.cos(a) * r, y: hy + h, z: hz + Math.sin(a) * r }; const dx = hx - eye.x, dy = hy - eye.y, dz = hz - eye.z;
+    return { eye, yaw: Math.atan2(-dx, dz), pitch: -Math.atan2(dy, Math.hypot(dx, dz)) };
+  },
   frame(alpha, dtMs) {
     if (RTEX.dirty) { RTEX.dirty = false; this.gfx.refreshAtlas(); } // tiles first used after start-up (crack stages, new items)
     this.dt = dtMs; this.frameN = (this.frameN || 0) + 1; const g = this.gfx, gl = g.gl, cv = this.cv; const me = RG.me;
@@ -59,8 +68,9 @@ const RR = {
     gl.viewport(0, 0, W, H); this.rebuild(RG.gs.ph === 'prep' ? 40 : 8);
     for (const r of RG.remotes.values()) { r.interp(); if (r.bots) for (const b of r.bots) b.interp(); }
     // camera: me / third person / spectator following someone
-    let eye, yaw, pitch, roll = 0; const fol = RUI.follow ? RG.byId(RUI.follow) : null;
-    if (fol && me.spectator && fol.alive !== false) { const fx = fol.local ? lerp(fol.px, fol.x, alpha) : fol.x, fy = fol.local ? lerp(fol.py, fol.y, alpha) : fol.y, fz = fol.local ? lerp(fol.pz, fol.z, alpha) : fol.z; eye = { x: fx, y: fy + (fol.sneaking ? 1.27 : 1.62), z: fz }; yaw = fol.yaw || 0; pitch = fol.pitch || 0; if (RUI.followThird) { const d = lookVec(yaw, pitch); const h = RW.w.ray(eye, { x: -d.x, y: -d.y, z: -d.z }, 4); const dd = h ? Math.max(.3, h.t - .2) : 4; eye = { x: eye.x - d.x * dd, y: eye.y - d.y * dd, z: eye.z - d.z * dd }; } }
+    let eye, yaw, pitch, roll = 0; const fol = RUI.follow ? RG.byId(RUI.follow) : null; const cut = this.cutCam();
+    if (cut) { eye = cut.eye; yaw = cut.yaw; pitch = cut.pitch; } // victory cutscene: everyone's camera flies to the winner on the podium
+    else if (fol && me.spectator && fol.alive !== false) { const fx = fol.local ? lerp(fol.px, fol.x, alpha) : fol.x, fy = fol.local ? lerp(fol.py, fol.y, alpha) : fol.y, fz = fol.local ? lerp(fol.pz, fol.z, alpha) : fol.z; eye = { x: fx, y: fy + (fol.sneaking ? 1.27 : 1.62), z: fz }; yaw = fol.yaw || 0; pitch = fol.pitch || 0; if (RUI.followThird) { const d = lookVec(yaw, pitch); const h = RW.w.ray(eye, { x: -d.x, y: -d.y, z: -d.z }, 4); const dd = h ? Math.max(.3, h.t - .2) : 4; eye = { x: eye.x - d.x * dd, y: eye.y - d.y * dd, z: eye.z - d.z * dd }; } }
     else {
       eye = { x: lerp(me.px, me.x, alpha), y: lerp(me.py, me.y, alpha) + me.eye, z: lerp(me.pz, me.z, alpha) }; yaw = me.yaw; pitch = me.pitch;
       if (me.hurtTime > 0) roll = Math.sin(me.hurtTime / 10 * Math.PI) * .1;
@@ -81,7 +91,7 @@ const RR = {
     const b = this.bo; b.reset(); const bt = this.bt; bt.reset();
     // players
     for (const p of RG.players()) {
-      if (p.spectator || p.alive === false) continue; if (p === me && !this.third) continue; if (fol && p === fol && !RUI.followThird && me.spectator) continue;
+      if (p.spectator || p.alive === false) continue; if (p === me && !this.third && !cut) continue; if (fol && p === fol && !RUI.followThird && me.spectator && !cut) continue;
       const sk = SKIN.get(p.skin);
       if (sk) { this.bs.reset(); this.drawPlayer(b, p, alpha, this.bs, sk); g.bind(sk.tex); g.drawBatch(this.bs); g.bind(); } else this.drawPlayer(b, p, alpha);
     }
@@ -115,7 +125,7 @@ const RR = {
     }
     g.drawChunks('t', eye); gl.depthMask(true); gl.disable(gl.BLEND);
     // first person hand / held item
-    if (!this.third && !me.spectator && me.alive) this.drawHand(alpha);
+    if (!this.third && !cut && !me.spectator && me.alive) this.drawHand(alpha);
     RUI.tags(vp, W / dpr, H / dpr);
   },
   drawHand(alpha) {
