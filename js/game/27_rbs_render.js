@@ -74,7 +74,7 @@ const RR = {
     let fov = RUI.fov; this.fovS = lerp(this.fovS || 1, me.sprinting ? 1.12 : 1, .2); fov *= this.fovS;
     const proj = M4.persp(fov * D2R, W / H, .05, 300); const d = lookVec(yaw, pitch);
     const up = { x: Math.sin(roll) * Math.cos(yaw), y: Math.cos(roll), z: Math.sin(roll) * Math.sin(yaw) };
-    const vp = M4.mul(proj, M4.lookAt(eye, { x: eye.x + d.x, y: eye.y + d.y, z: eye.z + d.z }, up)); this.vp = vp; this.W = W; this.H = H; this.proj = proj;
+    const vp = M4.mul(proj, M4.lookAt(eye, { x: eye.x + d.x, y: eye.y + d.y, z: eye.z + d.z }, up)); this.vp = vp; this.W = W; this.H = H; this.proj = proj; this.rayF = { d, up, t: Math.tan(fov * D2R / 2), asp: W / H };
     gl.clearColor(g.sky[0], g.sky[1], g.sky[2], 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     const fogA = nether ? 40 : 90, fogB = nether ? 110 : 220; g.setU(vp, eye, fogA, fogB); g.bind();
     gl.disable(gl.BLEND); gl.depthMask(true); g.drawChunks('o', eye);
@@ -170,5 +170,9 @@ const RR = {
     g.bind();
   },
   // screen projection for name tags / floating texts
+  // direction of the ray through a screen point (sx, sy in 0..1 of the canvas) — touch aiming in 마크 PE mode
+  screenDir(sx, sy) { const F = this.rayF; if (!F) return null; const f = F.d, u0 = F.up; let r = { x: f.y * u0.z - f.z * u0.y, y: f.z * u0.x - f.x * u0.z, z: f.x * u0.y - f.y * u0.x }; const rl = Math.hypot(r.x, r.y, r.z) || 1; r = { x: r.x / rl, y: r.y / rl, z: r.z / rl };
+    const u = { x: r.y * f.z - r.z * f.y, y: r.z * f.x - r.x * f.z, z: r.x * f.y - r.y * f.x }; const nx = (sx * 2 - 1) * F.t * F.asp, ny = (1 - sy * 2) * F.t;
+    const v = { x: f.x + r.x * nx + u.x * ny, y: f.y + r.y * nx + u.y * ny, z: f.z + r.z * nx + u.z * ny }; const l = Math.hypot(v.x, v.y, v.z); return { x: v.x / l, y: v.y / l, z: v.z / l }; },
   project(x, y, z) { const m = this.vp; const cx = m[0] * x + m[4] * y + m[8] * z + m[12], cy = m[1] * x + m[5] * y + m[9] * z + m[13], cw = m[3] * x + m[7] * y + m[11] * z + m[15]; if (cw <= .05) return null; return [(cx / cw * .5 + .5), (1 - (cy / cw * .5 + .5)), cw]; },
 };

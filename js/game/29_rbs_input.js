@@ -46,7 +46,7 @@ const RIN = {
       inp.sprint = !!(K.ControlLeft || K.ControlRight) || this.sprintT || T.sprint; if (inp.f <= 0) this.sprintT = false;
     }
     if (me.spectator) { if (inp.sneak && RUI.follow && !this._sn) { RUI.follow = null; } this._sn = inp.sneak; if (this.atkQ) { this.atkQ = 0; RUI.specNext(1); } if (this.useQ) { this.useQ = 0; RUI.specNext(-1); } return; }
-    this.target = this.pickTarget(me);
+    this.target = this.pickTarget(me, RUI.mobile ? RTCTL.aimDir() : null);
     // attack (one hit per click / tap; Bedrock has no attack cooldown)
     if (this.atkQ) { this.atkQ = 0; if (this.target && this.target.ent) me.tryAttack(this.target.ent); else me.swingAnim(); }
     // mining
@@ -64,6 +64,7 @@ const RIN = {
     if (this.placeCd > 0) this.placeCd--;
     const useHeld = this.rmb || T.use;
     if (this.useQ) { this.useQ = 0; this.use(me, true); } else if (useHeld && !this.placeCd && !me.useT) this.use(me, false);
+    if (RUI.mobile) RTCTL.tapDone();
     // eating
     const s = me.held(), I = s && RIT[s.id];
     if (me.useT) { if (!useHeld || !I || !I.food) me.useT = 0; else { me.useT++; if (me.useT % 4 === 0) RAU.at('eat', me); if (me.useT >= 32) { me.food = Math.min(20, me.food + I.food[0]); me.sat = Math.min(me.food, me.sat + I.food[1]); if (I.gold) { me.addEff('regeneration', 1, 5); me.addEff('absorption', 0, 120); } s.n--; if (!s.n) me.inv[me.sel] = null; me.useT = 0; RAU.at('burp', me); } } }
@@ -73,8 +74,8 @@ const RIN = {
     me.blocking = !!(sh && ((useHeld && !handUse) || me.sneaking));
   },
   after(me) { },
-  pickTarget(me) {
-    const eye = { x: me.x, y: me.y + me.eye, z: me.z }; const d = lookVec(me.yaw, me.pitch);
+  pickTarget(me, dir) { // dir: a touch ray (마크 PE) instead of the crosshair
+    const eye = { x: me.x, y: me.y + me.eye, z: me.z }; const d = dir || lookVec(me.yaw, me.pitch);
     const bh = RW.w.ray(eye, d, 6, B => (B.solid || B.cross || (!B.full && B.boxes) || B.cut || B.use) && !B.liquid && !B.invisible);
     let best = null, bt = 3.2; // entity reach
     for (const p of RG.players()) { if (p === me || p.spectator || p.alive === false) continue; const t = rayAABB(eye, d, p, bt, .1); if (t !== null && t < bt) { bt = t; best = p; } }

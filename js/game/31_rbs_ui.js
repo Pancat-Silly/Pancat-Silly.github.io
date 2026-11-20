@@ -99,7 +99,7 @@ const RUI = {
   // name tags + floating texts (DOM over the canvas)
   tags(vp, W, H) {
     const box = $('rbTags'); let h = ''; const cam = RR.cam.eye; const me = RG.me;
-    for (const p of RG.players()) { if (p === me || p.spectator || p.alive === false || p.sneaking) continue; if (RUI.follow === p.id && me.spectator && !this.followThird) continue; const d = Math.hypot(p.x - cam.x, p.y - cam.y, p.z - cam.z); if (d > 40) continue; const s = RR.project(p.x, p.y + 2.1, p.z); if (!s) continue; h += '<div class="rtag" style="left:' + (s[0] * W | 0) + 'px;top:' + (s[1] * H | 0) + 'px">' + esc(p.name) + (p.isBot ? ' <small>봇</small>' : '') + '</div>'; }
+    if (RG.gs.opts.tags) for (const p of RG.players()) { if (p === me || p.spectator || p.alive === false || p.sneaking) continue; /* other players' name tags: host option (default off) */ if (RUI.follow === p.id && me.spectator && !this.followThird) continue; const d = Math.hypot(p.x - cam.x, p.y - cam.y, p.z - cam.z); if (d > 40) continue; const s = RR.project(p.x, p.y + 2.1, p.z); if (!s) continue; h += '<div class="rtag" style="left:' + (s[0] * W | 0) + 'px;top:' + (s[1] * H | 0) + 'px">' + esc(p.name) + (p.isBot ? ' <small>봇</small>' : '') + '</div>'; }
     for (const f of RB_MARK.floating_texts) { const P = RW.P(f.pos[0], f.pos[1] + 1.1, f.pos[2]); const d = Math.hypot(P.x - cam.x, P.y - cam.y, P.z - cam.z); if (d > 18) continue; const s = RR.project(P.x, P.y, P.z); if (!s) continue; h += '<div class="rtag rft" style="left:' + (s[0] * W | 0) + 'px;top:' + (s[1] * H | 0) + 'px">' + this.fmt(f.text) + '</div>'; }
     if (h !== this._tg) { this._tg = h; box.innerHTML = h; }
   },
@@ -179,6 +179,7 @@ const RUI = {
       h += B('경기장 인원: ' + (O.big ? '25명' : '9명'), () => H('big', O.big ? 0 : 1, '경기장 인원'), lock, '9명: 33×33 / 25명: 53×53 · 25인 데스매치');
       const LV = ['쉬움', '보통', '어려움'], lv = O.botLv === undefined ? 1 : O.botLv | 0;
       h += B('봇 난이도: ' + ['§a', '§e', '§c'][lv] + LV[lv], () => H('botLv', (lv + 1) % 3, '봇 난이도'), lock, '어려움: 지금까지의 봇 · 보통 / 쉬움: 판단 · 반응 · 공격이 느려요');
+      h += lev('tags', '상대 이름표 보이기', '다른 플레이어 머리 위 이름표 (기본: 안 보임)');
       h += lev('kit', '기본템 지급', '경기 시작 때 돌 곡괭이 · 돌 도끼 · 돌 검 + 치유 물약 4개 (봇 포함)');
       h += lev('brk', '시작시 주변블록 파괴', '게임 시작 때 주변 블록을 부숴요');
       h += lev('pvp', '경기장 PvP');
