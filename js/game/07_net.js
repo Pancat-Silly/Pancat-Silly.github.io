@@ -5,11 +5,11 @@ const NB = d => APP === 'rbs' ? RG.onBlob(d) : UPJ.onBlob(d);
 const NET = {
   mode: 'off', status: '오프라인', rc: 'main', peerKey: null, peers: new Map(), out: [], seq: 0, seen: {}, room: null, bc: null, filter: false, onChange: null,
   gen: 0, peer: null, conns: new Map(), hostConn: null, isHost: false, latest: new Map(), dirty: new Set(), byes: [], online: false,
-  set(st, ok) { this.status = st; if (ok !== undefined) this.online = ok; if (this.onChange) this.onChange(); },
+  set(st, ok) { this.status = st; if (ok !== undefined) this.online = ok; if (this.online) this.busy = false; if (this.onChange) this.onChange(); },
   isArtifact() { return !!(window.claude && typeof window.claude.use === 'function'); },
   async connect(code) {
     this.rc = (code || 'main').toLowerCase().replace(/[^a-z0-9_.-]/g, '').slice(0, 30) || 'main';
-    this.disconnect(); const gen = ++this.gen;
+    this.disconnect(); const gen = ++this.gen; this.busy = true; // busy: connecting / reconnecting (랜덤블록 shows a splash)
     this.set('연결 확인 중…', false);
     for (let i = 0; i < 30 && !this.isArtifact(); i++) await new Promise(r => setTimeout(r, 100));
     if (gen !== this.gen) return;
@@ -22,19 +22,19 @@ const NET = {
       bc.onmessage = e => { const d = e.data; if (!d || d.peer === this.peerKey) return; if (d.blob) { NB(d.blob); return; } if (d.bye) this.leave(d.peer); else this.recv(d.peer, d.pres); };
       this.set('같은 브라우저 탭끼리만 연결 · 방 ' + this.rc, true); this.watchArtifact(gen); return true;
     }
-    this.mode = 'off'; this.set('오프라인 (연습 모드만 가능)', false); this.watchArtifact(gen); return false;
+    this.mode = 'off'; this.busy = false; this.set('오프라인 (연습 모드만 가능)', false); this.watchArtifact(gen); return false;
   },
   watchArtifact(gen) { const t = setInterval(() => { if (gen !== this.gen) return clearInterval(t); if (this.isArtifact()) { clearInterval(t); this.connect(this.rc); } }, 1000); },
   async connectRoom(gen) {
     this.mode = 'room'; this.set('실시간 방에 연결 중…', false);
     let room = null; try { room = await window.claude.use('room'); } catch (e) { room = null; }
     if (gen !== this.gen) return;
-    if (!room) { this.mode = 'off'; this.set('⚠ 실시간 연결을 쓸 수 없어요. 공개 링크로 열었거나 로그인하지 않은 경우예요. 공유받은 Claude 계정으로 로그인해서 열어 주세요. (연습 모드는 가능)', false); return false; }
+    if (!room) { this.mode = 'off'; this.busy = false; this.set('⚠ 실시간 연결을 쓸 수 없어요. 공개 링크로 열었거나 로그인하지 않은 경우예요. 공유받은 Claude 계정으로 로그인해서 열어 주세요. (연습 모드는 가능)', false); return false; }
     let nr = null; this.filter = false;
     try { nr = await room.join((APP === 'rbs' ? 'rbs2p2-' : 'apvp-') + this.rc); } catch (e) { nr = room; this.filter = true; }
     if (gen !== this.gen) { if (nr && nr.leave && !this.filter) nr.leave().catch(() => { }); return; }
     this.room = nr;
-    const err = e => { const c = e && e.code; if (gen !== this.gen) return; this.set(c === 'not_granted' || c === 'revoked' ? '⚠ 이 계정/링크는 실시간 방에 들어갈 수 없어요 (' + c + '). 공개 링크가 아니라, 공유받은 사람으로 로그인해서 열어야 해요.' : '⚠ 연결 오류 (' + c + ') · 잠시 후 다시 시도해 주세요', false); };
+    const err = e => { const c = e && e.code; if (gen !== this.gen) return; this.busy = false; this.set(c === 'not_granted' || c === 'revoked' ? '⚠ 이 계정/링크는 실시간 방에 들어갈 수 없어요 (' + c + '). 공개 링크가 아니라, 공유받은 사람으로 로그인해서 열어야 해요.' : '⚠ 연결 오류 (' + c + ') · 잠시 후 다시 시도해 주세요', false); };
     try {
       nr.onPeers(ch => {
         if (gen !== this.gen) return;
@@ -90,8 +90,8 @@ const NET = {
     pr.on('disconnected', () => { if (gen === this.gen) { try { pr.reconnect(); } catch (e) { } } });
     pr.on('error', e => { if (gen !== this.gen) return; if (e.type === 'network' || e.type === 'server-error' || e.type === 'socket-error' || e.type === 'socket-closed') { if (this.hostConn && this.hostConn.open) return; } try { pr.destroy(); } catch (x) { } this.retryHost(gen); });
   },
-  retryHost(gen) { this.hostConn = null; this.set('방장이 나가서 다시 연결 중…', false); setTimeout(() => this.tryHost(gen), 400 + Math.random() * 1600); },
-  p2pFail(gen) { this.set('⚠ P2P 서버에 연결하지 못했어요. 다시 시도 중…', false); setTimeout(() => this.tryHost(gen), 4000); },
+  retryHost(gen) { this.hostConn = null; this.busy = true; this.set('방장이 나가서 다시 연결 중…', false); setTimeout(() => this.tryHost(gen), 400 + Math.random() * 1600); },
+  p2pFail(gen) { this.busy = true; this.set('⚠ P2P 서버에 연결하지 못했어요. 다시 시도 중…', false); setTimeout(() => this.tryHost(gen), 4000); },
   p2pStatus() { const n = this.countPeers(); this.set('🟢 온라인(P2P' + (this.isHost ? '·방장' : '') + ') · 방 ' + this.rc + ' · 나 포함 ' + (n + 1) + '명', true); },
   disconnect() {
     this.gen++;
@@ -99,7 +99,7 @@ const NET = {
     if (this.bc) { try { this.bc.postMessage({ peer: this.peerKey, bye: 1 }); this.bc.close(); } catch (e) { } }
     if (this.peer) { try { this.peer.destroy(); } catch (e) { } }
     this.room = null; this.bc = null; this.peer = null; this.hostConn = null; this.conns.clear(); this.latest.clear(); this.dirty.clear(); this.isHost = false;
-    for (const k of [...this.peers.keys()]) this.leave(k); this.mode = 'off'; this.online = false;
+    for (const k of [...this.peers.keys()]) this.leave(k); this.mode = 'off'; this.online = false; this.busy = false;
   },
   // side channel for big one-off data (uploaded job files): not part of presence (that one is limited to ~4KB)
   blob(d) {

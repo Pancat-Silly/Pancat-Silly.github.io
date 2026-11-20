@@ -26,6 +26,8 @@ const RUI = {
     addEventListener('mousemove', e => { this.mx = e.clientX; this.my = e.clientY; const c = $('rbCursor'); c.style.left = (e.clientX - 18) + 'px'; c.style.top = (e.clientY - 18) + 'px'; this.tipAt(e); });
     $('rbChatF').onsubmit = e => { e.preventDefault(); const v = $('rbChatIn').value.trim(); if (v) this.sendChat(v); this.closeChat(); };
     $('rbChatX').onclick = () => this.closeChat();
+    const off = e => { e.preventDefault(); e.stopPropagation(); this.goOffline(); }; $('rbNetOff').addEventListener('click', off); $('rbNetOff').addEventListener('touchend', off, { passive: false });
+    addEventListener('keydown', e => { if (!this.netWait || this.paused || e.code !== 'KeyF' || e.repeat) return; const a = document.activeElement; if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return; e.preventDefault(); e.stopImmediatePropagation(); this.goOffline(); }, true); // PC: the cursor is locked in the game, so F presses the button
     $('rbPause').addEventListener('click', e => { const a = e.target.closest('[data-p]'); if (!a) return; this.pauseAct(a.dataset.p); });
     if (this.mobile) { const s2 = document.createElement('style'); s2.textContent = RTCTL_CSS; document.head.appendChild(s2); RTCTL.init(); } // touch buttons + layout editor (29b_rbs_touch.js)
     const port = () => document.body.classList.toggle('rbport', innerHeight > innerWidth * 1.05); port(); addEventListener('resize', port);
@@ -59,12 +61,29 @@ const RUI = {
     this.iconCache[id] = url; return url;
   },
   slotHTML(s) { if (!s) return ''; const I = RIT[s.id]; let h = '<img class="ric' + ((s.en || s.glow || (I && I.glint)) ? ' glint' : '') + '" src="' + this.iconURL(s.id) + '" draggable="false">'; if (s.n > 1) h += '<b class="rcn">' + s.n + '</b>'; if (I && I.dur && s.d) { const f = 1 - s.d / I.dur; h += '<i class="rdur"><i style="width:' + Math.round(f * 100) + '%;background:hsl(' + Math.round(f * 120) + ',90%,45%)"></i></i>'; } return h; },
+  // ---------- P2P connecting splash: covers the game while connecting / changing rooms / reconnecting ----------
+  netTick(now) {
+    const on = SITE.p2pNow() && !!NET.busy; const el = $('rbNet');
+    if (on !== !!this.netWait) { this.netWait = on; el.classList.toggle('hide', !on); if (on) { this.netT0 = now; RIN.lmb = RIN.rmb = false; if (RG.me) RG.me.dig = null; } }
+    if (!on) return; const sec = Math.floor((now - this.netT0) / 1000);
+    const st = NET.status || '연결 중…'; if (st !== this._nst) { this._nst = st; $('rbNetS').textContent = st; }
+    const mode = NET.mode === 'p2p' ? 'P2P (PeerJS · WebRTC)' : NET.mode === 'room' ? '실시간 방' : NET.mode === 'bc' ? '같은 브라우저 탭' : '서버 확인 중';
+    const info = '방 코드: ' + NET.rc + ' · ' + mode + ' · ' + sec + '초' + (sec >= 10 ? '<br>오래 걸리면 아래 버튼으로 혼자 플레이할 수 있어요' : '');
+    if (info !== this._nin) { this._nin = info; $('rbNetI').innerHTML = info; }
+    const lab = '오프라인 모드로 전환' + (this.mobile ? '' : ' (F)'); if ($('rbNetOff').textContent !== lab) $('rbNetOff').textContent = lab;
+  },
+  goOffline(quiet) {
+    SITE.setP2PNow(false); NET.disconnect(); NET.status = 'P2P 꺼짐 (혼자 플레이 · Ready를 누르면 봇 수를 골라요)'; RG.remotes.clear();
+    this.netTick(performance.now());
+    if (!quiet) { this.chat('§e오프라인 모드로 전환했어요. 핫바 5번 §fReady§e로 봇과 플레이할 수 있어요. (메뉴 → 멀티플레이에서 다시 켤 수 있어요)'); RAU.play('click', 1, false, .5); if (this.paused) this.menuDraw(); }
+  },
   // ---------- per-frame HUD ----------
   hud(dt) {
     if (this.mobile) RTCTL.ringTick();
     const me = RG.me; const now = performance.now();
     if (this.titleUntil && now > this.titleUntil) { $('rbTitle').style.opacity = 0; this.titleUntil = 0; }
     for (const l of $('rbChat').children) { const age = now - +l.dataset.t; l.style.opacity = this.chatOpen ? 1 : age > 10000 ? 0 : age > 9000 ? 1 - (age - 9000) / 1000 : 1; }
+    this.netTick(now);
     document.body.classList.toggle('rbhide', this.hideHud); document.body.classList.toggle('rbcut', RG.gs.ph === 'win'); document.body.classList.toggle('rbspec', me.spectator); document.body.classList.toggle('rbguiopen', !!this.gui);
     // hotbar (rebuilt only on change)
     const sig = me.inv.slice(0, 9).map(s => s ? s.id + s.n + (s.d || 0) + (s.en ? 'e' : '') + (s.glow ? 'g' : '') : '').join('|') + me.sel + (me.off ? me.off.id + (me.off.d || 0) : '');
@@ -151,7 +170,7 @@ const RUI = {
       h += B('조작법...', () => this.menuGo('help'), 'full');
     } else if (pg === 'multi') { // hotbar slot 4 in the lobby
       h += '<div class="rmnote">' + esc(NET.status || '') + '</div>';
-      h += B('P2P 멀티플레이: ' + (SITE.p2pNow() ? '허용' : '꺼짐'), () => { const v = !SITE.p2pNow(); SITE.setP2PNow(v); if (v) NET.connect(this.room); else { NET.disconnect(); NET.status = 'P2P 꺼짐 (혼자 플레이 · Ready를 누르면 봇 수를 골라요)'; RG.remotes.clear(); } this.menuDraw(); }, SITE.p2pNow() ? 'on full' : 'full', '다른 플레이어와 직접 연결해서 함께 플레이 (PeerJS · WebRTC)');
+      h += B('P2P 멀티플레이: ' + (SITE.p2pNow() ? '허용' : '꺼짐'), () => { const v = !SITE.p2pNow(); SITE.setP2PNow(v); if (v) NET.connect(this.room); else this.goOffline(true); this.menuDraw(); }, SITE.p2pNow() ? 'on full' : 'full', '다른 플레이어와 직접 연결해서 함께 플레이 (PeerJS · WebRTC)');
       h += X('닉네임', this.name, 16, v => { this.name = v || this.name; RG.me.name = this.name; this.save(); });
       h += X('스킨', this.skin, 16, v => { this.skin = v; RG.me.skin = v; SKIN.retry(v); this.save(); }, '마크 닉네임 (영문, 비우면 기본)');
       h += X('방 코드', this.room, 30, v => { const r = (v || 'main').toLowerCase(); if (r === this.room) return; this.room = r; this.save(); if (SITE.p2pNow()) { RG.remotes.clear(); NET.connect(this.room); } });
@@ -298,6 +317,15 @@ body.rbmob .rrb{width:180px}body.rbmob .rrbg{grid-template-columns:repeat(4,38px
 .rli .rbtn{font-size:13px;padding:8px 10px;flex:none}
 body.rbmob #rbTip{font-size:13px;max-width:220px}
 .hide{display:none}
+#rbNet{position:absolute;inset:0;z-index:25;background:#1d1d1d;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font:15px system-ui,'Malgun Gothic',sans-serif;text-shadow:2px 2px 0 #000;padding:16px;box-sizing:border-box}
+#rbNet.hide{display:none}.rnin{width:min(440px,90vw);text-align:center;margin-top:auto}
+.rncube{display:flex;gap:8px;justify-content:center;margin-bottom:18px}.rncube i{width:16px;height:16px;background:#80d850;box-shadow:inset -3px -3px 0 #4a9a2a;animation:rnb 1.2s infinite ease-in-out}.rncube i:nth-child(2){animation-delay:.2s;background:#5aa0e0;box-shadow:inset -3px -3px 0 #2d6aa6}.rncube i:nth-child(3){animation-delay:.4s;background:#e0b050;box-shadow:inset -3px -3px 0 #a87a20}
+@keyframes rnb{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-12px)}}
+.rnt{font-size:20px;font-weight:700;margin-bottom:10px}.rns{min-height:22px;color:#e8e8e8;word-break:keep-all}.rni{margin-top:10px;font-size:13px;color:#9a9a9a;line-height:1.6}
+.rnbar{height:6px;background:#333;margin:14px auto 0;width:70%;overflow:hidden;outline:2px solid #000}.rnbar i{display:block;height:100%;width:30%;background:linear-gradient(#80d850,#4a9a2a);animation:rnbar 1.4s infinite linear}
+@keyframes rnbar{0%{transform:translateX(-100%)}100%{transform:translateX(340%)}}
+#rbNetOff{margin-top:auto;margin-bottom:6vh;min-width:min(320px,80vw);font-size:16px;min-height:48px}
+body.rbmob #rbNetOff{min-height:56px;font-size:17px}
 `;
 const RUI_HTML = `<canvas id="rcv"></canvas>
 <div id="rbHud"><div id="rbTags"></div><div id="rbCross"></div><div id="rbCredit"></div><div id="rbEff"></div><div id="rbSide"></div><div id="rbSpec"><div id="rbSpecT"></div></div>
@@ -306,4 +334,5 @@ const RUI_HTML = `<canvas id="rcv"></canvas>
 <div id="rbHeld"></div><div id="rbTab" class="hide"></div>
 <div id="rbBottom"><canvas id="rbBars"></canvas><div id="rbXp"><i></i><span id="rbLvl"></span></div><div id="rbHotW"><div id="rbOff"></div><div id="rbHot"></div></div></div></div>
 <div id="rbTouch"><div id="rbJoy"><div id="rbKnob"></div></div></div><div id="rbRot">📱 가로 화면 권장 · 탭해서 가로 전체화면</div>
-<div id="rbGui"></div><div id="rbCursor"></div><div id="rbTip"></div><div id="rbPause" class="hide"></div>`;
+<div id="rbGui"></div><div id="rbCursor"></div><div id="rbTip"></div><div id="rbPause" class="hide"></div>
+<div id="rbNet" class="hide"><div class="rnin"><div class="rncube"><i></i><i></i><i></i></div><div class="rnt">멀티플레이 서버에 연결하는 중</div><div id="rbNetS" class="rns"></div><div class="rnbar"><i></i></div><div id="rbNetI" class="rni"></div></div><button id="rbNetOff" class="rmb">오프라인 모드로 전환</button></div>`;

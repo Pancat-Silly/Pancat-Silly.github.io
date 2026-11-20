@@ -40,7 +40,7 @@ const RIN = {
   apply(me) {
     if (RUI.mobile) RTCTL.tick();
     const K = this.keys, T = this.touch; const inp = me.inp;
-    if (RUI.gui || RUI.paused || RUI.chatOpen) { inp.f = inp.s = 0; inp.jump = false; inp.sprint = false; if (!RUI.mobile) inp.sneak = false; this.lmb = this.rmb = false; }
+    if (RUI.gui || RUI.paused || RUI.chatOpen || RUI.netWait) { inp.f = inp.s = 0; inp.jump = false; inp.sprint = false; if (!RUI.mobile) inp.sneak = false; this.lmb = this.rmb = false; }
     else {
       inp.f = (K.KeyW ? 1 : 0) - (K.KeyS ? 1 : 0) + T.f; inp.s = (K.KeyD ? 1 : 0) - (K.KeyA ? 1 : 0) + T.s; inp.jump = !!K.Space || T.jump; inp.sneak = !!(K.ShiftLeft || K.ShiftRight) || T.sneak;
       inp.sprint = !!(K.ControlLeft || K.ControlRight) || this.sprintT || T.sprint; if (inp.f <= 0) this.sprintT = false;
