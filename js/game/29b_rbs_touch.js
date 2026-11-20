@@ -95,7 +95,7 @@ const RTCTL = {
     tz.addEventListener('pointermove', e => {
       const q = this.pt(e);
       if (e.pointerId === jId) { let dx = q.x - jx, dy = q.y - jy; const l = Math.hypot(dx, dy), m = 50; if (l > m) { dx *= m / l; dy *= m / l; } knob.style.transform = 'translate(' + dx + 'px,' + dy + 'px)'; T.s = dx / m; T.f = -dy / m; T.sprint = this.sprintOn || -dy / m > .95; }
-      if (e.pointerId === lookId) { const dx = q.x - lx, dy = q.y - ly; lx = q.x; ly = q.y; lmove += Math.abs(dx) + Math.abs(dy); if (this.holdPt) { this.holdPt = { x: lx, y: ly }; return; } // PE: holding = mining under the finger (the finger moves the spot, not the camera)
+      if (e.pointerId === lookId) { const dx = q.x - lx, dy = q.y - ly; lx = q.x; ly = q.y; lmove += Math.abs(dx) + Math.abs(dy); if (this.holdPt) this.holdPt = { x: lx, y: ly }; // PE: while holding, the spot under the finger is mined and the camera still turns (like Bedrock)
         const k = .0045 * RUI.sens, me = RG.me; me.yaw += dx * k; me.pitch = clamp(me.pitch + dy * k, -1.55, 1.55); }
     });
     this.resetZone = () => { jId = null; lookId = null; clearTimeout(holdT); T.hold = false; this.holdPt = this.tapPt = null; joy.style.display = 'none'; this.resetDpad && this.resetDpad(); };
@@ -111,6 +111,14 @@ const RTCTL = {
   dirAt(x, y) { const c = $('rcv').getBoundingClientRect(); return RR.screenDir((x - c.left) / c.width, (y - c.top) / c.height); },
   aimDir() { if (this.scheme !== 'pe') return null; const p = this.tapPt || this.holdPt; return p ? this.dirAt(p.x, p.y) : null; },
   tapDone() { this.tapPt = null; },
+  // Bedrock-style break indicator: a white ring at the finger, a white disc inside it grows with the block's break progress
+  // (full disc = broken). mix-blend-mode: difference inverts the picture underneath, like the PE touch circle.
+  ringTick() {
+    const r = $('rbRing'); if (!r) return; const p = this.holdPt, me = RG.me;
+    if (!p || this.editing || RUI.gui || RUI.paused || me.spectator) { if (r.style.display !== 'none') r.style.display = 'none'; return; }
+    const k = me.dig ? clamp(me.dig.p, 0, 1) : 0; r.style.display = 'block'; r.style.left = p.x + 'px'; r.style.top = p.y + 'px';
+    r.firstChild.style.transform = 'scale(' + (0.12 + k * .88).toFixed(3) + ')'; r.firstChild.style.opacity = me.dig ? 1 : 0;
+  },
   // the 달리기 button locks sprint for the D-pad / joystick until pressed again
   tick() { if (this.sprintOn && RIN.touch.f > .5) RIN.touch.sprint = true; },
   // ---------- editor ----------
@@ -139,7 +147,7 @@ const RTCTL = {
   init() {
     const bar = document.createElement('div'); bar.id = 'rbTEdit'; bar.className = 'hide';
     bar.innerHTML = '<select id="rteScheme"><option value="classic">기존 조작</option><option value="pe">마크 PE 조작</option></select><select id="rteAdd"></select><button id="rteMinus">크기 −</button><button id="rtePlus">크기 ＋</button><button id="rteDel">🗑 빼기</button><button id="rteReset">초기화</button><button id="rteDone">✔ 완료</button><div id="rteSel"></div>';
-    $('rbs').appendChild(bar);
+    $('rbs').appendChild(bar); const ring = document.createElement('div'); ring.id = 'rbRing'; ring.innerHTML = '<i></i>'; $('rbs').appendChild(ring);
     this.load(); this.build(); this.bindZone(); document.body.classList.toggle('rbpe', this.scheme === 'pe');
     $('rteMinus').onclick = () => this.size(-.1); $('rtePlus').onclick = () => this.size(.1); $('rteDel').onclick = () => this.remove(); $('rteReset').onclick = () => { if (confirm('이 조작 방식의 버튼 배치를 처음 상태로 되돌릴까요?')) this.reset(); };
     $('rteDone').onclick = () => this.closeEditor(); $('rteAdd').onchange = e => { this.addKey(e.target.value); e.target.value = ''; };
@@ -150,7 +158,9 @@ const RTCTL = {
 const RTCTL_CSS = `
 .rtdyn{position:absolute;touch-action:none;user-select:none;-webkit-user-select:none}
 .rtb.rtdyn{width:58px;height:58px;border-radius:10px;background:rgba(0,0,0,.35);border:2px solid rgba(255,255,255,.35);color:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;box-sizing:border-box}
-.rtb.rtsm{width:42px;height:42px;font-size:17px}body.rbmob.rbpe #rbCross{display:none}
+.rtb.rtsm{width:42px;height:42px;font-size:17px}
+#rbRing{position:absolute;display:none;width:76px;height:76px;margin:-38px 0 0 -38px;border-radius:50%;border:3px solid #fff;box-sizing:border-box;mix-blend-mode:difference;pointer-events:none;z-index:12}
+#rbRing i{position:absolute;inset:3px;border-radius:50%;background:#fff;transform:scale(.12);transition:transform .06s linear}body.rbmob.rbpe #rbCross{display:none}
 .rtb.on,.rtb.lock,.rdc.on,.rdc.lock{background:rgba(255,255,255,.4)}
 .rdpad{width:168px;height:168px;margin:0}.rdc{position:absolute;width:52px;height:52px;border-radius:8px;background:rgba(0,0,0,.35);border:2px solid rgba(255,255,255,.35);color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center}
 .rdpad .rdc-ul,.rdpad .rdc-ur{opacity:0}.rdpad.fwd .rdc-ul,.rdpad.fwd .rdc-ur{opacity:1}

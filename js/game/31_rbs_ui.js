@@ -61,6 +61,7 @@ const RUI = {
   slotHTML(s) { if (!s) return ''; const I = RIT[s.id]; let h = '<img class="ric' + ((s.en || s.glow || (I && I.glint)) ? ' glint' : '') + '" src="' + this.iconURL(s.id) + '" draggable="false">'; if (s.n > 1) h += '<b class="rcn">' + s.n + '</b>'; if (I && I.dur && s.d) { const f = 1 - s.d / I.dur; h += '<i class="rdur"><i style="width:' + Math.round(f * 100) + '%;background:hsl(' + Math.round(f * 120) + ',90%,45%)"></i></i>'; } return h; },
   // ---------- per-frame HUD ----------
   hud(dt) {
+    if (this.mobile) RTCTL.ringTick();
     const me = RG.me; const now = performance.now();
     if (this.titleUntil && now > this.titleUntil) { $('rbTitle').style.opacity = 0; this.titleUntil = 0; }
     for (const l of $('rbChat').children) { const age = now - +l.dataset.t; l.style.opacity = this.chatOpen ? 1 : age > 10000 ? 0 : age > 9000 ? 1 - (age - 9000) / 1000 : 1; }
