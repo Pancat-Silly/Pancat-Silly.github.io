@@ -220,10 +220,3 @@ body.mobile #actionbar{bottom:128px}
 #siteVerNote .svt{color:#ffff55;font-weight:bold}#siteVerNote .svt b{color:#55ff55}#siteVerNote .svs{font-size:12px;color:#aaa;margin:4px 0 8px}
 #siteVerNote .svb{display:flex;gap:8px;justify-content:center}#siteVerNote button{padding:7px 16px;font-size:14px;cursor:pointer;color:#fff;background:#6f6f6f;border:2px solid;border-color:#aaa #333 #333 #aaa}#siteVerNote .svy{background:#2f7d32;border-color:#6c6 #1b4d1d #1b4d1d #6c6}
 .sitever{color:#aaa}
-/* 내 정보 (desktop app, contents of pancat-silly.carrd.co) */
-.dkMe{background:linear-gradient(160deg,#ffb04a,#f07d1a);color:#3b1d00;padding:18px 16px;overflow:auto;display:flex;flex-direction:column;align-items:center;gap:12px;font-family:system-ui,'Malgun Gothic',sans-serif}
-.meTop{text-align:center}.meAv{position:relative;width:112px;height:112px;margin:0 auto 8px;border-radius:50%;overflow:hidden;border:4px solid #fff3;box-shadow:0 4px 14px #0003;background:#ffd8a8;display:flex;align-items:center;justify-content:center;font-size:52px}
-.meAv img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.dkMe h2{margin:0;font-size:22px;color:#fff;text-shadow:0 2px 0 #0002}.meSub{font-size:12px;color:#5a2c00}
-.meList{width:100%;max-width:320px;display:flex;flex-direction:column;gap:8px}.meBtn{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border:0;border-radius:12px;background:#fff8;color:#3b1d00;cursor:pointer;text-align:left;font:inherit;transition:background .15s}
-.meBtn:hover{background:#fffc}.meIc{font-size:22px;width:28px;text-align:center}.meT{flex:1;display:flex;flex-direction:column}.meT b{font-size:14px}.meT small{font-size:12px;color:#7a4510}.meGo{font-size:12px;color:#a35a10;font-weight:bold}
-.meCarrd{border:2px solid #fff;background:transparent;color:#fff;border-radius:999px;padding:8px 18px;font:inherit;font-weight:bold;cursor:pointer}.meCarrd:hover{background:#fff3}.meNote{font-size:11px;color:#6a3500}

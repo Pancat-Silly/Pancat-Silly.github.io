@@ -133,6 +133,7 @@ const DESK = {
   top() { let b = null; for (const id in this.wins) { const w = this.wins[id]; if (w.closed || w.min) continue; if (!b || w.z > b.z) b = w; } return b; },
   focus(id) { const W = this.wins[id]; if (!W || this.top() === W) return; const prev = this.top(); W.z = ++this.z; if (prev && prev !== W) this.blurApp(prev); this.sync(); },
   open(id) {
+    const L = this.APPS.find(a => a.id === id); if (L && L.url) { window.open(L.url, '_blank', 'noopener'); this.startMenu(false); return; } // link apps
     const W = this.wins[id] || this.mkWin(id); if (!W) return; const was = W.closed; const prev = this.top(); W.min = false; W.closed = false; if (W.mode === 'full' && !(this.mobile && W.A.game)) W.mode = this.mobile ? 'max' : 'normal'; if (this.mobile && W.A.game) W.mode = 'full'; W.z = ++this.z; if (prev && prev !== W) this.blurApp(prev);
     this.startMenu(false); this.sync(); this.save();
     if (was) { if (W.A.game) this.gameStart(W); else if (W.A.build) W.A.build(W.body, W); }
@@ -212,19 +213,8 @@ DESK.addApp({ id: 'apvp', icon: '⚔️', label: '4중인격<br>PvP', title: '4�
 DESK.addApp({ id: 'rbs', icon: '🧱', img: (typeof RB_ICON !== 'undefined' ? RB_ICON : ''), label: '랜덤블록<br>서바이벌 <b class="dkbeta">베타</b>', title: '랜덤블록 서바이벌 · 베타', game: true, w: 1280, h: 800, bg: 'linear-gradient(#3a7bd5,#22427a)' });
 // 개발 도구: the 4중인격 game with APVP_DEV, offline only. No icon; opened from the game's '개발 도구 창 열기' or 사이트주소/ability_pvp_dev
 DESK.addApp({ id: 'apvp_dev', app: 'apvp', dev: true, offline: true, hidden: true, icon: '🛠', title: '4중인격 개발 도구', game: true, w: 1280, h: 800 });
-// 내 정보: pancat-silly.carrd.co can't be shown in a frame (X-Frame-Options: deny), so its contents are rebuilt here; the picture loads from Carrd
-DESK.addApp({ id: 'me', icon: '🥞', label: '내 정보', title: '내 정보 · 팬캣실리', w: 380, h: 580, bg: 'linear-gradient(#ffb347,#f0801c)',
-  CARRD: 'https://pancat-silly.carrd.co/',
-  LINKS: [['💬', 'Discord', 'pancat_silly', null], ['📝', 'Tistory', 'pancat-silly.tistory.com', 'https://pancat-silly.tistory.com/'], ['🎮', 'Steam', '스팀 프로필', 'https://steamcommunity.com/profiles/76561198958422183/'], ['▶️', 'YouTube', '@냥', 'https://www.youtube.com/@%EB%83%A5']],
-  build(body) {
-    body.classList.add('dkMe');
-    body.innerHTML = '<div class="meTop"><div class="meAv"><img src="' + this.CARRD + 'assets/images/image01.jpg" alt="" onerror="this.remove()"><span>🥞</span></div><h2>Pancat_Silly</h2><div class="meSub">팬캣실리 · Pancat_Silly\'s sites</div></div>'
-      + '<div class="meList">' + this.LINKS.map((L, i) => '<button class="meBtn" data-i="' + i + '"><span class="meIc">' + L[0] + '</span><span class="meT"><b>' + L[1] + '</b><small>' + L[2] + '</small></span><span class="meGo">' + (L[3] ? '↗' : '복사') + '</span></button>').join('') + '</div>'
-      + '<button class="meCarrd">Carrd에서 보기 ↗</button><div class="meNote">이메일 등 전체 내용은 Carrd 페이지에 있어요</div>';
-    for (const b of body.querySelectorAll('.meBtn')) b.onclick = () => { const L = this.LINKS[+b.dataset.i]; if (L[3]) { window.open(L[3], '_blank', 'noopener'); return; }
-      const done = () => { const g = b.querySelector('.meGo'); g.textContent = '복사됨!'; setTimeout(() => g.textContent = '복사', 1500); }; try { navigator.clipboard.writeText(L[2]).then(done, done); } catch (e) { done(); } };
-    body.querySelector('.meCarrd').onclick = () => window.open(this.CARRD, '_blank', 'noopener');
-  } });
+// 내 정보: a link app — opens pancat-silly.carrd.co in a new browser tab (Carrd can't be shown inside a window: X-Frame-Options: deny)
+DESK.addApp({ id: 'me', icon: '🥞', label: '내 정보', title: '내 정보', url: 'https://pancat-silly.carrd.co/', bg: 'linear-gradient(#ffb347,#f0801c)' });
 DESK.addApp({ id: 'settings', icon: '⚙️', label: '설정', title: '설정', w: 460, h: 520, bg: 'linear-gradient(#6a7480,#3f4650)',
   build(body) { body.classList.add('dkApp'); this.onOpen(body); },
   onOpen(body) {
