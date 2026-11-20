@@ -19,4 +19,8 @@
 
 원작 : 마인크래프트 베드락에디션 1.17 에서 만들어진 랜덤블록서바이벌 V2.1을 기반으로 함.
 
+[![랜덤블록 서바이벌 원작 영상](https://img.youtube.com/vi/C_QVJYME30A/hqdefault.jpg)](https://youtu.be/C_QVJYME30A)
+
+원작 영상 : https://youtu.be/C_QVJYME30A
+
 원작자 : 본인
