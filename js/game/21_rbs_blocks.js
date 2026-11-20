@@ -21,6 +21,8 @@ const RBLK = {
   },
   build() {
     BL.length = 0; defB(0, { name: 'air', solid: false, full: false, opaque: false, air: true, repl: true });
+    // block items the map never contained (e.g. 자작나무 판자 from crafting) get ids after the map's: same order on every client
+    for (const k in RIT) { const b = RIT[k].place || RIT[k].block; if (b && !RB_KEYS.includes(b)) RB_KEYS.push(b); }
     RB_KEYS.forEach((k, i) => { if (i) { this.id[k] = i; BL[i] = this.def(k, i); } });
   },
   T(n) { return RTEX.T(n); },

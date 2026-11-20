@@ -1,5 +1,6 @@
 // ===================== mobile touch controls: 기존 / 마크 PE + user button layout editor =====================
 // Layout = { key: { x, y, s } }, x/y = button centre as a fraction of the game area, s = size scale. Keys missing = hidden.
+// The same button can be added more than once: extra copies are stored as 'key#2', 'key#3' … (base key = before '#').
 // 기존: attack/use buttons, tap = attack (finger target, else crosshair).
 // PE (Bedrock): tap ON the enemy = attack (no crosshair needed), tap on nothing = swing.
 // Both: move with the floating joystick (left-bottom drag) or the D-pad buttons; sneak as toggle or hold.
@@ -24,6 +25,8 @@ const TCTL = {
   },
   save() { try { localStorage.setItem('apvp_ctl', this.scheme); localStorage.setItem('apvp_tlay_' + this.scheme, JSON.stringify(this.lay)); } catch (e) { } },
   setScheme(s) { this.save(); this.scheme = s === 'pe' ? 'pe' : 'classic'; try { localStorage.setItem('apvp_ctl', this.scheme); } catch (e) { } this.load(); this.build(); this.syncPause(); },
+  base(k) { return String(k).split('#')[0]; },
+  copies(b) { return Object.keys(this.els).filter(k => this.base(k) === b).map(k => this.els[k]); },
   moveStyle() { return this.lay.dpad ? 'dpad' : 'joy'; },
   setMove(v) { if (v === 'dpad' && !this.lay.dpad) this.lay.dpad = { x: .13, y: .7, s: 1 }; if (v === 'joy') delete this.lay.dpad; this.save(); this.build(); },
   setSneakHold(v) { this.sneakHold = !!v; UI.sneakToggle = false; UI.touch.sneak = false; try { localStorage.setItem('apvp_sneakhold', v ? '1' : '0'); } catch (e) { } this.lockSync(); },
@@ -32,7 +35,7 @@ const TCTL = {
   // ---------- DOM ----------
   build() {
     const tz = $('touch'); for (const k in this.els) this.els[k].remove(); this.els = {};
-    for (const k in this.lay) { if (!this.KEYS[k]) continue; const el = k === 'dpad' ? this.mkDpad() : this.mkBtn(k); el.dataset.k = k; tz.appendChild(el); this.els[k] = el; this.bind(k, el); }
+    for (const k in this.lay) { if (!this.KEYS[this.base(k)]) continue; const el = k === 'dpad' ? this.mkDpad() : this.mkBtn(this.base(k)); el.dataset.k = k; tz.appendChild(el); this.els[k] = el; this.bind(k, el); }
     this.place(); UI.closeMenu && UI.closeMenu();
   },
   mkBtn(k) { const K = this.KEYS[k], el = document.createElement('div'); el.className = 'tb tdyn' + (K.sm ? ' tsm' : ''); el.innerHTML = K.ic + (K.sm ? '' : '<small>' + K.name + '</small>'); return el; },
@@ -51,15 +54,15 @@ const TCTL = {
       chat: () => setTimeout(() => UI.openChat(), 50), tab: () => { UI.tabOpen = !UI.tabOpen; $('tab').classList.toggle('hide', !UI.tabOpen); }, view: () => { R.third = (R.third + 1) % 3; },
       swap: () => { const me = G.me; if (me) { const t = me.off; me.off = me.inv[me.sel]; me.inv[me.sel] = t; } }, land: () => UI.toggleLand(),
       slotL: () => { const me = G.me; if (me) me.sel = (me.sel + 8) % 9; }, slotR: () => { const me = G.me; if (me) me.sel = (me.sel + 1) % 9; },
-    }[k], up = { atk: () => { T.attackHold = false; }, use: () => { T.use = false; }, jump: () => { T.jump = false; }, sneak: () => { if (this.sneakHold) T.sneak = false; } }[k];
+    }[this.base(k)], up = { atk: () => { T.attackHold = false; }, use: () => { T.use = false; }, jump: () => { T.jump = false; }, sneak: () => { if (this.sneakHold) T.sneak = false; } }[this.base(k)];
     if (k === 'dpad') return this.bindDpad(el);
     el.addEventListener('pointerdown', e => {
       e.preventDefault(); e.stopPropagation(); if (this.editing) return this.dragStart(k, e); AU.init();
       el.classList.add('on'); down && down(); try { el.setPointerCapture(e.pointerId); } catch (x) { }
     });
-    const u = () => { if (this.editing) return; if (k !== 'more') el.classList.remove('on'); up && up(); }; el.addEventListener('pointerup', u); el.addEventListener('pointercancel', u);
+    const u = () => { if (this.editing) return; if (this.base(k) !== 'more') el.classList.remove('on'); up && up(); }; el.addEventListener('pointerup', u); el.addEventListener('pointercancel', u);
   },
-  lockSync() { if (this.els.sneak) this.els.sneak.classList.toggle('lock', UI.sneakToggle); if (this.els.sprint) this.els.sprint.classList.toggle('lock', !!UI.sprintLock); const m = this.els.dpad && this.els.dpad.querySelector('.dc-mid'); if (m) m.classList.toggle('lock', UI.sneakToggle); },
+  lockSync() { for (const e of this.copies('sneak')) e.classList.toggle('lock', UI.sneakToggle); for (const e of this.copies('sprint')) e.classList.toggle('lock', !!UI.sprintLock); const m = this.els.dpad && this.els.dpad.querySelector('.dc-mid'); if (m) m.classList.toggle('lock', UI.sneakToggle); },
   bindDpad(el) {
     const T = UI.touch; let pid = null, cur = null, lastUp = 0;
     const cellAt = (e) => { const L = this.lay.dpad, a = this.area(), q = UI.pt(e); const c = 56 * L.s, dx = q.x - L.x * a.w, dy = q.y - L.y * a.h; if (Math.abs(dx) > c * 1.9 || Math.abs(dy) > c * 1.9) return null; const col = dx < -c / 2 ? 0 : dx > c / 2 ? 2 : 1, row = dy < -c / 2 ? 0 : dy > c / 2 ? 2 : 1; return [['ul', 'up', 'ur'], ['left', 'mid', 'right'], [null, 'down', null]][row][col]; };
@@ -108,8 +111,9 @@ const TCTL = {
     this.editBar(); this.place();
   },
   editBar() {
-    const add = $('teAdd'); add.innerHTML = '<option value="">＋ 버튼 추가…</option>' + Object.keys(this.KEYS).filter(k => !this.lay[k]).map(k => '<option value="' + k + '">' + (this.KEYS[k].ic || '✚') + ' ' + this.KEYS[k].name + '</option>').join('');
-    $('teSel').textContent = this.sel ? (this.KEYS[this.sel].ic || '✚') + ' ' + this.KEYS[this.sel].name + ' · 크기 ' + Math.round(this.lay[this.sel].s * 100) + '%' : '버튼을 끌어서 옮기고, 눌러서 고르세요';
+    const add = $('teAdd'); add.innerHTML = '<option value="">＋ 버튼 추가…</option>' + Object.keys(this.KEYS).filter(k => k !== 'dpad' || !this.lay.dpad).map(k => '<option value="' + k + '">' + (this.KEYS[k].ic || '✚') + ' ' + this.KEYS[k].name + '</option>').join('');
+    const SK = this.sel && this.KEYS[this.base(this.sel)];
+    $('teSel').textContent = this.sel ? (SK.ic || '✚') + ' ' + SK.name + ' · 크기 ' + Math.round(this.lay[this.sel].s * 100) + '%' : '버튼을 끌어서 옮기고, 눌러서 고르세요';
     $('teScheme').value = this.scheme;
   },
   dragStart(k, e) {
@@ -121,7 +125,7 @@ const TCTL = {
   },
   size(d) { if (!this.sel) return; const L = this.lay[this.sel]; L.s = clamp(Math.round((L.s + d) * 10) / 10, .5, 2.5); this.place(); this.editBar(); },
   remove() { if (!this.sel) return; delete this.lay[this.sel]; this.sel = null; this.build(); this.editBar(); },
-  addKey(k) { if (!k || this.lay[k]) return; this.lay[k] = { x: .5, y: .45, s: k === 'dpad' ? 1 : (this.KEYS[k].sm ? 1 : 1) }; this.sel = k; this.build(); this.editBar(); },
+  addKey(k) { if (!k || !this.KEYS[k] || (k === 'dpad' && this.lay.dpad)) return; if (this.lay[k]) { let n = 2; while (this.lay[k + '#' + n]) n++; k = k + '#' + n; } this.lay[k] = { x: .5, y: .45, s: 1 }; this.sel = k; this.build(); this.editBar(); },
   reset() { this.lay = JSON.parse(JSON.stringify(this.DEF[this.scheme])); this.sel = null; this.build(); this.editBar(); },
   closeEditor() { this.editing = false; this.sel = null; this.save(); this.syncPause(); $('tEdit').classList.add('hide'); this.place(); UI.paused = false; UI.resetInput(); },
   init() {

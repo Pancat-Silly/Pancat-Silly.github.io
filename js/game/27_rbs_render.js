@@ -89,7 +89,9 @@ const RR = {
     const tt = (RG.tick + alpha);
     for (const e of RG.items.values()) {
       if (e.st.id === 'xp') { const s = .08 + Math.min(.08, e.st.n * .006); b.cube(e.x, e.y + .15, e.z, s, [.5 + .4 * Math.sin(tt * .3), 1, .3]); continue; }
-      let m = M4.T(M4.id(), e.x, e.y + .2 + Math.sin(tt * .1 + e.age) * .05, e.z); m = M4.RY(m, tt * .05 + (e.age % 7)); this.drawItem(b, m, e.st.id, .7);
+      // Minecraft ItemEntityRenderer: spin = (age + partialTick) / 20 rad + a random start angle per item, bob = sin(t / 10 + start) * .1 + .1 (smooth, ticks not frames)
+      const hs = e.hs !== undefined ? e.hs : (e.hs = Math.random() * Math.PI * 2), ta = e.age + alpha;
+      let m = M4.T(M4.id(), e.x, e.y + .1 + Math.sin(ta / 10 + hs) * .1 + .1, e.z); m = M4.RY(m, ta / 20 + hs); this.drawItem(b, m, e.st.id, .7);
     }
     // falling blocks (sand / gravel / anvil)
     for (const f of RG.falls) { const B = BL[f.id]; if (!B) continue; const P = RW.P(f.x, lerp(f.py, f.y, alpha), f.z); const bx = B.full ? [[0, 0, 0, 1, 1, 1]] : (B.boxes || [[0, 0, 0, 1, 1, 1]]); for (const q of bx) this.boxT(b, null, P.x + q[0], P.y + q[1], P.z + q[2], P.x + q[3], P.y + q[4], P.z + q[5], B.tiles); }
@@ -147,9 +149,11 @@ const RR = {
     return out;
   },
   drawSigns() {
-    if (!this.signTex.length) { for (const o of this.signs || (this.signs = this.signFix())) { const c = document.createElement('canvas'); c.width = 128; c.height = 64; const x = c.getContext('2d'); x.fillStyle = '#000'; x.textAlign = 'center'; x.textBaseline = 'middle';
-      const lines = o.s[4].split('\n').slice(0, 4); while (lines.length < 4) lines.push(''); lines.forEach((l, i) => { const t = l.replace(/§./g, ''); let fs = 13; do { x.font = 'bold ' + fs + 'px sans-serif'; } while (fs-- > 7 && x.measureText(t).width > 122); x.fillText(t, 64, 9 + i * 15); }); // long lines shrink to fit the board
-      if (o.s[4].trim()) this.signTex.push(Object.assign(o, { tex: this.gfx.makeTex(c) })); } if (!this.signTex.length) this.signTex.push({ none: true }); }
+    if (!this.signTex.length) { for (const o of this.signs || (this.signs = this.signFix())) { // 256x128 text texture, regular weight, smoothed (LINEAR + mipmaps)
+      const c = document.createElement('canvas'); c.width = 256; c.height = 128; const x = c.getContext('2d'); x.fillStyle = '#1a1208'; x.textAlign = 'center'; x.textBaseline = 'middle';
+      const lines = o.s[4].replace(/랜덤블록 서바이벌 V2[^\n]*/g, '랜덤블록 서바이벌').split('\n').slice(0, 4); while (lines.length < 4) lines.push('');
+      lines.forEach((l, i) => { const t = l.replace(/§./g, ''); let fs = 24; do { x.font = '500 ' + fs + "px 'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif"; } while (fs-- > 12 && x.measureText(t).width > 244); x.fillText(t, 128, 18 + i * 30); }); // long lines shrink to fit the board
+      if (o.s[4].trim()) this.signTex.push(Object.assign(o, { tex: this.gfx.makeTex(c, true) })); } if (!this.signTex.length) this.signTex.push({ none: true }); }
     const g = this.gfx; const b = this.bs;
     // quad on the face of a board that faces f: wall board = back 2/16 of the cell (y .3-.85), standing board = middle (y .5-1)
     const quad = (P, f, d, y0, y1) => { const o = d + .004;

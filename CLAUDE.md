@@ -31,7 +31,7 @@ js/data/              생성된 데이터 (손으로 고치지 말고 tools/ 스
   jobs_builtin.js     개발 도구로 만든 내장 직업 BUILTIN_JOBS (mkmodjobs.py)
 js/game/              게임 코드. 파일 이름 순서로 로드하는 일반 <script>들 (전역 공유)
 rbs/music/            랜덤블록 BGM mp3 (선택)
-sounds/               효과음 파일 (apvp/, rbs/, jobs/<직업>/). 예전에 js/data 안에 base64로 있던 것 (tools/split_sounds.py)
+sounds/               효과음 파일 (apvp/, rbs/, jobs/<직업>/). 랜덤블록 sfx_gameover·sfx_error·sfx_win_sin*는 사용자 요청으로 저장소에 안 올림(.gitignore, RB_SFX에서도 뺌 → 합성음). 예전에 js/data 안에 base64로 있던 것 (tools/split_sounds.py)
 tools/                [로컬 전용 · .gitignore로 저장소에 안 올림] mkentry.py, split_sounds.py, bump_version.py, hooks/pre-commit, build_single.py, rbsconv.py, rbsassets.py, mkmodjobs.py, mkassets.py, modjobs/*.txt
 ```
 모듈을 새로 추가하면 **index.html에 `<script src>`도 추가**해야 한다. 순서는 파일 이름 순이다.
@@ -113,6 +113,7 @@ tools/                [로컬 전용 · .gitignore로 저장소에 안 올림] m
   - **메뉴는 하나뿐이다:** Esc · M · 모바일 ☰ → `RUI.pause(true, 페이지)`. 4중인격 ESC 메뉴처럼 마크식 돌 버튼(`menuDraw`, `MPAGE`): 게임 메뉴(관전·로비·튜토리얼·시점) → 설정(볼륨·효과음·자동 전체화면·리소스팩) → 화면·조작 / 조작법, 그리고 호스트 설정(게임시간·인원·봇 난이도·옵션·블록 커스텀·초기화). Esc는 한 단계 뒤로(`menuBack`).
   - 로비 핫바(`RG.KIT`, 칸에 잠김, 우클릭/사용 → `RUI.menuAct`): 4 멀티플레이(`menu_multi` → 메뉴의 'multi' 페이지: P2P 허용·닉네임·스킨·방 코드), 5 Ready, 6 놀이터. 이 셋은 Esc 메뉴에는 없다.
   - 예전 메뉴 상자(0,31,6) 자리는 가문비 위 반블록(양옆 거꾸로 계단과 맞춤, 34_rbs_main.js)이고 설정 상자 목록은 없앴다. 메뉴에서 책·팔레트·봇 선택 화면으로 갈 때는 `menuTo()`로 포인터 잠금 없이 넘어간다(잠갔다 바로 푸는 게 전체화면에서 커서가 안 보이던 원인).
+  - 모바일 조작은 29b_rbs_touch.js `RTCTL`(4중인격 `TCTL`과 같은 방식). 설정 → 화면·조작에서 조작 방식·이동·웅크리기·버튼 배치 편집. 두 게임 모두 편집기에서 같은 버튼을 여러 개 넣을 수 있다(레이아웃 키 `atk#2` 식, 기본 키는 `#` 앞).
   - 인벤토리와 제작대에는 페이지식 제작법 책(`rbHTML`/`rbCraft`)과 CSS 3D 스킨 인형(`dollHTML`)이 있다.
   - 호스트 블록 커스텀은 `palHTML`이다.
 - **놀이터 장치:**
@@ -120,6 +121,9 @@ tools/                [로컬 전용 · .gitignore로 저장소에 안 올림] m
   - 자폭 열쇠 화로: `KEYCHAIN`이 원작 단계를 재생한다(3초 단계 생략 버그 유지).
   - 벽 폭파, 웅크리면 출구로 복귀, 회복 구역, 토템 파티클.
 - **표지판:** 벽 표지판은 키의 방향대로. 서 있는 표지판은 변환 때 회전값이 깨져 있어서(`rbsconv.py`의 축 계산 버그) 런타임 `RR.signFix()`가 방향을 정한다(바로 옆 벽 반대쪽, 아니면 가장 트인 쪽). 판 블록도 돌리고 글자는 판 양면에 그린다.
+- **이름:** 화면에 나오는 이름은 "랜덤블록 서바이벌" 하나로 쓴다(V2 파트 2, V2.1 표기 안 함. 맵 표지판의 "랜덤블록 서바이벌 V2.1"도 그릴 때 바꿈). 표지판 글자는 256×128 캔버스, 보통 굵기, LINEAR+밉맵(`makeTex(cv, true)`).
+- **떨어진 아이템:** 마크 ItemEntityRenderer처럼 회전 = (age+partialTick)/20 + 아이템마다 랜덤 시작각 `e.hs`, 위아래 = sin(t/10+hs)·0.1+0.1.
+- **맵에 없던 블록 아이템**(예: 제작으로 만든 자작나무 판자)은 `RBLK.build()`가 `RB_KEYS` 뒤에 붙여 등록한다(모든 클라이언트 같은 순서). 없으면 아이콘이 깨져 인벤토리가 빈 화면이 됐다.
 - **대나무 발판:** 위에 서고, 웅크리면 뚫고 내려가고, 안에서 점프하면 올라간다(`RWorld.boxes`의 `scafEnt`, `B.scaf`).
 - **블록 상호작용:**
   - 문·다락문·울타리 문·레버·버튼·감압판이 동작한다(`RG.useBlock`, `plateTick`, `power`). 토글 대상 키는 rbsconv.py `flip()`이 미리 등록한다.

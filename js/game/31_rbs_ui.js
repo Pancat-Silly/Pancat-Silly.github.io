@@ -27,13 +27,13 @@ const RUI = {
     $('rbChatF').onsubmit = e => { e.preventDefault(); const v = $('rbChatIn').value.trim(); if (v) this.sendChat(v); this.closeChat(); };
     $('rbChatX').onclick = () => this.closeChat();
     $('rbPause').addEventListener('click', e => { const a = e.target.closest('[data-p]'); if (!a) return; this.pauseAct(a.dataset.p); });
-    if (this.mobile) RIN.bindTouch();
+    if (this.mobile) { const s2 = document.createElement('style'); s2.textContent = RTCTL_CSS; document.head.appendChild(s2); RTCTL.init(); } // touch buttons + layout editor (29b_rbs_touch.js)
     const port = () => document.body.classList.toggle('rbport', innerHeight > innerWidth * 1.05); port(); addEventListener('resize', port);
     $('rbRot').addEventListener('touchstart', e => { e.preventDefault(); if (!this.land) this.toggleLand(); }, { passive: false });
   },
   esc: s => esc(s),
   // landscape: inside a desktop window the top page does fullscreen + orientation lock
-  toggleLand() { this.land = !this.land; const b = $('rtLand'); if (b) b.classList.toggle('lit', this.land);
+  toggleLand() { this.land = !this.land; for (const b of (window.RTCTL ? RTCTL.copies('land') : [])) b.classList.toggle('lock', this.land);
     if (SITE.inFrame) { SITE.toParent({ t: 'land', on: this.land }); return; }
     const lock = () => { try { const q = screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape'); if (q && q.catch) q.catch(() => { }); } catch (e) { } };
     if (this.land) { const el = document.documentElement; try { const p = el.requestFullscreen && el.requestFullscreen({ navigationUI: 'hide' }); if (p && p.then) p.then(lock).catch(lock); else lock(); } catch (e) { lock(); } } else SITE.landOff(); },
@@ -73,9 +73,9 @@ const RUI = {
     // bars
     const bs = Math.ceil(me.hp) + '|' + Math.ceil(me.absorb) + '|' + me.armorPts()[0] + '|' + me.food + '|' + me.lvl + '|' + Math.round(me.xp) + '|' + (me.hurtTime > 0) + '|' + me.mode + '|' + (me.eff('poison') ? 'p' : me.eff('wither') ? 'w' : '');
     if (bs !== this._bs) { this._bs = bs; this.drawBars(); }
-    // sidebar (original: "랜덤블록 서바이벌 V2 파트2" scoreboard)
+    // sidebar (the original scoreboard)
     if ((RG.tick & 7) === 0) { const all = RG.players().filter(p => !p.isBot || true); const rows = [['준비한 플레이어', RG.readyCount()], ['서버 인원', all.length], ['게임중인 플레이어', all.filter(p => !p.spectator && p.alive !== false && RG.area(p) === 'arena').length]].sort((a, b) => b[1] - a[1]);
-      const h = '<div class="rsh">랜덤블록 서바이벌 V2 파트2</div>' + rows.map(r => '<div><span>' + r[0] + '</span><b>' + r[1] + '</b></div>').join(''); if (h !== this._sb) { this._sb = h; $('rbSide').innerHTML = h; }
+      const h = '<div class="rsh">랜덤블록 서바이벌</div>' + rows.map(r => '<div><span>' + r[0] + '</span><b>' + r[1] + '</b></div>').join(''); if (h !== this._sb) { this._sb = h; $('rbSide').innerHTML = h; }
       const ef = Object.entries(me.effects).filter(([n]) => n !== 'saturation').map(([n, e]) => (this.EFN[n] || n) + ' ' + RITEM.ROMAN[e.amp + 1 > 5 ? 5 : e.amp + 1] + ' <small>' + Math.ceil(e.t / 20) + 's</small>').join('<br>'); if (ef !== this._ef) { this._ef = ef; $('rbEff').innerHTML = ef; }
       if (this.gui) this.guiTick();
       if (me.spectator) { const f = this.follow ? RG.byId(this.follow) : null; $('rbSpecT').innerHTML = '👁 관전 중' + (f ? ' · <b>' + esc(f.name) + '</b> 시점' + (this.followThird ? ' (3인칭)' : '') : ' · 자유 시점') + '<br><small>' + (this.mobile ? '탭: 다음 플레이어 · 웅크리기: 자유 시점 · 메뉴(☰)에서 관전 끝내기' : '클릭: 다음 / 우클릭: 이전 플레이어 · 숫자: 바로 선택 · Shift: 자유 시점 · V: 1/3인칭 · M: 메뉴 (관전 끝내기)') + '</small>'; }
@@ -161,7 +161,13 @@ const RUI = {
       h += B('해상도: ' + RES[ri][1], () => { this.res = RES[(ri + 1) % RES.length][0]; this.save(); this.menuDraw(); });
       h += T('화면 흔들림', this.bob, () => { this.bob = !this.bob; this.save(); this.menuDraw(); });
       h += T('HUD 숨기기 (F1)', this.hideHud, () => { this.hideHud = !this.hideHud; this.menuDraw(); });
-      if (this.mobile) h += T('가로 전체화면', this.land, () => { this.toggleLand(); this.menuDraw(); });
+      if (this.mobile) {
+        h += T('가로 전체화면', this.land, () => { this.toggleLand(); this.menuDraw(); });
+        h += B('조작 방식: ' + (RTCTL.scheme === 'pe' ? '마크 PE' : '기존'), () => { RTCTL.setScheme(RTCTL.scheme === 'pe' ? 'classic' : 'pe'); this.menuDraw(); }, '', '기존: 조이스틱 + 버튼 / 마크 PE: 방향키 · 버튼 배치는 방식마다 따로 저장돼요');
+        h += B('이동: ' + (RTCTL.moveStyle() === 'dpad' ? '방향키 버튼' : '조이스틱'), () => { RTCTL.setMove(RTCTL.moveStyle() === 'dpad' ? 'joy' : 'dpad'); this.menuDraw(); }, '', '조이스틱: 화면 왼쪽 아래를 끌기');
+        h += B('웅크리기: ' + (RTCTL.sneakHold ? '누르는 동안만' : '눌러서 켜기/끄기'), () => { RTCTL.setSneakHold(!RTCTL.sneakHold); this.menuDraw(); });
+        h += B('버튼 배치 편집...', () => RTCTL.openEditor(), 'full', '버튼을 끌어서 옮기고, 크기를 바꾸고, 빼거나 더할 수 있어요 (같은 버튼 여러 개도 가능)');
+      }
     } else if (pg === 'help') {
       h += '<div class="rmhelp">' + this.HELP + '</div>';
     } else if (pg === 'host') {
@@ -262,8 +268,6 @@ button.rmb:hover,.rmpair button:hover{background:#7f86c0}.rmb.on{box-shadow:inse
 #rbTouch{position:absolute;inset:0;display:none;z-index:10}body.rbmob #rbTouch{display:block}body.rbguiopen #rbTouch{display:none}
 #rbJoy{position:absolute;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.3);display:none;pointer-events:none}#rbKnob{position:absolute;left:35px;top:35px;width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.4)}
 .rtb{position:absolute;width:58px;height:58px;border-radius:10px;background:rgba(0,0,0,.35);border:2px solid rgba(255,255,255,.35);color:#fff;font-size:22px;display:flex;align-items:center;justify-content:center}.rtb.on,.rtb.lit{background:rgba(255,255,255,.35)}
-#rtJump{right:22px;bottom:110px;width:70px;height:70px}#rtSneak{right:100px;bottom:96px}#rtAtk{right:22px;bottom:196px}#rtUse{right:96px;bottom:176px}#rtInv{left:50%;bottom:4px;margin-left:205px;width:42px;height:42px;font-size:16px}#rtDrop{left:50%;bottom:4px;margin-left:-250px;width:42px;height:42px;font-size:16px}
-#rtPause{right:6px;top:40px;width:42px;height:42px;font-size:17px}#rtMenu{right:54px;top:40px;width:42px;height:42px;font-size:17px}#rtChat{right:102px;top:40px;width:42px;height:42px;font-size:17px}#rtView{right:150px;top:40px;width:42px;height:42px;font-size:17px}#rtTab{right:198px;top:40px;width:42px;height:42px;font-size:17px}#rtLand{right:246px;top:40px;width:42px;height:42px;font-size:17px}#rtLand.lit{background:rgba(120,200,120,.5)}
 #rbRot{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);background:rgba(0,0,0,.75);color:#fff;padding:12px 16px;border-radius:10px;font-size:15px;display:none;z-index:40;text-align:center}body.rbmob.rbport #rbRot{display:block}
 body.rbmob #rbSide{left:6px;right:auto;top:6px;transform:none;font-size:11px;min-width:140px}body.rbmob #rbChat{max-height:30vh}body.rbmob #rbBars{width:300px;height:38px}body.rbmob #rbXp{width:300px}body.rbmob .rhs,body.rbmob #rbOff{width:36px;height:36px}body.rbmob .ric{width:26px;height:26px}
 body.rbmob #rbTt{font-size:36px}body.rbmob #rbTs{font-size:18px}body.rbmob #rbChat{bottom:120px;font-size:12px}
@@ -299,5 +303,5 @@ const RUI_HTML = `<canvas id="rcv"></canvas>
 <form id="rbChatF" class="hide" autocomplete="off"><input id="rbChatIn" maxlength="120" placeholder="메시지 입력" enterkeyhint="send"><button class="rbtn">전송</button><button type="button" class="rbtn" id="rbChatX">✕</button></form>
 <div id="rbHeld"></div><div id="rbTab" class="hide"></div>
 <div id="rbBottom"><canvas id="rbBars"></canvas><div id="rbXp"><i></i><span id="rbLvl"></span></div><div id="rbHotW"><div id="rbOff"></div><div id="rbHot"></div></div></div></div>
-<div id="rbTouch"><div id="rbJoy"><div id="rbKnob"></div></div><div class="rtb" id="rtJump">⤒</div><div class="rtb" id="rtSneak">⇩</div><div class="rtb" id="rtAtk">⚔</div><div class="rtb" id="rtUse">✋</div><div class="rtb" id="rtInv">…</div><div class="rtb" id="rtDrop">⇣</div><div class="rtb" id="rtPause">☰</div><div class="rtb" id="rtChat">💬</div><div class="rtb" id="rtView">👁</div><div class="rtb" id="rtTab">👥</div><div class="rtb" id="rtLand">⛶</div></div><div id="rbRot">📱 가로 화면 권장 · 탭해서 가로 전체화면</div>
+<div id="rbTouch"><div id="rbJoy"><div id="rbKnob"></div></div></div><div id="rbRot">📱 가로 화면 권장 · 탭해서 가로 전체화면</div>
 <div id="rbGui"></div><div id="rbCursor"></div><div id="rbTip"></div><div id="rbPause" class="hide"></div>`;

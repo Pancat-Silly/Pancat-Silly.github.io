@@ -38,6 +38,7 @@ const RIN = {
   },
   // ---------- per tick ----------
   apply(me) {
+    if (RUI.mobile) RTCTL.tick();
     const K = this.keys, T = this.touch; const inp = me.inp;
     if (RUI.gui || RUI.paused || RUI.chatOpen) { inp.f = inp.s = 0; inp.jump = false; inp.sprint = false; if (!RUI.mobile) inp.sneak = false; this.lmb = this.rmb = false; }
     else {
@@ -105,33 +106,5 @@ const RIN = {
   swapOff() { const me = RG.me; const s = me.held(); if (s && !(RIT[s.id] && RIT[s.id].shield)) return; const o = me.off; me.off = s || null; me.inv[me.sel] = o || null; },
   pick() { },
   // ---------- touch ----------
-  bindTouch() {
-    const el = $('rbTouch'); if (!el) return; const T = this.touch; const me = () => RG.me; let joy = null, look = null;
-    const stick = $('rbJoy'), knob = $('rbKnob');
-    el.addEventListener('touchstart', e => { RAU.init(); for (const t of e.changedTouches) {
-      const tgt = t.target; if (tgt.closest && tgt.closest('.rtb')) continue;
-      if (t.clientX < innerWidth * .4 && !joy) { joy = { id: t.identifier, x: t.clientX, y: t.clientY }; stick.style.display = 'block'; stick.style.left = (t.clientX - 60) + 'px'; stick.style.top = (t.clientY - 60) + 'px'; knob.style.transform = 'translate(0,0)'; }
-      else if (!look) { look = { id: t.identifier, x: t.clientX, y: t.clientY, sx: t.clientX, sy: t.clientY, t: performance.now(), moved: 0 }; look.timer = setTimeout(() => { if (look && look.moved < 12) T.hold = true; }, 280); }
-    } e.preventDefault(); }, { passive: false });
-    el.addEventListener('touchmove', e => { for (const t of e.changedTouches) {
-      if (joy && t.identifier === joy.id) { let dx = t.clientX - joy.x, dy = t.clientY - joy.y; const l = Math.hypot(dx, dy); const m = 50; if (l > m) { dx *= m / l; dy *= m / l; } knob.style.transform = 'translate(' + dx + 'px,' + dy + 'px)'; T.s = dx / m; T.f = -dy / m; T.sprint = -dy / m > .95; }
-      if (look && t.identifier === look.id) { const dx = t.clientX - look.x, dy = t.clientY - look.y; look.x = t.clientX; look.y = t.clientY; look.moved += Math.abs(dx) + Math.abs(dy); const k = .0045 * RUI.sens; me().yaw += dx * k; me().pitch = clamp(me().pitch + dy * k, -1.55, 1.55); }
-    } e.preventDefault(); }, { passive: false });
-    const end = e => { for (const t of e.changedTouches) {
-      if (joy && t.identifier === joy.id) { joy = null; T.f = T.s = 0; T.sprint = false; stick.style.display = 'none'; }
-      if (look && t.identifier === look.id) { clearTimeout(look.timer); const short = performance.now() - look.t < 280 && look.moved < 12; if (short && !T.hold) { // tap: hit what's in the crosshair, otherwise use / place
-          const tg = RG.me.spectator ? null : this.pickTarget(RG.me); if (tg && tg.ent) this.atkQ++; else this.useQ++; }
-        T.hold = false; look = null; }
-    } };
-    el.addEventListener('touchend', end); el.addEventListener('touchcancel', end);
-    const btn = (id, down, up) => { const b = $(id); if (!b) return; b.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); RAU.init(); down(); b.classList.add('on'); }, { passive: false }); b.addEventListener('touchend', e => { e.preventDefault(); e.stopPropagation(); if (up) up(); b.classList.remove('on'); }, { passive: false }); };
-    btn('rtJump', () => T.jump = true, () => T.jump = false);
-    btn('rtSneak', () => { T.sneak = !T.sneak; $('rtSneak').classList.toggle('lit', T.sneak); });
-    btn('rtAtk', () => this.atkQ++);
-    btn('rtUse', () => { this.useQ++; T.use = true; }, () => T.use = false);
-    btn('rtInv', () => RUI.open('inv')); btn('rtDrop', () => this.drop(false)); btn('rtChat', () => RUI.openChat()); btn('rtPause', () => RUI.pause(true));
-    btn('rtView', () => { if (RG.me.spectator && RUI.follow) RUI.followThird = !RUI.followThird; else RR.third = (RR.third + 1) % 3; });
-    btn('rtTab', () => RUI.tab(true), () => RUI.tab(false));
-    btn('rtLand', () => RUI.toggleLand());
-  },
+
 };

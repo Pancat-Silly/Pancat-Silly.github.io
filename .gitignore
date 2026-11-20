@@ -1,3 +1,7 @@
 .claude/
 tools/
 dist/
+# 랜덤블록 원작 효과음 중 올리지 않는 것 (로컬에만 둠, 게임은 없으면 합성음)
+sounds/rbs/sfx_gameover.mp3
+sounds/rbs/sfx_error.mp3
+sounds/rbs/sfx_win_sin*.mp3

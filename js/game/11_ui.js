@@ -449,7 +449,7 @@ const UI = {
     const btn = (id, down, up) => { const el = $(id); el.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); AU.init(); el.classList.add('on'); down && down(); el.setPointerCapture && el.setPointerCapture(e.pointerId); }); const u = e => { el.classList.remove('on'); up && up(); }; el.addEventListener('pointerup', u); el.addEventListener('pointercancel', u); };
     btn('tSpawn', () => this.setSpawn());
     const menu = $('tMenu');
-    const closeMenu = () => { menu.classList.add('hide'); if (TCTL.els.more) TCTL.els.more.classList.remove('on'); clearTimeout(TCTL.menuT); };
+    const closeMenu = () => { menu.classList.add('hide'); for (const e of TCTL.copies('more')) e.classList.remove('on'); clearTimeout(TCTL.menuT); };
     this.closeMenu = closeMenu;
     for (const el of menu.children) el.addEventListener('pointerup', () => setTimeout(closeMenu, 120));
     btn('tTab', () => { this.tabOpen = !this.tabOpen; $('tab').classList.toggle('hide', !this.tabOpen); });
