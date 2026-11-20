@@ -279,6 +279,7 @@ Object.assign(RUI, {
       case 'playground': { const a = RG.area(me); if (a === 'arena' || a === 'dm') return; if (me.spectator) me.mode = 'adventure'; RG.tp(me, RV.playground); this.close(); RAU.play('pop'); break; }
       case 'spec': this.close(true); this.spec(!me.spectator); break;
       case 'book': this.open('book', { p: 0 }); break;
+      case 'multi': this.close(true); this.pause(true, 'multi'); break;
       case 'host': case 'settings': case 'more': this.close(true); this.pause(true, k === 'host' ? 'host' : k === 'settings' ? 'set' : 'main'); break;
     }
   },
@@ -308,7 +309,7 @@ Object.assign(RUI, {
   // the original book had 18 pages that weren't in the export; this one is written from the analysed game rules
   BOOK: [
     '§l랜덤블록 서바이벌 V2 파트 2§r\n튜토리얼 & 정보\n\n최대 9명이 33×33×15 크기의 무작위 블록 큐브 안에서 캐고, 만들고, 싸워서 §c최후의 1명§r이 이기는 게임이에요.\n\n원작: LemonyMEF (마인크래프트 베드락 맵)',
-    '§l시작하기§r\n\n§6메뉴§r(Esc · 모바일은 ☰)에서 §fReady§r를 누르세요.\n준비한 플레이어가 §a2명 이상§r이면 경기장이 만들어지고 10초 뒤 시작해요.\n\n혼자라면 §6호스트 설정§r에서 봇을 추가할 수 있어요.',
+    '§l시작하기§r\n\n핫바 5번 §fReady§r를 우클릭(모바일은 사용 버튼)하세요.\n준비한 플레이어가 §a2명 이상§r이면 경기장이 만들어지고 10초 뒤 시작해요.\n\n혼자라면 §6호스트 설정§r에서 봇을 추가할 수 있어요.',
     '§l경기장§r\n\n블록 33종이 무작위로 채워져요: 원목 · 돌 · 흙 · 자갈 · 각종 광석 · 책장 · 제작대 · 화로 · 용광로 · 유리 · 모루 · 상자.\n\n상자 3종류에는 조약돌, 투척용 치유의 물약 II, 경험치 병, 다이아몬드, 마법부여대 같은 아이템이 들어 있어요.',
     '§l생존 팁§r\n\n· 원목 → 판자 → 막대기 → 나무 곡괭이부터!\n· 철광석은 돌 곡괭이, 다이아몬드는 철 곡괭이가 필요해요.\n· 원석은 화로·용광로에서 녹여 주괴로.\n· 경험치 병 + 청금석 + 마법부여대 = 마법 부여.\n· 모든 플레이어는 항상 포만 상태라 체력이 빨리 차요.',
     '§l제한 시간 · 데스매치§r\n\n남은 시간은 화면 아래에 보여요. 1분 30초가 남으면 음악이 빨라져요.\n\n시간이 끝났는데 2명 이상 살아 있으면 §c데스매치§r! 네더 경기장으로 이동하고, 5초 뒤 PvP가 시작돼요. 45초 뒤에는 독가스(또는 용암), 60초 뒤에는 더 강한 독가스가 퍼져요.',

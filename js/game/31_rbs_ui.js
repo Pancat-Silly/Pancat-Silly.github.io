@@ -107,7 +107,7 @@ const RUI = {
   // ---------- the one menu (Esc · ☰ · M): 게임 메뉴 -> 설정 -> 화면 · 조작 / 조작법, 호스트 설정. Minecraft-style stone buttons
   // like 4중인격's pause screen; replaces the old menu chest, the lobby hotbar items and the separate settings chests.
   pg: 'main',
-  MPAGE: { main: ['게임 메뉴', null], set: ['설정', 'main'], video: ['화면 · 조작 설정', 'set'], help: ['조작법', 'set'], host: ['호스트 설정', 'main'] },
+  MPAGE: { main: ['게임 메뉴', null], set: ['설정', 'main'], video: ['화면 · 조작 설정', 'set'], help: ['조작법', 'set'], host: ['호스트 설정', 'main'], multi: ['멀티플레이', null] },
   pause(on, pg) {
     if (on && (this.gui || this.chatOpen)) return; this.paused = !!on; $('rbPause').classList.toggle('hide', !on);
     if (on) { if (document.pointerLockElement) document.exitPointerLock(); this.pg = pg || 'main'; this.menuDraw(); }
@@ -132,28 +132,28 @@ const RUI = {
     if (pg === 'main') {
       const a = RG.area(me), inGame = (a === 'arena' || a === 'dm') && !me.spectator;
       h += B('게임으로 돌아가기', () => this.pause(false), 'full');
-      h += B(RG.rd ? '§aReady: 준비 완료' : ph === 'lobby' ? 'Ready: 준비하기' : '§7Ready (게임 진행 중)', () => this.ready(), RG.rd ? 'on' : '', '준비한 플레이어가 2명 이상이면 시작돼요 · 혼자면 함께할 봇 수를 골라요');
-      h += B('놀이터', () => { if (inGame) return; this.menuAct('playground'); this.pause(false); }, inGame ? 'dis' : '', '대기실 · 맨손 PvP · 미니 랜덤블록(1:1) · 숨겨진 던전 · 돌아올 때는 출구에서 웅크리기');
       h += B(me.spectator ? '관전 끝내기' : '관전하기', () => { this.pause(false); this.spec(!me.spectator); }, me.spectator ? 'on' : '', '날아다니며 경기를 보거나 플레이어 시점으로 따라가요 (관전 중에는 다음 게임에 참가하지 않아요)');
       h += B('로비로 이동', () => { if (inGame) return; if (me.spectator) this.spec(false); else RG.toSpawn(me); this.pause(false); }, inGame ? 'dis' : '', '스폰 지점으로 돌아가요 (경기 중 경기장에서는 안 돼요)');
       h += B('튜토리얼 & 정보', () => this.menuTo(() => this.open('book', { p: 0 })));
       h += B('시점: ' + ['1인칭', '3인칭 (뒤)', '3인칭 (앞)'][RR.third | 0], () => { RR.third = (RR.third + 1) % 3; this.menuDraw(); });
       h += B('설정...', () => this.menuGo('set'));
-      h += B('호스트 설정...', () => this.menuGo('host'), 'full', host ? '게임 시간 · 옵션 · 봇 난이도 · 블록 커스텀' : '호스트 외 설정 불가능 (보기만 가능)');
+      h += B('호스트 설정...', () => this.menuGo('host'), '', host ? '게임 시간 · 옵션 · 봇 난이도 · 블록 커스텀' : '호스트 외 설정 불가능 (보기만 가능)');
       if (SITE.inFrame) h += B('§c게임 끄고 바탕화면으로', () => { RAU.stopBgm(); SITE.toParent({ t: 'close' }); }, 'full');
     } else if (pg === 'set') {
       h += R('효과음 볼륨', 0, 1, .05, this.vol, v => Math.round(v * 100) + '%', v => { this.vol = v; RAU.setVol(); });
       h += R('음악 볼륨', 0, 1, .05, this.mvol, v => Math.round(v * 100) + '%', v => { this.mvol = v; RAU.setVol(); });
       h += T('효과음', this.sfxOn, () => { this.sfxOn = !this.sfxOn; this.save(); this.menuDraw(); });
-      h += B('P2P 멀티플레이: ' + (SITE.p2pNow() ? '허용' : '꺼짐'), () => { const v = !SITE.p2pNow(); SITE.setP2PNow(v); if (v) NET.connect(this.room); else { NET.disconnect(); NET.status = 'P2P 꺼짐 (혼자 플레이 · Ready를 누르면 봇 수를 골라요)'; RG.remotes.clear(); } this.menuDraw(); }, SITE.p2pNow() ? 'on' : '', '다른 플레이어와 직접 연결해서 함께 플레이 (PeerJS · WebRTC)');
       if (!this.mobile) h += T('자동 전체화면', SITE.autoFs(), () => { SITE.setAutoFs(!SITE.autoFs()); this.menuDraw(); }, '', '게임 화면을 클릭하면 브라우저를 전체화면으로 바꿔요 (게임 창 크기는 그대로) · 바탕화면 설정과 같은 값');
       h += B('리소스팩: ' + RPACK.label(), () => RPACK.click(0), RPACK.on ? 'on' : '', '마인크래프트 1.21.4 바닐라 텍스처 · 사운드를 이 기기의 브라우저가 공식 미러에서 직접 받아요 (게임에 포함 안 됨)');
       if (RPACK.has) h += B('리소스팩 다시 받기', () => RPACK.click(2));
+      h += B('화면 · 조작 설정...', () => this.menuGo('video'));
+      h += B('조작법...', () => this.menuGo('help'), 'full');
+    } else if (pg === 'multi') { // hotbar slot 4 in the lobby
+      h += '<div class="rmnote">' + esc(NET.status || '') + '</div>';
+      h += B('P2P 멀티플레이: ' + (SITE.p2pNow() ? '허용' : '꺼짐'), () => { const v = !SITE.p2pNow(); SITE.setP2PNow(v); if (v) NET.connect(this.room); else { NET.disconnect(); NET.status = 'P2P 꺼짐 (혼자 플레이 · Ready를 누르면 봇 수를 골라요)'; RG.remotes.clear(); } this.menuDraw(); }, SITE.p2pNow() ? 'on full' : 'full', '다른 플레이어와 직접 연결해서 함께 플레이 (PeerJS · WebRTC)');
       h += X('닉네임', this.name, 16, v => { this.name = v || this.name; RG.me.name = this.name; this.save(); });
       h += X('스킨', this.skin, 16, v => { this.skin = v; RG.me.skin = v; SKIN.retry(v); this.save(); }, '마크 닉네임 (영문, 비우면 기본)');
       h += X('방 코드', this.room, 30, v => { const r = (v || 'main').toLowerCase(); if (r === this.room) return; this.room = r; this.save(); if (SITE.p2pNow()) { RG.remotes.clear(); NET.connect(this.room); } });
-      h += B('화면 · 조작 설정...', () => this.menuGo('video'));
-      h += B('조작법...', () => this.menuGo('help'), 'full');
     } else if (pg === 'video') {
       h += R(this.mobile ? '터치 감도' : '마우스 감도', .3, 3, .05, this.sens, v => (+v).toFixed(2), v => { this.sens = v; });
       h += R('시야각', 50, 110, 1, this.fov, v => String(Math.round(v)), v => { this.fov = v; });

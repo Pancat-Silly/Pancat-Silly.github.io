@@ -219,7 +219,7 @@ falls: [], // falling block entities (sand, gravel, anvil) — animated on every
   palDefault() { const m = new Map(); for (const e of RB_ARENA) { const k = e.fixed + (e.loot ? '#' + e.r : ''); m.set(k, (m.get(k) || 0) + 1); } return [...m].map(([k, w]) => { const [b, r] = k.split('#'); return r ? [b, w, +r] : [b, w]; }); },
   palInfo() { const P = this.gs.opts.pal; if (!P || !P.length) return '§7기본 (원작 33칸 · 각 1/33)'; return '§a커스텀 ' + P.filter(e => +e[1] > 0).length + '종 · ' + (this.gs.opts.palN ? '개수 지정' : '확률'); },
   // ---------- hotbar menu items in the lobby (locked in their slots like Bedrock's lock_in_slot; the menu chest still works too) ----------
-  KIT: [], // the lobby hotbar menu items are gone (everything is in the Esc menu); kitTick just strips leftovers
+  KIT: [null, null, null, 'menu_multi', 'menu_ready', 'menu_playground', null, null, null], // lobby hotbar: 4 멀티플레이 · 5 Ready · 6 놀이터 (right click / use); the rest is in the Esc menu
   kitTick() {
     const me = this.me; const a = this.area(me); const want = me.alive && !me.spectator && me.mode === 'adventure' && (a === 'lobby' || a === 'playground' || a === 'winner');
     for (let i = 0; i < me.inv.length; i++) { const s = me.inv[i]; if (s && RIT[s.id] && RIT[s.id].menu && (!want || this.KIT[i] !== s.id)) me.inv[i] = null; }
