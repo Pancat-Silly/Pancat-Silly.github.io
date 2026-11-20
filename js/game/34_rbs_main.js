@@ -1,6 +1,6 @@
 // ===================== Random Block Survival: boot + loop =====================
 async function RBS_BOOT() {
-  const bt = document.querySelector('#boot .boott'); if (bt) bt.innerHTML = '<img src="' + RB_IMG.logo + '" style="width:120px;height:120px;display:block;margin:0 auto 8px;image-rendering:auto">랜덤블록 서바이벌 <b class="dkbeta" style="font-size:12px">베타</b>';
+  const bt = document.querySelector('#boot .boott'); if (bt) bt.innerHTML = '<img src="' + (typeof RB_ICON !== 'undefined' ? RB_ICON : RB_IMG.logo) + '" style="width:120px;height:120px;display:block;margin:0 auto 8px;image-rendering:auto">랜덤블록 서바이벌 <b class="dkbeta" style="font-size:12px">베타</b>';
   const tip = document.querySelector('#boot .boottip'); if (tip) tip.textContent = '창이 열리면 바로 로비예요. Esc(모바일은 ☰)를 누르면 메뉴가 열려요!';
   try {
     await BOOT(10, '블록 준비 중…'); RTEX.init(); RBLK.build(); for (const k in RIT) { const I = RIT[k]; if (I.tex) RTEX.T(I.tex); }
