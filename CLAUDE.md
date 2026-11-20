@@ -29,10 +29,11 @@ js/data/              생성된 데이터 (손으로 고치지 말고 tools/ 스
   rbs_assets.js       랜덤블록 원작 팩 효과음 RB_SFX(파일 경로), 아이콘 RB_IMG(base64 PNG) (rbsassets.py → split_sounds.py)
   rbs_icon.js         바탕화면 아이콘 RB_ICON (SVG)
   jobs_builtin.js     개발 도구로 만든 내장 직업 BUILTIN_JOBS (mkmodjobs.py)
+  dances.js           공용 춤 DANCE_DATA (마카레나·강남스타일, Mixamo FBX → mkdance.py). 두 게임이 같이 쓴다
 js/game/              게임 코드. 파일 이름 순서로 로드하는 일반 <script>들 (전역 공유)
 rbs/music/            랜덤블록 BGM mp3 (선택)
 sounds/               효과음 파일 (apvp/, rbs/, jobs/<직업>/). 랜덤블록 sfx_gameover·sfx_error·sfx_win_sin*는 사용자 요청으로 저장소에 안 올림(.gitignore, RB_SFX에서도 뺌 → 합성음). 예전에 js/data 안에 base64로 있던 것 (tools/split_sounds.py)
-tools/                [로컬 전용 · .gitignore로 저장소에 안 올림] mkentry.py, split_sounds.py, bump_version.py, hooks/pre-commit, build_single.py, rbsconv.py, rbsassets.py, mkmodjobs.py, mkassets.py, modjobs/*.txt
+tools/                [로컬 전용 · .gitignore로 저장소에 안 올림] mkdance.py + fbxbin.py + dance/*.fbx, mkentry.py, split_sounds.py, bump_version.py, hooks/pre-commit, build_single.py, rbsconv.py, rbsassets.py, mkmodjobs.py, mkassets.py, modjobs/*.txt
 ```
 모듈을 새로 추가하면 **index.html에 `<script src>`도 추가**해야 한다. 순서는 파일 이름 순이다.
 
@@ -41,6 +42,7 @@ tools/                [로컬 전용 · .gitignore로 저장소에 안 올림] m
 |---|---|
 | 00_wall.js | 바탕화면 배경 사진 (base64 JPEG) |
 | 01_core.js | 공통: `SELF_HTML`, `DEV_VER`, `World`(복셀), 수학·유틸 (`$`, `clamp`, `uid`, `M4` 행렬 …) |
+| 01b_dance.js | 공용 춤 재생 `DANCE`: `pick(seed)`, `pose(이름, 초)` → root yaw·엉덩이 위치 + 몸·머리·팔·다리 각도(MC ModelPart식 RZ·RY·RX, `DANCE.rot`). 4중인격에서도 그대로 쓰면 된다 |
 | 02_gfx.js / 02b_skin.js | WebGL1 렌더러(`Gfx`)와 아틀라스 / 마크 닉네임 스킨 (mc-heads.net → minotar.net, 2곳만) |
 | 03_audio.js / 03b_pack.js | 4중인격 오디오(`AU`) / 바닐라 리소스팩 다운로드(`PACK`) |
 | 04_items.js | 인격·효과·아이템·직업 정의 `JOBS`, `JOB_ORDER`, 아이템 테이블 |
@@ -125,7 +127,7 @@ tools/                [로컬 전용 · .gitignore로 저장소에 안 올림] m
   - 벽 폭파, 웅크리면 출구로 복귀, 회복 구역, 토템 파티클.
 - **표지판:** 벽 표지판은 키의 방향대로. 서 있는 표지판은 변환 때 회전값이 깨져 있어서(`rbsconv.py`의 축 계산 버그) 런타임 `RR.signFix()`가 방향을 정한다(바로 옆 벽 반대쪽, 아니면 가장 트인 쪽). 판 블록도 돌리고 글자는 판 양면에 그린다.
 - **이름표:** 다른 플레이어 이름표는 로비·놀이터에서는 항상 보이고, 경기 중에는 호스트 설정 `opts.tags`(기본 0 = 안 보임)를 따른다.
-- **승리 컷씬:** win 단계(7.5초)에서 승리자만 단상(`RV.podium`)으로 옮기고, 모든 클라이언트의 카메라가 `RR.cutCam()`으로 승리자 정면에서 멀리·높이 → 가까이로 다가간다. `body.rbcut`이 제목(승리 문구) 말고 모든 UI를 숨기고, 입력·메뉴는 막힌다.
+- **승리 컷씬:** win 단계(7.5초)에서 승리자만 단상(`RV.podium`)으로 옮기고, 승리자는 공용 춤(`RR.danceOf`, `gs.t`로 골라서 모든 클라이언트가 같은 춤을 같은 타이밍에)을 춘다. 모든 클라이언트의 카메라가 `RR.cutCam()`으로 승리자 정면에서 멀리·높이 → 가까이로 다가간다. `body.rbcut`이 제목(승리 문구) 말고 모든 UI를 숨기고, 입력·메뉴는 막힌다.
 - **이름:** 화면에 나오는 이름은 "랜덤블록 서바이벌" 하나로 쓴다(V2 파트 2, V2.1 표기 안 함. 맵 표지판의 "랜덤블록 서바이벌 V2.1"도 그릴 때 바꿈). 표지판 글자는 256×128 캔버스, 보통 굵기, LINEAR+밉맵(`makeTex(cv, true)`).
 - **떨어진 아이템:** 마크 ItemEntityRenderer처럼 회전 = (age+partialTick)/20 + 아이템마다 랜덤 시작각 `e.hs`, 위아래 = sin(t/10+hs)·0.1+0.1.
 - **맵에 없던 블록 아이템**(예: 제작으로 만든 자작나무 판자)은 `RBLK.build()`가 `RB_KEYS` 뒤에 붙여 등록한다(모든 클라이언트 같은 순서). 없으면 아이콘이 깨져 인벤토리가 빈 화면이 됐다.
@@ -152,6 +154,7 @@ tools/                [로컬 전용 · .gitignore로 저장소에 안 올림] m
 python3 tools/rbsconv.py <V2P2 맵 폴더(markers.json, voxels/)> js/data/rbs_data.js <V2.1 변경점 패키지 폴더>
 python3 tools/rbsassets.py <원작 리소스팩 폴더> <sfx 폴더> js/data/rbs_assets.js
 python3 tools/mkmodjobs.py          # tools/modjobs/*.txt -> js/data/jobs_builtin.js (ffmpeg 필요)
+python3 tools/mkdance.py           # tools/dance/*.fbx (Mixamo) -> js/data/dances.js (목록은 LIST)
 python3 tools/mkextrasnd.py         # tools/sounds/*.wav|mp3 -> js/data/apvp_extra_snd.js (ffmpeg 필요, G.sound('<파일 이름>'))
 python3 tools/split_sounds.py       # 위 스크립트들이 넣은 base64 효과음 -> sounds/*.mp3 (생성 스크립트 다음에 항상 실행)
 python3 tools/mkentry.py            # 바로 들어가기 페이지 6개

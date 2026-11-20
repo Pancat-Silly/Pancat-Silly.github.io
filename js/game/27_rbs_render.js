@@ -26,6 +26,8 @@ const RR = {
     if (T.block) { const B = T.block; const s = .25 * scale; if (B.full || B.use === 'chest') this.boxT(b, m, -s, -s, -s, s, s, s, B.tiles); else this.boxT(b, m, -s, -s, -s, s, 0, s, B.tiles); }
     else this.sprite(b, M4.S(m, .5 * scale, .5 * scale, .5 * scale), T.sprite);
   },
+  // victory cutscene: winners dance one of the shared clips; the phase start time picks it, so every client shows the same dance in sync
+  danceOf(e) { const gs = RG.gs; if (gs.ph !== 'win' || !gs.win || !gs.win.ids.includes(e.id)) return null; const nm = DANCE.pick(Math.floor(gs.t / 1000)); return nm ? DANCE.pose(nm, Math.max(0, RG.hostNow() - gs.t - 600) / 1000) : null; },
   ARMC: { iron: [.85, .85, .85], golden: [.98, .82, .25], diamond: [.35, .9, .88] },
   drawPlayer(b, e, alpha, sb, sk) {
     const x = e.local ? lerp(e.px, e.x, alpha) : e.x, y = e.local ? lerp(e.py, e.y, alpha) : e.y, z = e.local ? lerp(e.pz, e.z, alpha) : e.z; const k = .9375 / 16;
@@ -34,20 +36,21 @@ const RR = {
     if (e._af !== this.frameN) { e._af = this.frameN; const ft = Math.min(5, (this.dt || 16.7) / 50); let dt; if (e.local) dt = Math.hypot(e.x - e.px, e.z - e.pz); else { dt = e._lx === undefined ? 0 : Math.hypot(e.x - e._lx, e.z - e._lz) / Math.max(ft, .05); e._lx = e.x; e._lz = e.z; } const tg = Math.min(1, dt * 4); e.walkA = (e.walkA || 0) + (tg - (e.walkA || 0)) * (1 - Math.pow(.6, ft)); e.walkP = (e.walkP || 0) + e.walkA * ft; }
     const legA = Math.cos(e.walkP * .6662) * 1.4 * e.walkA, armA = Math.cos(e.walkP * .6662) * e.walkA;
     let base = M4.T(M4.id(), x, y, z); base = M4.RY(base, -e.yaw); base = M4.S(base, k, k, k); if (sneak) base = M4.T(base, 0, -2, 0);
+    const D = this.danceOf(e); if (D) { base = M4.RY(base, D.yaw); base = M4.T(base, D.off[0], D.off[1], D.off[2]); } // winner dance (shared clips, js/game/01b_dance.js)
     const S = !!(sb && sk); const W1 = tint([1, 1, 1]);
     const ids = e.local ? e.armor.map(a => a ? a.id : '') : (e.armorIds || []); const ac = i => { const id = ids[i]; if (!id) return null; const t = id.split('_')[0]; return this.ARMC[t] || [.8, .8, .8]; };
     const part = (m, x0, y0, z0, x1, y1, z1, uv, ov, flat, front) => { if (S) { const w = x1 - x0, h = y1 - y0, d = z1 - z0; sb.skinBox(m, x0, y0, z0, x1, y1, z1, uv[0], uv[1], w, h, d, W1); if (ov) { const g = ov[2] || .25; sb.skinBox(m, x0 - g, y0 - g, z0 - g, x1 + g, y1 + g, z1 + g, ov[0], ov[1], w, h, d, W1); } } else b.box(m, x0, y0, z0, x1, y1, z1, tint(flat), 0, front === undefined ? -1 : front); };
     const armor = (m, x0, y0, z0, x1, y1, z1, c) => { if (c) b.box(m, x0, y0, z0, x1, y1, z1, tint(c)); };
-    for (const sd of [-1, 1]) { let m = M4.T(base, sd * 2, 12, sneak ? -2 : 0); m = M4.RX(m, sd * legA); part(m, -2, -12, -2, 2, 0, 2, sd < 0 ? [0, 16] : [16, 48], sd < 0 ? [0, 32] : [0, 48], [.25, .25, .6]); armor(m, -2.5, -9, -2.5, 2.5, .3, 2.5, ac(2)); armor(m, -2.6, -12.3, -2.6, 2.6, -8.5, 2.6, ac(3)); }
-    let bm = M4.T(base, 0, 12, 0); if (sneak) bm = M4.RX(bm, .5);
+    for (const sd of [-1, 1]) { let m = M4.T(base, sd * 2, 12, sneak ? -2 : 0); m = D ? DANCE.rot(m, sd < 0 ? D.rleg : D.lleg) : M4.RX(m, sd * legA); part(m, -2, -12, -2, 2, 0, 2, sd < 0 ? [0, 16] : [16, 48], sd < 0 ? [0, 32] : [0, 48], [.25, .25, .6]); armor(m, -2.5, -9, -2.5, 2.5, .3, 2.5, ac(2)); armor(m, -2.6, -12.3, -2.6, 2.6, -8.5, 2.6, ac(3)); }
+    let bm = M4.T(base, 0, 12, 0); if (sneak) bm = M4.RX(bm, .5); if (D) bm = DANCE.rot(bm, D.body);
     part(bm, -4, 0, -2, 4, 12, 2, [16, 16], [16, 32], [.1, .65, .7]); armor(bm, -4.6, -.3, -2.6, 4.6, 12.4, 2.6, ac(1));
     const slim = S && sk.slim, aw = slim ? 3 : 4, ao = slim ? 5.5 : 6; const held = e.local ? (e.held() ? e.held().id : '') : e.heldId; const off = e.local ? (e.off ? e.off.id : '') : e.offId;
     for (const sd of [-1, 1]) {
       let m = M4.T(bm, sd * ao, 10, 0); let ax = -sd * armA; if (sd === -1 && swingP > 0) ax -= Math.sin(swingP * Math.PI) * 1.4; if (sd === 1 && e.blocking) ax = -.9; if (sd === -1 && (e.useT || e.using)) ax = -1.1;
-      m = M4.RX(m, ax); part(m, -aw / 2, -10, -2, aw / 2, 2, 2, sd < 0 ? [40, 16] : [32, 48], sd < 0 ? [40, 32] : [48, 48], [.8, .6, .45]); armor(m, -aw / 2 - .6, -3, -2.6, aw / 2 + .6, 2.6, 2.6, ac(1));
+      m = D ? DANCE.rot(m, sd < 0 ? D.rarm : D.larm) : M4.RX(m, ax); part(m, -aw / 2, -10, -2, aw / 2, 2, 2, sd < 0 ? [40, 16] : [32, 48], sd < 0 ? [40, 32] : [48, 48], [.8, .6, .45]); armor(m, -aw / 2 - .6, -3, -2.6, aw / 2 + .6, 2.6, 2.6, ac(1));
       const iid = sd === -1 ? held : off; if (iid) { let im = M4.T(m, 0, -10, -1); im = M4.S(im, 16 / .9375, 16 / .9375, 16 / .9375); im = M4.RX(im, -Math.PI / 2); if (RIT[iid] && !RIT[iid].block) { im = M4.RY(im, Math.PI / 2); im = M4.T(im, 0, .25, 0); im = M4.RZ(im, -.7); } this.drawItem(b, im, iid, .8); }
     }
-    let hm = M4.T(bm, 0, 12, 0); if (sneak) hm = M4.RX(hm, -.5); hm = M4.RX(hm, e.pitch);
+    let hm = M4.T(bm, 0, 12, 0); if (sneak) hm = M4.RX(hm, -.5); hm = D ? DANCE.rot(hm, D.head) : M4.RX(hm, e.pitch);
     if (S) part(hm, -4, 0, -4, 4, 8, 4, [0, 0], [32, 0, .5]); else { b.box(hm, -4, 0, -4, 4, 8, 4, tint([.8, .6, .45])); b.box(hm, -4.2, 6, -4.2, 4.2, 8.3, 4.2, tint([.25, .17, .08])); b.box(hm, -2.5, 3.5, 4.01, -1, 4.5, 4.05, [.3, .3, .8]); b.box(hm, 1, 3.5, 4.01, 2.5, 4.5, 4.05, [.3, .3, .8]); }
     armor(hm, -4.7, 4.2, -4.7, 4.7, 8.8, 4.7, ac(0));
   },
