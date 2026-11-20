@@ -29,6 +29,10 @@ class RPlayer {
     for (let i = 0; i < 36; i++) if (!this.inv[i]) { const k = Math.min(n, mx); this.inv[i] = Object.assign({}, st, { n: k }); n -= k; if (!n) return 0; }
     return n;
   }
+  room(st) { // how many of st give() could take right now (no side effects)
+    const I = RIT[st.id]; const mx = this.maxStack(st.id); let n = I && I.shield && !this.off ? 1 : 0;
+    for (let i = 0; i < 36; i++) { const s = this.inv[i]; if (!s) n += mx; else if (RITEM.same(s, st) && s.n < mx) n += mx - s.n; } return n;
+  }
   count(id) { let n = 0; for (const s of this.inv) if (s && s.id === id) n += s.n; return n; }
   take(id, n) { for (let i = 0; i < 36 && n > 0; i++) { const s = this.inv[i]; if (s && s.id === id) { const k = Math.min(n, s.n); s.n -= k; n -= k; if (!s.n) this.inv[i] = null; } } return n === 0; }
   clearInv() { this.inv.fill(null); this.armor = [null, null, null, null]; this.off = null; }

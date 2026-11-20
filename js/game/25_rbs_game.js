@@ -138,8 +138,8 @@ falls: [], // falling block entities (sand, gravel, anvil) — animated on every
     }
   },
   // ---------- item entities ----------
-  dropStack(st, x, y, z, vx, vy, vz, nopick) {
-    const id = this.me.id + ':' + (++this.seq); const e = { id, st: Object.assign({}, st), x, y, z, vx: vx ?? rand(-.1, .1), vy: vy ?? .2, vz: vz ?? rand(-.1, .1), age: 0, pick: nopick ? 40 : 10, own: this.me.id };
+  dropStack(st, x, y, z, vx, vy, vz, nopick, keep) {
+    const id = this.me.id + ':' + (++this.seq); const e = { id, st: Object.assign({}, st), x, y, z, vx: vx ?? rand(-.1, .1), vy: vy ?? .2, vz: vz ?? rand(-.1, .1), age: 0, pick: nopick ? 40 : 10, own: this.me.id }; if (keep) e.keep = 1; // keep: GUI leftovers (bag full) survive the lobby item kill
     this.items.set(id, e); this.emit({ k: 'drop', e }); return e;
   },
   dropXp(n, x, y, z) { while (n > 0) { const v = n >= 17 ? 17 : n >= 7 ? 7 : n >= 3 ? 3 : 1; n -= v; this.dropStack({ id: 'xp', n: v }, x, y, z, rand(-.15, .15), .25, rand(-.15, .15)); } },
@@ -151,11 +151,12 @@ falls: [], // falling block entities (sand, gravel, anvil) — animated on every
       if (xp && me.alive && !me.spectator) { const dx = me.x - e.x, dy = me.y + .8 - e.y, dz = me.z - e.z, d = Math.hypot(dx, dy, dz); if (d < 7.5 && d > .01) { const k = (1 - d / 7.5) ** 2 * .1; e.vx += dx / d * k; e.vy += dy / d * k; e.vz += dz / d * k; } }
       e.vy -= xp ? .03 : .04; const nx = e.x + e.vx, ny = e.y + e.vy, nz = e.z + e.vz;
       if (W.solidAt(nx, e.y + .05, e.z)) e.vx *= -.3; else e.x = nx; if (W.solidAt(e.x, e.y + .05, nz)) e.vz *= -.3; else e.z = nz;
-      if (W.solidAt(e.x, ny, e.z)) { e.vy = 0; e.y = Math.floor(ny) + 1; e.vx *= .6; e.vz *= .6; e.ground = true; } else { e.y = ny; e.ground = false; }
+      if (e.vy > 0 && W.solidAt(e.x, ny + .25, e.z)) e.vy = 0; // hit a ceiling: stop (it used to snap on top of the block above = gone in the arena)
+      else if (W.solidAt(e.x, ny, e.z)) { e.vy = 0; e.y = Math.floor(ny) + 1; e.vx *= .6; e.vz *= .6; e.ground = true; } else { e.y = ny; e.ground = false; }
       e.vx *= .98; e.vz *= .98; e.vy *= .98;
       if (e.age > 6000 || e.y < -10) { this.items.delete(id); continue; }
       // lobby / spectator box remove dropped items (original: kill @e[type=item] there)
-      const ar = this.area(e); if ((ar === 'lobby' || ar === 'dmspec') && e.age > 2) { this.items.delete(id); continue; }
+      const ar = this.area(e); if ((ar === 'lobby' || ar === 'dmspec') && e.age > 2 && !e.keep) { this.items.delete(id); continue; }
       // dungeon key thrown at the wall spot
       if (e.own === me.id && e.st.id === 'tripwire_hook' && e.ground) { const [mx, my, mz] = this.mcOf(e); if (Math.hypot(mx + 16.5, mz + 18.5) < 1.6 && Math.abs(my - 90) < 1.6) { this.items.delete(id); this.emit({ k: 'pick', i: id }); this.dungeonWall(); continue; } }
       // pickup: me, and on the host my bots too

@@ -16,7 +16,7 @@ Object.assign(RUI, {
   },
   close(silent) {
     const g = this.gui; if (!g) return; const me = RG.me;
-    const back = s => { if (!s) return; const l = me.give(s); if (l) RG.dropStack(Object.assign({}, s, { n: l }), me.x, me.y + 1.2, me.z, 0, .2, 0, true); };
+    const back = s => { if (!s) return; const l = me.give(s); if (l) RG.dropStack(Object.assign({}, s, { n: l }), me.x, me.y + 1.2, me.z, 0, .2, 0, true, true); };
     if (g.grid) g.grid.forEach(back); if (g.e) g.e.forEach(back); if (g.a) g.a.forEach(back); back(this.cursor); this.cursor = null; $('rbCursor').innerHTML = '';
     if (g.type === 'chest') RAU.play('chest_close', 1, false, .6);
     this.gui = null; $('rbGui').innerHTML = ''; $('rbTip').style.display = 'none';
@@ -83,12 +83,13 @@ Object.assign(RUI, {
   guiTick() { const g = this.gui; if (!g) return; if (g.type === 'furnace') { const d = RG.beGet(g.ctx.x, g.ctx.y, g.ctx.z); if (!d) { this.close(); return; } const f = $('rbFire'), c = $('rbCook'); if (f) f.style.opacity = d.burn > 0 ? .3 + .7 * d.burn / (d.burnMax || 1) : .15; if (c) c.style.color = d.cook ? 'hsl(' + (40 + d.cook / 2) + ',80%,45%)' : '#8b8b8b'; if (g.key) { const h = $('rbGui').querySelector('h4'); if (h) h.innerHTML = this.fmt(this.keyTitle(d)); if (!d.inv[0] && d.regen && RG.hostNow() >= d.regen) this.paint(); } this.paint(); }
     if (g.type === 'chest' || g.type === 'furnace') { const k = g.ctx.key; const [x, y, z] = [g.ctx.x, g.ctx.y, g.ctx.z]; if (!BL[RW.getM(x, y, z)].use) this.close(); const P = RW.P(x + .5, y + .5, z + .5); if (Math.hypot(P.x - RG.me.x, P.y - RG.me.y - 1, P.z - RG.me.z) > 7) this.close(); } },
   // ---------- crafting ----------
+  fullMsg() { this.chat('§c인벤토리가 가득 찼어요!'); RAU.play('anvil_land', 1, true, .4); },
   craftOut(w) { const g = this.gui; const r = RCRAFT.match(g.grid, w); return r ? Object.assign({}, r.out) : null; },
   craftTake(w) {
     const g = this.gui; const r = RCRAFT.match(g.grid, w); if (!r) return null;
     for (let i = 0; i < g.grid.length; i++) if (g.grid[i]) { g.grid[i].n--; if (!g.grid[i].n) g.grid[i] = null; }
     if (r.r.shield && !RG.gs.opts.shield) { // original: shield crafting disabled by the host -> taken back, planks 6 + iron 1 returned
-      this.chat('§c호스트가 방패 제작을 비활성화 하였습니다!'); RAU.play('anvil_land', 1, true); RG.me.give({ id: 'oak_planks', n: 6 }); RG.me.give({ id: 'iron_ingot', n: 1 }); return null;
+      this.chat('§c호스트가 방패 제작을 비활성화 하였습니다!'); RAU.play('anvil_land', 1, true); for (const s of [{ id: 'oak_planks', n: 6 }, { id: 'iron_ingot', n: 1 }]) { const l = RG.me.give(s); if (l) RG.dropStack({ id: s.id, n: l }, RG.me.x, RG.me.y + 1.2, RG.me.z, 0, .2, 0, true, true); } return null;
     }
     return Object.assign({}, r.out);
   },
@@ -127,7 +128,7 @@ Object.assign(RUI, {
     const max = s => RITEM.max(s.id); const acc = s => !S.accept || S.accept(s);
     if (S.out) {
       const o = S.get(); if (!o) return;
-      if (shift) { let guard = 0; while (guard++ < 64) { const o2 = S.get(); if (!o2) break; const before = JSON.stringify(me.inv); const got = S.take(); if (!got) break; const l = me.give(got); if (l) { RG.dropStack(Object.assign({}, got, { n: l }), me.x, me.y + 1.2, me.z, 0, .2, 0, true); break; } if (JSON.stringify(me.inv) === before) break; } }
+      if (shift) { let guard = 0; while (guard++ < 64) { const o2 = S.get(); if (!o2) break; if (me.room(o2) < o2.n) { if (guard === 1) this.fullMsg(); break; } const before = JSON.stringify(me.inv); const got = S.take(); if (!got) break; const l = me.give(got); if (l) { RG.dropStack(Object.assign({}, got, { n: l }), me.x, me.y + 1.2, me.z, 0, .2, 0, true, true); break; } if (JSON.stringify(me.inv) === before) break; } }
       else { const c = this.cursor; if (c && !(RITEM.same(c, o) && c.n + o.n <= max(c))) return; const got = S.take(); if (!got) { this.render(); return; } if (c) c.n += got.n; else this.cursor = got; }
       RAU.play('click', 1, false, .3); this.afterChange(S); return;
     }
@@ -186,8 +187,9 @@ Object.assign(RUI, {
     if (r.shield && !RG.gs.opts.shield) { this.chat('§c호스트가 방패 제작을 비활성화 하였습니다!'); RAU.play('anvil_land', 1, true); return; }
     const need = this.rbNeed(r); let made = 0;
     while (this.rbHave(need) && made < (max ? 64 : 1)) {
+      if (me.room({ id: r.out, n: r.n }) < r.n) { if (!made) this.fullMsg(); break; } // bag full: don't craft (a drop would vanish in the lobby)
       for (const k in need) { let n = need[k]; for (let j = 0; j < me.inv.length && n; j++) { const s = me.inv[j]; if (!s || s.d || s.en || (RIT[s.id] && RIT[s.id].menu) || !RCRAFT.tagOk(k, s.id)) continue; const t = Math.min(n, s.n); s.n -= t; n -= t; if (!s.n) me.inv[j] = null; } }
-      const l = me.give({ id: r.out, n: r.n }); if (l) RG.dropStack({ id: r.out, n: l }, me.x, me.y + 1.2, me.z, 0, .2, 0, true); made++;
+      const l = me.give({ id: r.out, n: r.n }); if (l) RG.dropStack({ id: r.out, n: l }, me.x, me.y + 1.2, me.z, 0, .2, 0, true, true); made++;
       if (RITEM.max(r.out) === 1 && !max) break;
     }
     if (made) { RAU.play('click', 1, false, .4); } this.render();
