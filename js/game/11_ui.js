@@ -226,7 +226,8 @@ const UI = {
     this.PAGES = {
       main: { t: '게임 메뉴', up: null, el: [[$('pResume'), 'pfull'], nav('경기 설정...', 'match', 'gameonly'), $('pStart'), $('pView'), nav('설정...', 'set'), $('pDeskX'), $('pWinMode'), [$('pLobby'), 'pfull']] },
       match: { t: '경기 설정', up: 'main', el: [byIn('pGod'), byIn('pNoAI'), byIn('pMode'), byIn('pUniq')] },
-      set: { t: '설정', up: 'main', el: [[byIn('vol'), 'pfull'], byIn('vSfx'), byIn('vAb'), [byIn('pFov'), 'pfull'], byIn('pP2P'), byIn('pLock'), nav('화면 설정...', 'video'), nav('조작 설정...', 'ctrl')] },
+      set: { t: '설정', up: 'main', el: [byIn('pFov'), nav('볼륨 설정...', 'sound'), byIn('pP2P'), byIn('pLock'), nav('화면 설정...', 'video'), nav('조작 설정...', 'ctrl')] },
+      sound: { t: '볼륨 설정', up: 'set', el: [[byIn('vol'), 'pfull'], [byIn('vSfx'), 'pfull'], [byIn('vAb'), 'pfull']] },
       video: { t: '화면 설정', up: 'set', el: [byIn('pRes'), byIn('pHp'), byIn('pBob'), byIn('pDeath')] },
       ctrl: { t: '조작 설정', up: 'set', el: [[sensL, this.mobile ? '' : 'pfull'], byIn('pAssist'), byIn('pCtl'), byIn('pMove'), byIn('pSneakM'), $('pEdit'), ...kbBox] },
     };
