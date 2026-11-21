@@ -47,10 +47,14 @@ const UI = {
     G.setMode(ffa, 0, uniq); NET.emit({ k: 'mode', ffa: G.ffa, uniq: G.uniq, t: G.modeT });
     UI.chat('§e방 설정: ' + (G.ffa ? '개인전 (모두가 적)' : '팀전 (같은 인격끼리 아군)') + ' · ' + (G.uniq ? '직업당 1명' : '직업 중복 가능'));
   },
+  jobVar: {}, // last-picked variant per job card
   addJobButton(id) {
     const jb = $('jobs'); if (!jb) return; const J = JOBS[id]; const old = jb.querySelector('.job[data-id="' + id + '"]'); if (old) old.remove();
-    const b = document.createElement('button'); b.className = 'mcbtn job'; b.dataset.id = id; b.innerHTML = '<b>' + J.icon + ' ' + esc(J.name) + (J.uploaded ? ' <small class="upl">업로드됨</small>' : J.wip ? ' <small class="wip">' + (J.custom && !J.builtin ? '커스텀' : '미완성') + '</small>' : '') + '</b><small class="desc">' + esc(J.desc) + '</small><small class="taken"></small>';
-    b.onclick = () => { if (b.classList.contains('taken')) return; this.job = this.job === id ? null : id; this.jobT = Date.now(); AU.init(); AU.sfx('click'); if (this.job && JOBS[id].uploaded) this.chat('§b' + JOBS[id].name + '§f: 방장이 임의로 업로드한 직업이며, 원활하게 작동되지 않을 수도 있어요'); this.refreshMenu(); };
+    const b = document.createElement('button'); b.className = 'mcbtn job'; b.dataset.id = id; b.innerHTML = '<b>' + J.icon + ' ' + esc(J.name) + (J.uploaded ? ' <small class="upl">업로드됨</small>' : J.wip ? ' <small class="wip">' + (J.custom && !J.builtin ? '커스텀' : '미완성') + '</small>' : '') + '</b><small class="desc">' + esc(J.desc) + '</small>' + (J.vars ? '<span class="jvars">' + J.vars.map(v => '<span class="jvar" data-v="' + v[0] + '">' + v[1] + '</span>').join('') + '</span>' : '') + '<small class="taken"></small>';
+    // variants (dude New/old): click the toggle while the card is selected -> switch to the other variant; card click picks the last-used variant
+    if (J.vars) b.querySelector('.jvars').onclick = e => { e.stopPropagation(); if (b.classList.contains('taken')) return; const vs = J.vars.map(v => v[0]), cur = vs.indexOf(this.job);
+      this.job = cur >= 0 ? vs[(cur + 1) % vs.length] : (this.jobVar[id] || id); this.jobVar[id] = this.job; this.jobT = Date.now(); AU.init(); AU.sfx('click'); this.refreshMenu(); };
+    b.onclick = () => { if (b.classList.contains('taken')) return; const pick = J.vars ? (this.jobVar[id] || id) : id; const on = this.job === id || (J.vars && J.vars.some(v => v[0] === this.job)); this.job = on ? null : pick; this.jobT = Date.now(); AU.init(); AU.sfx('click'); if (this.job && JOBS[id].uploaded) this.chat('§b' + JOBS[id].name + '§f: 방장이 임의로 업로드한 직업이며, 원활하게 작동되지 않을 수도 있어요'); this.refreshMenu(); };
     const dev = DEV_JOBS.has(id) || J.custom || J.uploaded || J.builtin; const ref = dev ? $('btnNewJob') : $('jobSep'); if (ref) jb.insertBefore(b, ref); else jb.appendChild(b);
   },
   // practice / dev tool test options: 무적 (I take no damage) and 봇 AI 끄기 (bots stand still as training dummies)
@@ -161,7 +165,7 @@ const UI = {
   refreshMenu() {
     document.querySelectorAll('.persona').forEach(b => b.classList.toggle('sel', +b.dataset.i === this.persona));
     const taken = NET.mode !== 'off' ? this.takenJobs() : {};
-    document.querySelectorAll('.job').forEach(b => { const id = b.dataset.id; const tk = taken[id]; b.classList.toggle('sel', this.job === id); b.classList.toggle('taken', !!tk); b.querySelector('.taken').textContent = tk ? '사용 중: ' + tk : ''; if (tk && this.job === id) { this.job = null; this.chatToast = '§c' + tk + ' 님이 먼저 ' + JOBS[id].name + '을(를) 골랐어요'; } });
+    document.querySelectorAll('.job').forEach(b => { const id = b.dataset.id; const tk = taken[id]; b.classList.toggle('sel', this.job === id || !!(this.job && JOBS[this.job] && JOBS[this.job].varOf === id)); b.querySelectorAll('.jvar').forEach(s => s.classList.toggle('on', s.dataset.v === this.job)); b.classList.toggle('taken', !!tk); b.querySelector('.taken').textContent = tk ? '사용 중: ' + tk : ''; if (tk && this.job === id) { this.job = null; this.chatToast = '§c' + tk + ' 님이 먼저 ' + JOBS[id].name + '을(를) 골랐어요'; } });
     if (this.chatToast) { $('jobinfo').innerHTML = mcfmt(this.chatToast); this.chatToast = null; return; }
     $('netstat').textContent = NET.status; this.modeSync();
     const list = [...G.remotes.values()]; $('plist').innerHTML = list.length ? list.map(r => '<div>' + mcfmt('§x' + PERSONAS[r.persona].color + '■ ') + esc(r.name) + ' <small>' + (r.job ? JOBS[r.job] ? JOBS[r.job].name : '' : '직업 미선택') + ' · ' + (r.ph === 'game' ? '경기 중' : '로비') + '</small></div>').join('') : '<small>아직 같은 방에 아무도 없어요. 이 페이지를 공유한 사람이 같은 방 코드로 들어오면 여기에 표시돼요.</small>';

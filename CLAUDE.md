@@ -29,6 +29,7 @@ js/data/              생성된 데이터 (손으로 고치지 말고 tools/ 스
   rbs_assets.js       랜덤블록 원작 팩 효과음 RB_SFX(파일 경로), 아이콘 RB_IMG(base64 PNG) (rbsassets.py → split_sounds.py)
   rbs_icon.js         바탕화면 아이콘 RB_ICON (SVG)
   jobs_builtin.js     개발 도구로 만든 내장 직업 BUILTIN_JOBS (mkmodjobs.py)
+  frog.js             dude New 댄스 개구리 FROG (Frog Marauder FBX → mkfrog.py, 6부위 강체 + 텍스처 PNG)
   dances.js           공용 춤 DANCE_DATA (마카레나·강남스타일, Mixamo FBX → mkdance.py). 두 게임이 같이 쓴다
 js/game/              게임 코드. 파일 이름 순서로 로드하는 일반 <script>들 (전역 공유)
 rbs/music/            랜덤블록 BGM mp3 (선택)
@@ -82,6 +83,8 @@ tools/                [로컬 전용 · .gitignore로 저장소에 안 올림] m
 - **직업:** `JOB_ORDER`에 있다(러셔, 폴리셔, 스파이더, 360, 얼빙, 랜더마이져, 수노, 그랩, 슬라임, 비글, 소환사, 세룡이, Ai, 창찬, dude).
   - 내장 미완성 직업: 젬웬티, 윤톰맨(jobs_builtin).
   - `DEV_JOBS`는 "개발중" 구분선 아래에 표시된다.
+  - **dude 바리에이션:** dude 카드에 New / old 선택(`JOBS.dude.vars`, 선택된 상태에서 누르면 바뀜, `UI.jobVar`). old = 원래 dude, New = 직업 `dude_new`(`varOf: 'dude'`, JOB_ORDER에는 없음).
+  - **dude New 댄스(`SK.dance` 토글):** 제자리 춤(이동·공격·다른 스킬 잠김), 카메라는 뒷통수 기준 앞 4·위 3에서 플레이어를 봄. 노래 `dude_dance`(사용자 제공 mp3, `AU.posLoop`로 주변에도 들림), 1초마다 주변에 개구리(`R.drawFrogs`, FROG 모델)가 나타나 같이 강남스타일. 그만두면 개구리 수만큼 신속(≤IV)·힘(≤II)·회복(2/마리)·체력 증가(≤+20) 30초, 개구리당 5% `dude_bullet`(총알, 아직 쓸 곳 없음). 이벤트 `dance`/`dfrog`, 상태 `G.dancers`.
 - **모드 API·개발 도구:** 직업 코드는 `new Function('APVP','api', code)`로 실행된다. 프롬프트 버전은 `DEV_VER`이고, 프롬프트를 바꾸면 하나 올린다.
 - **ESC 메뉴:**
   - 단계: 게임 메뉴 → 경기 설정 / 설정(시야각 왼쪽 위) → 볼륨 설정(볼륨·게임 효과음·능력 효과음) / 화면 설정 / 조작 설정.
@@ -158,6 +161,7 @@ tools/                [로컬 전용 · .gitignore로 저장소에 안 올림] m
 python3 tools/rbsconv.py <V2P2 맵 폴더(markers.json, voxels/)> js/data/rbs_data.js <V2.1 변경점 패키지 폴더>
 python3 tools/rbsassets.py <원작 리소스팩 폴더> <sfx 폴더> js/data/rbs_assets.js
 python3 tools/mkmodjobs.py          # tools/modjobs/*.txt -> js/data/jobs_builtin.js (ffmpeg 필요)
+python3 tools/mkfrog.py            # tools/frog/FrogMarauder.fbx + png -> js/data/frog.js (dude New 댄스 개구리)
 python3 tools/mkdance.py           # tools/dance/*.fbx (Mixamo) -> js/data/dances.js (목록은 LIST)
 python3 tools/mkextrasnd.py         # tools/sounds/*.wav|mp3 -> js/data/apvp_extra_snd.js (ffmpeg 필요, G.sound('<파일 이름>'))
 python3 tools/split_sounds.py       # 위 스크립트들이 넣은 base64 효과음 -> sounds/*.mp3 (생성 스크립트 다음에 항상 실행)

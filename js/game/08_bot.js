@@ -91,6 +91,7 @@ function botDecide(b, I, ai, L) {
     case 'summoner': if (dist < 16) botUse(b, 'dogs'); if (dist < 3) botUse(b, 'fangc'); else if (dist < 12 && r < .3) botUse(b, 'fangl'); break;
     case 'bilcorner': if (b.hp < b.maxHp() - 6) { botUse(b, 'squid'); botUse(b, 'harder'); } if (dist < 3.5) botUse(b, 'harder'); if (dist < 7) botUse(b, 'gather'); if (dist > 2.5 && dist < 7 && r < .3) botUse(b, 'bdash'); if (dist < 8 && r < .1) botUse(b, 'drug'); break;
     default: if (MOD.defs[b.job] && MOD.defs[b.job].bot) MOD.fire(b, 'bot', t, dist); break;
+    case 'dude_new': { const d = b.st.dance; if (!d ? dist > 12 && r < .05 : dist < 6 || d.n >= 12) botUse(b, 'dance'); break; } // dance while nobody is near, stop when someone comes or 12 frogs
     case 'dude': botUse(b, 'rodwood'); botUse(b, 'crate'); if (b.hp < 28) botUse(b, 'pot_heal'); botUse(b, 'boots'); if (r < .01) { botUse(b, 'pot_swift'); botUse(b, 'pot_turtle'); } break;
   }
   if (b.job !== 'mefab3') I.sneak = false;

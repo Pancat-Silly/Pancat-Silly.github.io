@@ -6,6 +6,7 @@ const nearestOf = (p, list) => { let b = null, bd = 1e9; for (const t of list) {
 const SK = {
   // ---------- generic ----------
   passive(p) {
+    if (p.st.dance) SK.danceTick(p);
     if (p.job === 'bilcorner') SK.bilTick(p);
     if (p.st.trailUntil > G.tick) SK.trailTick(p);
     if (p.st.droneUp && p.vy <= 0) { p.st.droneUp = false; if (p.st.spinArmed) SK.spinStart(p); }
@@ -20,7 +21,7 @@ const SK = {
     else if (p._spin) { p._spin = false; if (p === G.me) AU.loop('360song', false); }
     p.onPad = BL[under].pad && p.onGround ? BL[under].pad : null;
   },
-  onDeath(p) { if (p === G.me) AU.loop('360song', false); },
+  onDeath(p) { if (p === G.me) AU.loop('360song', false); SK.danceEnd(p, false); },
   // ---------- rusher ----------
   rush(p) { p.addEff('speed', 9, 1.5); AU.sfx('firework', p, .6); return true; },
   // 번개 자국: for 5 s the rusher leaves a mark every block it runs (each mark lasts 5 s). Enemies standing on a mark get
@@ -336,6 +337,38 @@ const SK = {
   pot_turtle(p) { p.addEff('slowness', 3, 20); p.addEff('resistance', 2, 20); AU.sfx('drink', p); return true; },
   pot_fire(p) { p.addEff('fire_resistance', 0, 180); AU.sfx('drink', p); return true; },
   pot_swift(p) { p.addEff('speed', 0, 180); AU.sfx('drink', p); return true; },
+  // ---------- dude New: 댄스 ----------
+  // toggle: dance in place (no moving / attacking, other skills locked) to the song while a frog joins every second;
+  // stopping gives buffs for the frogs gathered. Everyone sees it through 'dance' / 'dfrog' events (G.dancers, R.drawFrogs).
+  DANCE_MAX: 30, DANCE_FX_SEC: 30,
+  dance(p) {
+    if (p.st.dance) return SK.danceEnd(p, true);
+    p.st.dance = { t: G.tick, yaw: p.yaw, n: 0 }; p.sprinting = false; p.vx = p.vz = 0;
+    G.emitAndApply({ k: 'dance', by: p.id, on: 1, yaw: r1(p.yaw) });
+    p.actionbar('§a댄스 시작! §7다시 누르면 그만두고 버프를 받아요'); return 'nocd';
+  },
+  danceTick(p) {
+    const d = p.st.dance; p.yaw = d.yaw; const a = G.tick - d.t;
+    if (a > 0 && a % 20 === 0 && d.n < SK.DANCE_MAX) {
+      for (let k = 0; k < 8; k++) { // a random free spot on the ground around the dancer
+        const ang = Math.random() * Math.PI * 2, r = rand(2, 5.5), x = p.x + Math.cos(ang) * r, z = p.z + Math.sin(ang) * r, gy = SK.fangY(x, p.y + 1, z);
+        if (gy === null || Math.abs(gy - p.y) > 3) continue;
+        d.n++; G.emitAndApply({ k: 'dfrog', by: p.id, x: r1(x), y: r1(gy), z: r1(z), yaw: r1(d.yaw + rand(-.35, .35)) }); break;
+      }
+      p.actionbar('§a🐸 개구리 ' + d.n + '마리' + (d.n >= SK.DANCE_MAX ? ' §7(최대)' : ''));
+    }
+  },
+  // reward: n frogs -> 신속 (max IV), 힘 (max II), 회복 (2 HP per frog, up to full), 체력 증가 (+4 HP per 3 frogs, max +20), each frog 5% -> 총알
+  danceEnd(p, reward) {
+    const d = p.st && p.st.dance; if (!d) return false; p.st.dance = null; G.emitAndApply({ k: 'dance', by: p.id, on: 0 });
+    if (!reward) return false;
+    const n = d.n, T = SK.DANCE_FX_SEC, spd = Math.min(4, Math.ceil(n / 4)), str = Math.min(2, Math.floor(n / 6)), hb = Math.min(5, Math.floor(n / 3));
+    if (spd) p.addEff('speed', spd - 1, T); if (str) p.addEff('strength', str - 1, T); if (hb) p.addEff('health_boost', hb - 1, T);
+    p.heal(n * 2); let ammo = 0; for (let i = 0; i < n; i++) if (Math.random() < .05) ammo++; if (ammo) p.addItem('dude_bullet', ammo);
+    const R = ['I', 'II', 'III', 'IV'];
+    p.msg('§a[댄스] §f개구리 ' + n + '마리' + (n ? ' → ' + [spd && '신속 ' + R[spd - 1], str && '힘 ' + R[str - 1], hb && '체력 +' + hb * 4, '회복 ' + n * 2].filter(Boolean).join(' · ') + (ammo ? ' · §6총알 ' + ammo + '개' : '') : ''));
+    if (n) AU.sfx('levelup', p); p.setCd('dance', ITEMS.dance.cd); return 'nocd';
+  },
   // ---------- 세룡이 (user-made job from the dev tool, ported natively) ----------
   // 성진이 소환: a pig hovers 4 blocks above the target's spot for 1 s (warning ring), falls in 8 ticks, 5 magic in r 1.6.
   // Everyone sees it (event); each client resolves the landing for its own players / mobs (no ping error).

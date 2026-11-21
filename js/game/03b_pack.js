@@ -162,7 +162,7 @@ const ITEM_ART = {
   stick_mace: { l: [['item/mace']], h: 1 }, grab: { l: [['item/tripwire_hook']] }, grabex: { cube: ['block/tnt_side', 'block/tnt_top'] },
   slime_axe: { l: [['item/stone_axe']], h: 1 }, cutter: { cube: ['block/stonecutter_side', 'block/stonecutter_top'] }, slimeball: { l: [['item/slime_ball']] },
   hammer: { l: [['item/mace']], h: 1 }, drone: { l: [['item/firework_rocket']] }, destroy: { cube: ['block/tnt_side', 'block/tnt_top'] }, spinpot: POT(0xA9656A, 'item/splash_potion'),
-  mace: { l: [['item/mace']], h: 1 }, rodwood: { l: [['item/fishing_rod']], h: 1 }, crate: { cube: ['block/stripped_birch_log', 'block/stripped_birch_log_top'] },
+  mace: { l: [['item/mace']], h: 1 }, rodwood: { l: [['item/fishing_rod']], h: 1 }, dance: { l: [['item/music_disc_cat']] }, dude_bullet: { l: [['item/gold_nugget']] }, crate: { cube: ['block/stripped_birch_log', 'block/stripped_birch_log_top'] },
   pot_heal: POT(0xF82423), pot_turtle: POT(0x8B71A0), pot_fire: POT(0xFF9900), pot_swift: POT(0x33EBFF), aglet: { l: [['item/yellow_candle']] },
   boots: { l: [['item/leather_boots', 0xA06540], ['item/leather_boots_overlay']] }, fish: { l: [['item/tropical_fish']] },
   chang: { l: [['item/ghast_tear']] }, gather: { l: [['item/ender_eye']] }, bdash: { l: [['item/feather']] }, squid: { l: [['item/ink_sac']] }, harder: { l: [['item/blaze_powder']] },

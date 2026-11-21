@@ -1,4 +1,5 @@
 // ===================== Player (local human or bot) =====================
+const NO_INP = { f: 0, s: 0, jump: false, sneak: false, sprint: false };
 class Player {
   constructor(id, name, persona, job, isBot = false) {
     this.id = id; this.name = name; this.persona = persona; this.job = job; this.isBot = isBot; this.local = true; this.kind = 'player';
@@ -91,7 +92,7 @@ class Player {
     if (this.hurtTime > 0) this.hurtTime--; if (this.invul > 0) this.invul--; this.attackTimer++; if (this.swingT > 0) this.swingT--;
     if (this.jumpCd > 0) this.jumpCd--;
     // sneak / sprint state
-    const wasSneak = this.sneaking; this.sneaking = !!this.inp.sneak && !this.st.rewind;
+    const wasSneak = this.sneaking; this.sneaking = !!this.inp.sneak && !this.st.rewind && !this.st.dance;
     if (this.sneaking && !wasSneak && !this.isBot) { }
     const canSprint = this.inp.f > 0.5 && !this.sneaking && !this.useHeld;
     if (this.inp.sprint && canSprint) this.sprinting = true; if (!canSprint || this.hx) this.sprinting = false;
@@ -121,7 +122,7 @@ class Player {
   heal(n) { this.hp = Math.min(this.maxHp(), this.hp + n); }
   // ---------- movement ----------
   physics() {
-    const W = G.world; const inp = this.inp;
+    const W = G.world; const inp = this.st.dance ? NO_INP : this.inp; // dude 댄스: dancing in place
     const inLava = aabbBlocks(W, this, d => d.lava);
     const inSnow = aabbBlocks(W, this, d => d.snow) && this.job !== 'spider_' ;
     const fx = Math.floor(this.x), fz = Math.floor(this.z);
@@ -221,6 +222,7 @@ class Player {
     return { t: best };
   }
   attack(opt = {}) {
+    if (this.st.dance) return;
     if (this.spectator || !this.alive || this.st.rewind) return;
     this.prot = 0; this.swing++; this.swingT = 6;
     let best = null;
@@ -260,7 +262,7 @@ class Player {
     if (this.spectator || !this.alive || this.st.rewind) return;
     const slot = this.inv[this.sel]; const D = slot ? ITEMS[slot.id] : null;
     if (D && D.use === 'skill') {
-      if (this.cdLeft(D.group) > 0) return;
+      if (this.cdLeft(D.group) > 0 || (this.st.dance && D.cast !== 'dance')) return;
       const ok = SK[D.cast](this, slot); if (ok === false) { if (this.st.aiSteal) SK.aiAfterUse(this, slot, ok); return; } this.prot = 0;
       if (this.job === 'bilcorner' && SK.BIL_SKILLS.has(D.cast)) SK.addFollowers(this);
       if (D.cd && ok !== 'nocd') this.setCd(D.group, D.cd);

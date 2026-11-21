@@ -5,11 +5,11 @@ const PAD_POS = { red: [21, 21, 13], lime: [66, 21, 24], purple: [9, 21, 46], bl
 const PAD_ORDER = ['red', 'lime', 'purple', 'blue'];
 const PAD_KO = { red: '빨강', lime: '연두', purple: '보라', blue: '파랑' };
 const G = {
-  tick: 0, phase: 'menu', world: null, me: null, bots: [], remotes: new Map(), mobs: [], rmobs: new Map(), arrows: [], drops: [], chains: [], parts: [], timers: [], ices: [], vigs: [], pigs: [], domains: [], ghosts: [], dashFx: new Map(), fangs: [], fangLines: [], zones: [], fangHit: new Map(),
+  tick: 0, phase: 'menu', world: null, me: null, bots: [], remotes: new Map(), mobs: [], rmobs: new Map(), arrows: [], drops: [], chains: [], parts: [], timers: [], ices: [], vigs: [], pigs: [], dancers: new Map(), domains: [], ghosts: [], dashFx: new Map(), fangs: [], fangLines: [], zones: [], fangHit: new Map(),
   match: false, winShown: false, kills: {}, mobN: 0, fangN: 0, arrowN: 0, dropN: 0, practice: false, nid: uid(6),
   pads: PAD_ORDER.map(k => ({ x: PAD_POS[k][0], y: PAD_POS[k][1], z: PAD_POS[k][2], k })),
   initWorld() { const [sx, sy, sz] = MAPDATA.size; this.world = new World(sx, sy, sz); this.world.loadRLE(MAPDATA.rle); this.orig = this.world.b.slice(); },
-  resetWorld() { this.world.b.set(this.orig); for (let i = 0; i < this.world.cx * this.world.cy * this.world.cz; i++) this.world.dirty.add(i); this.ices = []; this.vigs = []; this.fangs = []; this.fangLines = []; this.zones = []; this.fangHit.clear(); MOD.proj = []; this.pigs = []; this.domains = []; this.ghosts = []; this.dashFx.clear(); },
+  resetWorld() { this.world.b.set(this.orig); for (let i = 0; i < this.world.cx * this.world.cy * this.world.cz; i++) this.world.dirty.add(i); this.ices = []; this.vigs = []; this.fangs = []; this.fangLines = []; this.zones = []; this.fangHit.clear(); MOD.proj = []; this.pigs = []; this.dancers.clear(); this.domains = []; this.ghosts = []; this.dashFx.clear(); },
   // ---------- entity queries ----------
   players() {
     const a = []; if (this.phase === 'game' && this.me) a.push(this.me); for (const b of this.bots) a.push(b);
@@ -126,6 +126,11 @@ const G = {
       case 'iceb': this.breakIce(ev.x, ev.y, ev.z, false); break;
       case 'fang': SK.fangSpawn(ev); break;
       case 'rmark': this.zones.push({ x: ev.x, y: ev.y, z: ev.z, r: SK.MARK_R, by: ev.by, t0: this.tick }); break; // 러셔 번개 자국
+      case 'dance': // dude 댄스 on/off (t0: local clock, so the dance + song start together on every client)
+        if (ev.on) this.dancers.set(ev.by, { t0: performance.now(), yaw: ev.yaw || 0, frogs: [] });
+        else { const d = this.dancers.get(ev.by); if (d) for (const f of d.frogs) this.particles('poof', f.x, f.y + .6, f.z, 6); this.dancers.delete(ev.by); }
+        break;
+      case 'dfrog': { const d = this.dancers.get(ev.by); if (d && d.frogs.length < 40) { d.frogs.push({ x: ev.x, y: ev.y, z: ev.z, yaw: ev.yaw || 0, s0: performance.now() }); this.particles('poof', ev.x, ev.y + .4, ev.z, 5); } break; }
       case 'srpig': this.pigs.push({ x: ev.x, y: ev.y, z: ev.z, by: ev.by, yaw: ev.yaw || 0, t0: this.tick }); break;
       case 'srbeam': SK.srLine({ x: ev.a[0], y: ev.a[1], z: ev.a[2] }, { x: ev.b[0], y: ev.b[1], z: ev.b[2] }, ev.c || [1, .15, .15], .3); this.particles('glow', ev.b[0], ev.b[1], ev.b[2]); break;
       case 'srdomain': this.domains = this.domains.filter(d => d.by !== ev.by); this.domains.push({ x: ev.x, y: ev.y, z: ev.z, r: 5, by: ev.by, tid: ev.tid, t0: this.tick }); break;
@@ -315,6 +320,8 @@ const G = {
     const best = new Map(), cam = this.camPos;
     if (this.phase === 'game' && cam) for (const m of [...this.mobs, ...this.rmobs.values()]) { if (m.type !== 'dog' || !m.alive) continue; const d = dist3(m, cam), b = best.get(m.owner); if (!b || d < b.d) best.set(m.owner, { d, m }); }
     for (const [o, b] of best) AU.posLoop('dog:' + o, 'ukchuk_1b', { x: b.m.x, y: b.m.y + .5, z: b.m.z }, 20, .8);
+    // dude 댄스: the song plays at each dancer (heard around them); dancers who left / died / became spectators stop
+    for (const [id, d] of this.dancers) { const p = this.phase === 'game' && this.players().find(q => q.id === id); if (!p || !p.alive || p.spectator) { this.dancers.delete(id); continue; } AU.posLoop('dance:' + id, 'dude_dance', { x: p.x, y: p.y + 1, z: p.z }, 40, 1); }
     AU.endLoops();
   },
   // ---------- presence ----------

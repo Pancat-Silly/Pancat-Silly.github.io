@@ -55,8 +55,10 @@ const R = {
       const tgt = Math.min(1, dtick * 4 / sc); e.walkA = (e.walkA || 0) + (tgt - (e.walkA || 0)) * (1 - Math.pow(0.6, ft)); e.walkP = (e.walkP || 0) + e.walkA * ft;
     }
     const legA = Math.cos(e.walkP * 0.6662) * 1.4 * e.walkA, armA = Math.cos(e.walkP * 0.6662) * e.walkA;
-    let base = M4.T(M4.id(), x, y, z); base = M4.RY(base, -e.yaw); base = M4.S(base, k, k, k);
+    const dd = G.dancers.get(e.id), D = dd ? DANCE.pose('gangnam', (performance.now() - dd.t0) / 1000) : null; // dude 댄스: 강남스타일
+    let base = M4.T(M4.id(), x, y, z); base = M4.RY(base, -(dd ? dd.yaw : e.yaw)); base = M4.S(base, k, k, k);
     if (sneak) base = M4.T(base, 0, -2, 0);
+    if (D) { base = M4.RY(base, D.yaw); base = M4.T(base, D.off[0], D.off[1], D.off[2]); }
     const S = !!(sb && sk && !glowB); const W1 = tint([1, 1, 1]);
     // body part: skin-textured (with overlay layer) or flat colored
     const part = (m, x0, y0, z0, x1, y1, z1, uv, ov, flat, front) => {
@@ -67,13 +69,13 @@ const R = {
     const armor = (m, x0, y0, z0, x1, y1, z1, c) => { if (!glowB && c) b.box(m, x0, y0, z0, x1, y1, z1, tint(c)); };
     // legs
     for (const sd of [-1, 1]) {
-      let m = M4.T(base, sd * 2, 12, sneak ? -2 : 0); m = M4.RX(m, sd * legA);
+      let m = M4.T(base, sd * 2, 12, sneak ? -2 : 0); m = D ? DANCE.rot(m, sd < 0 ? D.rleg : D.lleg) : M4.RX(m, sd * legA);
       part(m, -2, -12, -2, 2, 0, 2, sd < 0 ? [0, 16] : [16, 48], sd < 0 ? [0, 32] : [0, 48], pants);
       if (S && ac) armor(m, -2.5, -9, -2.5, 2.5, .3, 2.5, ac);
       if (boots) armor(m, -2.6, -12.3, -2.6, 2.6, -8.5, 2.6, boots);
     }
     // body
-    let bm = M4.T(base, 0, 12, 0); if (sneak) bm = M4.RX(bm, .5);
+    let bm = M4.T(base, 0, 12, 0); if (sneak) bm = M4.RX(bm, .5); if (D) bm = DANCE.rot(bm, D.body);
     part(bm, -4, 0, -2, 4, 12, 2, [16, 16], [16, 32], shirt);
     if (S && ac) armor(bm, -4.6, -.3, -2.6, 4.6, 12.4, 2.6, ac);
     // arms (slim skins: 3px)
@@ -84,17 +86,53 @@ const R = {
       let m = M4.T(bm, sd * ao, 10, 0);
       let ax = -sd * armA; if (sd === -1 && swingP > 0) ax -= Math.sin(swingP * Math.PI) * 1.4; if (aiming) ax = -Math.PI / 2 - e.pitch;
       if (sd === 1 && e.blocking) ax = -.9;
-      m = M4.RX(m, ax);
+      m = D ? DANCE.rot(m, sd < 0 ? D.rarm : D.larm) : M4.RX(m, ax);
       part(m, -aw / 2, -10, -2, aw / 2, 2, 2, sd < 0 ? [40, 16] : [32, 48], sd < 0 ? [40, 32] : [48, 48], skin);
       if (ac) armor(m, -aw / 2 - .6, -3, -2.6, aw / 2 + .6, 2.6, 2.6, ac);
       const iid = sd === -1 ? heldId : offId;
       if (iid && !glowB && ITEMS[iid]) { let im = M4.T(m, 0, -9, 1); im = M4.S(im, 16 / .9375, 16 / .9375, 16 / .9375); im = M4.RX(im, Math.PI / 2 * (ITEMS[iid].use === 'shield' ? 0 : 1)); if (ITEMS[iid].use === 'shield') im = M4.RY(im, Math.PI / 2); this.drawItem(b, im, iid, false, e.drawT || 0); }
     }
     // head
-    let hm = M4.T(bm, 0, 12, 0); if (sneak) hm = M4.RX(hm, -.5); hm = M4.RX(hm, e.pitch);
+    let hm = M4.T(bm, 0, 12, 0); if (sneak) hm = M4.RX(hm, -.5); hm = D ? DANCE.rot(hm, D.head) : M4.RX(hm, e.pitch);
     if (S) { part(hm, -4, 0, -4, 4, 8, 4, [0, 0], [32, 0, .5]); if (helm) armor(hm, -4.7, 4.2, -4.7, 4.7, 8.8, 4.7, helm); }
     else if (glowB) glowB.box(hm, -4, 0, -4, 4, 8, 4, [1, 1, 1]);
     else { b.box(hm, -4, 0, -4, 4, 8, 4, tint([.8, .6, .45]), 0, 16); b.box(hm, -4.2, 6, -4.2, 4.2, 8.3, 4.2, tint(helm || [.3, .2, .1])); if (!helm) b.box(hm, -4.2, 5, -4.2, 4.2, 8.3, -2, tint([.3, .2, .1])); }
+  },
+  // dude 댄스 frogs: Frog Marauder mesh (js/data/frog.js, tools/mkfrog.py) cut into 6 rigid parts, posed by the shared DANCE clips
+  frogTex: null, frogM: null, bf: null,
+  frogInit() {
+    if (this.frogM || typeof FROG === 'undefined') return !!this.frogM;
+    this.frogM = {}; for (const k in FROG.parts) { const Pt = FROG.parts[k], v = Pt.v, n = v.length / 8, a = new Float32Array(n * 8); for (let i = 0; i < n * 8; i++) a[i] = v[i] / ((i % 8) < 6 ? 100 : 10000); this.frogM[k] = { p: Pt.p, v: a, n, i: Pt.i }; }
+    this.bf = new Batch(60000); const im = new Image(); im.onload = () => { this.frogTex = this.gfx.makeTex(im); }; im.src = FROG.tex; return true;
+  },
+  frogPart(b, m, k) {
+    const P = this.frogM[k], v = P.v, out = b.v, base = b.nv; let o = base * 9; const L = [.32, .86, .4];
+    for (let i = 0; i < P.n; i++) {
+      const j = i * 8, x = v[j], y = v[j + 1], z = v[j + 2];
+      out[o++] = m[0] * x + m[4] * y + m[8] * z + m[12]; out[o++] = m[1] * x + m[5] * y + m[9] * z + m[13]; out[o++] = m[2] * x + m[6] * y + m[10] * z + m[14];
+      out[o++] = v[j + 6]; out[o++] = v[j + 7];
+      const nx = m[0] * v[j + 3] + m[4] * v[j + 4] + m[8] * v[j + 5], ny = m[1] * v[j + 3] + m[5] * v[j + 4] + m[9] * v[j + 5], nz = m[2] * v[j + 3] + m[6] * v[j + 4] + m[10] * v[j + 5], nl = Math.hypot(nx, ny, nz) || 1;
+      const s = .55 + .45 * Math.max(0, (nx * L[0] + ny * L[1] + nz * L[2]) / nl); out[o++] = s; out[o++] = s; out[o++] = s; out[o++] = 1;
+    }
+    const I = b.i, src = P.i; let q = b.ni; for (let i = 0; i < src.length; i++) I[q++] = base + src[i]; b.ni = q; b.nv += P.n;
+  },
+  frogVerts() { let n = 0; for (const k in this.frogM) n += this.frogM[k].n; return n; },
+  drawFrog(b, x, y, z, yaw, t, sc) {
+    const k = sc / 16, P = DANCE.pose('gangnam', t), M = this.frogM; let base = M4.T(M4.id(), x, y, z); base = M4.RY(base, -yaw); base = M4.S(base, k, k, k);
+    if (P) { base = M4.RY(base, P.yaw); base = M4.T(base, P.off[0], P.off[1], P.off[2]); }
+    const at = (m, p) => M4.T(m, p[0], p[1], p[2]), R = (m, e) => P ? DANCE.rot(m, e) : m;
+    const bm = R(at(base, M.body.p), P && P.body); this.frogPart(b, bm, 'body');
+    for (const s of ['rleg', 'lleg']) this.frogPart(b, R(at(base, M[s].p), P && P[s]), s);
+    for (const s of ['rarm', 'larm', 'head']) this.frogPart(b, R(at(bm, M[s].p), P && P[s]), s);
+  },
+  drawFrogs() {
+    if (!G.dancers.size || !this.frogInit() || !this.frogTex) return; const b = this.bf, per = this.frogVerts(), now = performance.now(); b.reset();
+    const flush = () => { if (!b.ni) return; this.gfx.bind(this.frogTex); this.gfx.drawBatch(b); this.gfx.bind(); b.reset(); };
+    for (const d of G.dancers.values()) for (const f of d.frogs) {
+      if (b.nv + per > b.cap) flush();
+      const pop = clamp((now - f.s0) / 250, 0, 1); this.drawFrog(b, f.x, f.y, f.z, f.yaw, (now - d.t0) / 1000, .8 * (pop < 1 ? pop * (1.15 - .15 * pop) : 1));
+    }
+    flush();
   },
   drawDog(b, m, x, y, z) {
     const k = .85 / 17; let base = M4.T(M4.id(), x, y, z); base = M4.RY(base, -m.yaw); base = M4.S(base, k, k, k);
@@ -159,7 +197,12 @@ const R = {
       if (me.hurtTime > 0) roll = Math.sin(me.hurtTime / 10 * Math.PI) * .12;
       const ft = Math.min(5, (this.dt || 16.7) / 50); const bob = me.onGround && !me.spectator ? Math.hypot(me.x - me.px, me.z - me.pz) / me.scale : 0; this.bobP = (this.bobP || 0) + bob * 0.6 * Math.PI * ft; this.bobA = (this.bobA || 0) + (Math.min(1, bob * 5) - (this.bobA || 0)) * (1 - Math.pow(0.6, ft));
       if (!this.third && UI.bob) { eye.y += Math.abs(Math.cos(this.bobP)) * .07 * this.bobA * me.scale; }
-      if (this.third) {
+      const dd = G.dancers.get(me.id);
+      if (dd) { // dude 댄스: camera in front of the dancer (4 ahead of the back of the head, 3 up), facing them
+        const f = lookVec(dd.yaw, 0), head = { x: eye.x - f.x * .25, y: eye.y + .1, z: eye.z - f.z * .25 }, dir = { x: f.x * 4, y: 3, z: f.z * 4 }, L = 5;
+        const u = { x: dir.x / L, y: dir.y / L, z: dir.z / L }, h = G.world.ray(head, u, L), dl = h ? Math.max(.5, h.t - .2) : L;
+        eye = { x: head.x + u.x * dl, y: head.y + u.y * dl, z: head.z + u.z * dl }; yaw = yawTo(head.x - eye.x, head.z - eye.z); pitch = Math.atan2(eye.y - head.y + .4, Math.hypot(head.x - eye.x, head.z - eye.z));
+      } else if (this.third) {
         const d = lookVec(yaw, pitch); const sgn = this.third === 1 ? -1 : 1; const dist = 4 * Math.max(1, me.scale * .8);
         const dir = { x: d.x * sgn, y: d.y * sgn, z: d.z * sgn }; const h = G.world.ray(eye, dir, dist); const dd = h ? Math.max(.3, h.t - .2) : dist;
         eye = { x: eye.x + dir.x * dd, y: eye.y + dir.y * dd, z: eye.z + dir.z * dd }; if (this.third === 2) { yaw += Math.PI; pitch = -pitch; }
@@ -179,7 +222,7 @@ const R = {
     const b = this.bo; b.reset(); const bg = this.bg; bg.reset(); const bt = this.bt; bt.reset();
     for (const p of G.players()) {
       if (p.spectator) continue;
-      if (p === me && !this.third) { if (p.job === 'suno' && p.st.rewind) { const r = p.st.rewind, i0 = r.path.length - 1 - 2 * r.k, i1 = Math.max(0, r.path.length - 65); for (let i = i0; i >= i1; i -= 3) { const q = r.path[i]; bt.cube(q[0], q[1] + .1, q[2], .06, [1, .1, .1], 0, .9); } } continue; }
+      if (p === me && !this.third && !G.dancers.has(me.id)) { if (p.job === 'suno' && p.st.rewind) { const r = p.st.rewind, i0 = r.path.length - 1 - 2 * r.k, i1 = Math.max(0, r.path.length - 65); for (let i = i0; i >= i1; i -= 3) { const q = r.path[i]; bt.cube(q[0], q[1] + .1, q[2], .06, [1, .1, .1], 0, .9); } } continue; }
       if ((p.local ? G.tick < (p.prot || 0) : p.protF) && (performance.now() / 120 | 0) % 2) continue;
       const sk = SKIN.get(p.skin);
       if (sk) { this.bs.reset(); this.drawPlayer(b, p, alpha, null, this.bs, sk); gfx.bind(sk.tex); gfx.drawBatch(this.bs); gfx.bind(); }
@@ -197,7 +240,7 @@ const R = {
     for (const dr of G.drops) { const t = (G.tick + alpha) * .1; let m = M4.T(M4.id(), dr.x, dr.y + .15 + Math.sin(t) * .05, dr.z); m = M4.RY(m, t); b.box(m, -.12, -.12, -.12, .12, .12, .12, [.45, .85, .35]); }
     for (const c of G.chains) { const tip = Math.min(c.l === undefined ? 20 : c.l, c.t <= 10 ? 2 * c.t : 20 - 2 * (c.t - 10)); for (let s = 0; s <= tip; s += .8) { let m = M4.T(M4.id(), c.o.x + c.d.x * s, c.o.y + c.d.y * s, c.o.z + c.d.z * s); m = M4.RY(m, -yawTo(c.d.x, c.d.z) + (s * 1.3 % 2 > 1 ? Math.PI / 2 : 0)); b.box(m, -.04, -.12, -.2, .04, .12, .2, [.35, .37, .42]); } }
     for (const p of G.parts) b.cube(p.x, p.y, p.z, p.s * (p.life < 5 ? p.life / 5 : 1), p.col, 0);
-    gfx.drawBatch(b);
+    gfx.drawBatch(b); this.drawFrogs();
     // transparent
     gl.enable(gl.BLEND); gl.depthMask(false); gfx.drawChunks('t', eye);
     for (const v of G.vigs) if (v.t < 45 + VIG_N) { const F = [[0, 1], [-1, 0], [0, -1], [1, 0]][v.d]; const L = [-F[1], F[0]];
@@ -217,7 +260,7 @@ const R = {
     if (bg.ni) { gl.disable(gl.DEPTH_TEST); gl.uniform1f(gfx.u.uFlat, 1); gl.uniform4f(gfx.u.uTint, 1, 1, .85, 1); gfx.drawBatch(bg); gl.uniform1f(gfx.u.uFlat, 0); gl.uniform4f(gfx.u.uTint, 0, 0, 0, 0); gl.enable(gl.DEPTH_TEST); }
     gl.depthMask(true); gl.disable(gl.BLEND);
     // view model
-    if (G.phase === 'game' && me && !this.third && !me.spectator) {
+    if (G.phase === 'game' && me && !this.third && !me.spectator && !G.dancers.has(me.id)) {
       gl.clear(gl.DEPTH_BUFFER_BIT); const bv = this.bv; bv.reset();
       const vproj = M4.persp(70 * D2R, W / H, .01, 10); const vview = M4.lookAt({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 1 }, { x: 0, y: 1, z: 0 });
       gfx.setU(M4.mul(vproj, vview), { x: 0, y: 0, z: 0 }, 100, 200);
