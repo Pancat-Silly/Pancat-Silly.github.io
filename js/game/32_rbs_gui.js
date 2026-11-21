@@ -35,7 +35,7 @@ Object.assign(RUI, {
     const out = (get, take, cls) => this.slotEl(this.addS({ get, take, out: true }), 'big ' + (cls || ''));
     switch (g.type) {
       case 'inv': {
-        h = '<div class="rgw"><div class="rgflex"><div>'; for (let i = 0; i < 4; i++) h += '<div class="rgrow">' + this.slotEl(this.addS({ get: () => me.armor[i], set: v => me.armor[i] = v, accept: s => RIT[s.id] && RIT[s.id].armor && RIT[s.id].armor.slot === i, one: true })) + '</div>';
+        h = '<div class="rgw"><div class="rgflex"><div>'; for (let i = 0; i < 4; i++) h += '<div class="rgrow">' + this.slotEl(this.addS({ get: () => me.armor[i], set: v => me.armor[i] = v, accept: s => RIT[s.id] && RIT[s.id].armor && RIT[s.id].armor.slot === i, one: true, arm: true })) + '</div>';
         h += '</div><div class="rdollw"><div class="rdoll" id="rbDoll">' + this.dollHTML() + '</div><div class="rdolln">' + esc(me.name) + ' · Lv.' + me.lvl + ' · 방어 ' + me.armorPts()[0] + '</div></div><div><h4>제작</h4><div class="rgflex"><div>';
         for (let r = 0; r < 2; r++) { h += '<div class="rgrow">'; for (let c = 0; c < 2; c++) { const i = r * 2 + c; h += this.slotEl(this.addS({ get: () => g.grid[i], set: v => g.grid[i] = v, grid: true })); } h += '</div>'; }
         h += '</div><div class="rarrow">➜</div>' + out(() => this.craftOut(2), () => this.craftTake(2)) + '</div><div class="rgsp"></div><div class="rgflex">왼손 ' + this.slotEl(this.addS({ get: () => me.off, set: v => me.off = v, accept: s => RIT[s.id] && RIT[s.id].shield, one: true })) + '</div></div></div>';
@@ -121,7 +121,9 @@ Object.assign(RUI, {
     e.preventDefault(); this.click(+el.dataset.s, e.button, e.shiftKey);
   },
   guiTouch(e) { const el = e.target.closest && e.target.closest('.rs'); if (!el) return; e.preventDefault(); this._tipHold = true; this.tapTip(el, e.touches[0]); this._tch = { s: +el.dataset.s, t: performance.now() }; this._tlong = setTimeout(() => { if (this._tch) { this.click(this._tch.s, 2, false); this._tch = null; } }, 420); },
-  guiTouchEnd(e) { clearTimeout(this._tlong); this._tipHold = false; $('rbTip').style.display = 'none'; if (this._tch) { const s = this._tch.s; this._tch = null; e.preventDefault(); this.click(s, 0, false); } else { const t = e.target; if (t.dataset && (t.dataset.en !== undefined || t.dataset.bk)) { e.preventDefault(); this.guiDown({ target: t, button: 0, preventDefault() { } }); } } },
+  guiTouchEnd(e) { clearTimeout(this._tlong); this._tipHold = false; $('rbTip').style.display = 'none'; if (this._tch) { const s = this._tch.s; this._tch = null; e.preventDefault(); this.click(s, 0, this.armTap(s)); } else { const t = e.target; if (t.dataset && (t.dataset.en !== undefined || t.dataset.bk)) { e.preventDefault(); this.guiDown({ target: t, button: 0, preventDefault() { } }); } } },
+  // phones: with the sneak button on, tapping armor in the inventory puts it on (like shift-click)
+  armTap(i) { const g = this.gui, S = g && g.S[i]; if (!S || g.type !== 'inv' || !S.inv || !RIN.touch.sneak) return false; const st = S.get(); return !!(st && RIT[st.id] && RIT[st.id].armor); },
   click(i, btn, shift) {
     const g = this.gui; const S = g.S[i]; if (!S) return; const me = RG.me;
     if (S.act) { S.act(btn, shift); return; }
@@ -134,8 +136,8 @@ Object.assign(RUI, {
     }
     const st = S.get(); const cur = this.cursor;
     if (st && RIT[st.id] && RIT[st.id].menu) { if (g.type === 'inv' && btn === 2) { this.close(true); this.menuAct(RIT[st.id].menu); } return; } // locked lobby items
-    if (shift && st) { // quick move
-      let n = st.n; const targets = S.inv ? (g.type === 'inv' ? g.S.filter(T => T.inv && (S.hot ? T.main : T.hot)) : g.S.filter(T => (T.cont || T.ench) && !T.out)) : g.S.filter(T => T.inv);
+    if (shift && st) { // quick move (inventory: armor goes straight onto its empty armor slot first, like MC)
+      let n = st.n; const targets = S.inv ? (g.type === 'inv' ? g.S.filter(T => T.arm && !T.get() && T.accept(st)).concat(g.S.filter(T => T.inv && (S.hot ? T.main : T.hot))) :g.S.filter(T => (T.cont || T.ench) && !T.out)) : g.S.filter(T => T.inv);
       for (const T of targets) { const t = T.get(); if (t && RITEM.same(t, st) && t.n < max(t)) { const k = Math.min(n, max(t) - t.n); t.n += k; n -= k; if (!n) break; } }
       if (n) for (const T of targets) { if (T.get() || (T.accept && !T.accept(st))) continue; const k = T.one ? 1 : Math.min(n, max(st)); T.set(Object.assign({}, st, { n: k })); n -= k; if (!n) break; }
       S.set(n ? Object.assign(st, { n }) : null); this.afterChange(S); return;
