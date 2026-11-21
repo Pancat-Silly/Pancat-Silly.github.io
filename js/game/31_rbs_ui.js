@@ -20,6 +20,7 @@ const RUI = {
     const d = document.createElement('div'); d.id = 'rbs'; d.innerHTML = RUI_HTML; document.body.appendChild(d); document.body.classList.add('rbsapp'); document.body.classList.toggle('rbmob', this.mobile);
     $('rbCredit').innerHTML = 'made by LemonyMEF <b class="rbbeta">BETA</b>' + (SITE.VER ? ' <span class="rbver">' + SITE.verLabel() + '</span>' : '');
     $('rbHot').innerHTML = Array.from({ length: 9 }, (_, i) => '<div class="rhs" data-i="' + i + '"></div>').join('');
+    { const sb = $('rbSpecBar'), f = e => { const t = e.target.closest('[data-si]'); if (!t) return; e.preventDefault(); e.stopPropagation(); this.specJump(+t.dataset.si); }; sb.addEventListener('mousedown', f); sb.addEventListener('touchstart', f, { passive: false }); } // spectator hotbar
     for (const el of document.querySelectorAll('.rhs')) { const f = () => { RG.me.sel = +el.dataset.i; }; el.addEventListener('mousedown', f); el.addEventListener('touchstart', e => { e.preventDefault(); f(); }, { passive: false }); }
     $('rbGui').addEventListener('mousedown', e => this.guiDown(e)); $('rbGui').addEventListener('contextmenu', e => e.preventDefault());
     $('rbGui').addEventListener('touchstart', e => this.guiTouch(e), { passive: false }); $('rbGui').addEventListener('touchend', e => this.guiTouchEnd(e), { passive: false });
@@ -98,7 +99,7 @@ const RUI = {
       const h = '<div class="rsh">랜덤블록 서바이벌</div>' + rows.map(r => '<div><span>' + r[0] + '</span><b>' + r[1] + '</b></div>').join(''); if (h !== this._sb) { this._sb = h; $('rbSide').innerHTML = h; }
       const ef = Object.entries(me.effects).filter(([n]) => n !== 'saturation').map(([n, e]) => (this.EFN[n] || n) + ' ' + RITEM.ROMAN[e.amp + 1 > 5 ? 5 : e.amp + 1] + ' <small>' + Math.ceil(e.t / 20) + 's</small>').join('<br>'); if (ef !== this._ef) { this._ef = ef; $('rbEff').innerHTML = ef; }
       if (this.gui) this.guiTick();
-      if (me.spectator) { const f = this.follow ? RG.byId(this.follow) : null; $('rbSpecT').innerHTML = '👁 관전 중' + (f ? ' · <b>' + esc(f.name) + '</b> 시점' + (this.followThird ? ' (3인칭)' : '') : ' · 자유 시점') + '<br><small>' + (this.mobile ? '탭: 다음 플레이어 · 웅크리기: 자유 시점 · 메뉴(☰)에서 관전 끝내기' : '클릭: 다음 / 우클릭: 이전 플레이어 · 숫자: 바로 선택 · Shift: 자유 시점 · V: 1/3인칭 · M: 메뉴 (관전 끝내기)') + '</small>'; }
+      if (me.spectator) { const f = this.follow ? RG.byId(this.follow) : null; this.specBar(); $('rbSpecT').innerHTML = '👁 관전 중' + (f ? ' · <b>' + esc(f.name) + '</b> 시점' + (this.followThird ? ' (3인칭)' : '') : ' · 자유 시점') + '<br><small>' + (this.mobile ? '아래 핫바: 플레이어 선택 · 탭: 다음 플레이어 · 웅크리기: 자유 시점 · 메뉴(☰)에서 관전 끝내기' : '숫자 · 휠: 핫바에서 플레이어 선택 · 클릭: 다음 / 우클릭: 이전 · Shift: 자유 시점 · V: 1/3인칭 · M: 메뉴 (관전 끝내기)') + '</small>'; }
       RAU.lobbyMusic();
     }
   },
@@ -231,7 +232,22 @@ const RUI = {
   specOk(p) { if (!p || p === RG.me || p.spectator || p.alive === false) return false; const a = RG.area(p); return a === 'arena' || a === 'dm'; }, // spectating picks only players in the match (arena / deathmatch)
   specList() { return RG.players().filter(p => this.specOk(p)); },
   specNext(dir) { const L = this.specList(); if (!L.length) { this.follow = null; return; } let i = L.findIndex(p => p.id === this.follow); i = (i + dir + L.length) % L.length; this.follow = L[i].id; },
-  specJump(i) { const L = this.specList(); if (L[i]) this.follow = L[i].id; },
+  // spectator hotbar (like Minecraft's spectator menu): a head per player in the match; 1-9 / wheel / click picks who to watch.
+  // More than 9: slots 1-8 are a page of players and slot 9 turns the page.
+  specPage: 0,
+  specSlots() { const L = this.specList(); if (L.length <= 9) { this.specPage = 0; return { items: L, more: false }; } const pages = Math.ceil(L.length / 8);
+    const fi = L.findIndex(p => p.id === this.follow); if (this.follow !== this._spf) { this._spf = this.follow; if (fi >= 0) this.specPage = Math.floor(fi / 8); } this.specPage %= pages;
+    return { items: L.slice(this.specPage * 8, this.specPage * 8 + 8), more: true, pages }; },
+  specJump(i) { const S = this.specSlots(); if (S.more && i === 8) { this.specPage = (this.specPage + 1) % S.pages; this._sbs = ''; return; } const p = S.items[i]; if (p) this.follow = p.id; },
+  headURL(p) { const k = (p.skin || '').toLowerCase(), s = k ? SKIN.get(p.skin) : null; const ck = s ? k : '#' + (p.name || '?'); const H = this._heads || (this._heads = new Map()); if (H.has(ck)) return H.get(ck);
+    const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
+    if (s && s.cv) { g.drawImage(s.cv, 8, 8, 8, 8, 0, 0, 32, 32); g.drawImage(s.cv, 40, 8, 8, 8, 0, 0, 32, 32); }
+    else { g.fillStyle = '#c69c6d'; g.fillRect(0, 0, 32, 32); g.fillStyle = '#4a2f18'; g.fillRect(0, 0, 32, 10); g.fillStyle = '#fff'; g.fillRect(6, 16, 8, 4); g.fillRect(18, 16, 8, 4); g.fillStyle = '#3b3b9c'; g.fillRect(10, 16, 4, 4); g.fillRect(18, 16, 4, 4); }
+    const u = c.toDataURL(); if (s || !k || SKIN.state(p.skin) === 'fail') H.set(ck, u); return u; },
+  specBar() { const S = this.specSlots(); const sig = S.items.map(p => p.id + SKIN.state(p.skin)).join('|') + '/' + this.follow + '/' + S.more + this.specPage; if (sig === this._sbs) return; this._sbs = sig;
+    let h = ''; for (let i = 0; i < 9; i++) { const p = S.items[i]; if (S.more && i === 8) h += '<div class="rhs rspg" data-si="8" title="다음 페이지">▶<small>' + (this.specPage + 1) + '/' + S.pages + '</small></div>';
+      else h += '<div class="rhs' + (p && p.id === this.follow ? ' sel' : '') + '" data-si="' + i + '"' + (p ? ' title="' + esc(p.name) + '"><img src="' + this.headURL(p) + '">' : '>') + '</div>'; }
+    const f = this.follow ? RG.byId(this.follow) : null; $('rbSpecBar').innerHTML = '<div class="rsbn">' + (f ? esc(f.name) : '플레이어를 골라 관전하세요') + '</div><div class="rsbh">' + h + '</div>'; },
   // ---------- interaction with blocks (right click) ----------
   interact(x, y, z) {
     const id = RW.getM(x, y, z), B = BL[id];
@@ -267,7 +283,7 @@ body.rbsapp #app,body.rbsapp #newJobPop{display:none!important}body.rbsapp{backg
 #rbEff{position:absolute;right:6px;top:24px;font-size:13px;text-align:right}
 #rbTags .rtag{position:absolute;transform:translate(-50%,-100%);background:rgba(0,0,0,.3);padding:0 4px;font-size:13px;white-space:nowrap;text-shadow:none}#rbTags .rft{background:transparent;text-shadow:2px 2px 0 #222;font-size:14px}
 #rbTab{position:absolute;left:50%;top:10px;transform:translateX(-50%);background:rgba(0,0,0,.6);min-width:260px;font-size:14px;padding:4px;text-shadow:none}#rbTab .rth{text-align:center;color:#ff5}#rbTab>div:not(.rth){display:flex;justify-content:space-between;padding:1px 6px}#rbTab b{color:#ff5}#rbTab.hide{display:none}
-#rbSpec{position:absolute;left:0;right:0;top:40px;text-align:center;font-size:16px;display:none}body.rbspec #rbSpec{display:block}body.rbspec #rbBottom,body.rbspec #rbCross{display:none}
+#rbSpec{position:absolute;left:0;right:0;top:40px;text-align:center;font-size:16px;display:none}body.rbspec #rbSpec{display:block}#rbSpecBar{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);display:none;flex-direction:column;align-items:center;gap:4px;pointer-events:auto;z-index:11}body.rbspec #rbSpecBar{display:flex}body.rbcut #rbSpecBar{display:none}.rsbn{font-size:15px;text-shadow:2px 2px 0 #3f3f3f}.rsbh{display:flex;background:rgba(0,0,0,.45);border:2px solid #222;padding:1px}.rsbh .rhs img{position:absolute;left:5px;top:5px;width:26px;height:26px;image-rendering:pixelated}.rspg{display:flex;align-items:center;justify-content:center;flex-direction:column;font-size:15px;line-height:1;cursor:pointer}.rspg small{font-size:9px}body.rbspec #rbBottom,body.rbspec #rbCross{display:none}
 #rbGui{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(16,16,16,.55);z-index:20}body.rbguiopen #rbGui{display:flex}
 .rgw{background:#c6c6c6;border:3px solid;border-color:#fff #555 #555 #fff;border-radius:4px;padding:8px 10px;color:#3f3f3f;font-size:14px;max-height:96vh;overflow:auto;box-shadow:0 0 0 2px #000}
 .rgw h4{margin:2px 0 6px;font-size:15px;font-weight:normal;color:#3f3f3f}.rgrow{display:flex;gap:0;flex-wrap:wrap}.rgsp{height:10px}
@@ -333,7 +349,7 @@ body.rbmob #rbTip{font-size:13px;max-width:220px}
 body.rbmob #rbNetOff{min-height:56px;font-size:17px}
 `;
 const RUI_HTML = `<canvas id="rcv"></canvas>
-<div id="rbHud"><div id="rbTags"></div><div id="rbCross"></div><div id="rbCredit"></div><div id="rbEff"></div><div id="rbSide"></div><div id="rbSpec"><div id="rbSpecT"></div></div>
+<div id="rbHud"><div id="rbTags"></div><div id="rbCross"></div><div id="rbCredit"></div><div id="rbEff"></div><div id="rbSide"></div><div id="rbSpec"><div id="rbSpecT"></div></div><div id="rbSpecBar"></div>
 <div id="rbTitle"><div id="rbTt"></div><div id="rbTs"></div></div><div id="rbAct"></div><div id="rbChat"></div>
 <form id="rbChatF" class="hide" autocomplete="off"><input id="rbChatIn" maxlength="120" placeholder="메시지 입력" enterkeyhint="send"><button class="rbtn">전송</button><button type="button" class="rbtn" id="rbChatX">✕</button></form>
 <div id="rbHeld"></div><div id="rbTab" class="hide"></div>

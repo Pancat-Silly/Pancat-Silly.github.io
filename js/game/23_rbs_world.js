@@ -139,8 +139,9 @@ const RMESH = {
           const F = this.FACES[f];
           const onEdge = (F.d[0] === 1 && bx[3] >= 1) || (F.d[0] === -1 && bx[0] <= 0) || (F.d[1] === 1 && bx[4] >= 1) || (F.d[1] === -1 && bx[1] <= 0) || (F.d[2] === 1 && bx[5] >= 1) || (F.d[2] === -1 && bx[2] <= 0);
           if (onEdge && occ(x + F.d[0], y + F.d[1], z + F.d[2])) continue;
+          if (onEdge && B.conn === 'pane' && BL[world.get(x + F.d[0], y + F.d[1], z + F.d[2])].conn === 'pane') continue; // pane meeting pane (side by side or stacked): no face in between
           const pts = F.c.map(c => [x + (c[0] ? bx[3] : bx[0]), y + (c[1] ? bx[4] : bx[1]), z + (c[2] ? bx[5] : bx[2])]);
-          const [u0, v0, s] = tUV(B.tiles[f]);
+          const [u0, v0, s] = tUV((bx[6] || B.tiles)[f]); // bx[6]: per-box tiles (glass panes)
           const e = f >= 4 ? [bx[0], bx[2], bx[3], bx[5]] : (f < 2 ? [bx[0], bx[1], bx[3], bx[4]] : [bx[2], bx[1], bx[5], bx[4]]);
           const fr = v => clamp(v, 0, 1); const uvs = [[u0 + fr(e[0]) * s, v0 + (1 - fr(e[1])) * s], [u0 + fr(e[2]) * s, v0 + (1 - fr(e[1])) * s], [u0 + fr(e[2]) * s, v0 + (1 - fr(e[3])) * s], [u0 + fr(e[0]) * s, v0 + (1 - fr(e[3])) * s]];
           const sh = B.emis ? 1 : F.s; push(pass, pts, uvs, B.col, [sh, sh, sh, sh], 1);

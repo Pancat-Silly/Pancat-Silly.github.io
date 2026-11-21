@@ -90,6 +90,13 @@ const RBLK = {
         B.full = false; B.opaque = false; B.tiles = this.tiles6(tile, k0 === 'pane' ? tile : (m[1] || m[0])); B.conn = k0; B.cut = k0 === 'pane'; B.snd = k0 === 'pane' ? (p[1] === 'glass' ? 'glass' : 'metal') : p[1].includes('planks') ? 'wood' : 'stone';
         const W = k0 === 'fence' ? [6, 10, 1.5] : k0 === 'wall' ? [4, 12, 1] : [7, 9, 1]; const lo = W[0] / 16, hi = W[1] / 16, hh = k0 === 'fence' ? 1.5 : 1;
         const post = k0 === 'pane' ? [] : [[lo, 0, lo, hi, 1, hi]]; const arm = { n: [lo, 0, 0, hi, 1, lo], s: [lo, 0, hi, hi, 1, 1], w: [0, 0, lo, lo, 1, hi], e: [hi, 0, lo, 1, 1, hi] };
+        if (k0 === 'pane') { // Minecraft's pane model: a 2/16 sheet through the middle, one strip per connected axis (no gap at the centre);
+          // the wide faces use the glass / bars texture, the thin edges (top, bottom, ends) the *_pane_top strip
+          const G = this.T(tile), E = this.T(p[1] === 'glass' ? 'glass_pane_top' : 'iron_bars'), TZ = [E, E, G, G, E, E], TX = [G, G, E, E, E, E];
+          const pc = {}; B.dyn = (w, x, y, z) => { const c = (dx, dz) => { const N = BL[w.get(x + dx, y, z + dz)]; return N.conn === 'pane' || (N.full && N.opaque && N.solid); };
+            const n = c(0, -1), s = c(0, 1), we = c(-1, 0), e = c(1, 0), k = (n ? 1 : 0) | (s ? 2 : 0) | (we ? 4 : 0) | (e ? 8 : 0);
+            return pc[k] || (pc[k] = (() => { const r = []; if (n || s) r.push([lo, 0, n ? 0 : lo, hi, 1, s ? 1 : hi, TZ]); if (we || e) r.push([we ? 0 : lo, 0, lo, e ? 1 : hi, 1, hi, TX]); if (!r.length) r.push([lo, 0, lo, hi, 1, hi, TZ]); return r; })()); };
+          B.colH = 1; mine(2, 'pickaxe', 0); break; }
         const cache = {}; B.dyn = (w, x, y, z) => { const c = (dx, dz) => { const N = BL[w.get(x + dx, y, z + dz)]; return N.conn && (N.conn === B.conn || (B.conn !== 'pane') === (N.conn !== 'pane')) || (N.full && N.opaque && N.solid); };
           const m2 = (c(0, -1) ? 1 : 0) | (c(0, 1) ? 2 : 0) | (c(-1, 0) ? 4 : 0) | (c(1, 0) ? 8 : 0);
           return cache[m2] || (cache[m2] = (() => { const r = post.slice(); if (m2 & 1) r.push(arm.n); if (m2 & 2) r.push(arm.s); if (m2 & 4) r.push(arm.w); if (m2 & 8) r.push(arm.e); if (!r.length) r.push([lo, 0, lo, hi, 1, hi]); return r; })()); };

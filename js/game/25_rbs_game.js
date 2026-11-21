@@ -349,7 +349,7 @@ falls: [], // falling block entities (sand, gravel, anvil) — animated on every
       }
       case 'win': {
         if (el < 7000 && this.tick % 20 === 0) { const c = RW.P(-41, 13, -40); this.particles('fw', c.x + rand(-4, 4), c.y + rand(0, 3), c.z + rand(-4, 4), 30); RAU.play(this.tick % 40 ? 'fw_launch' : 'fw_blast'); }
-        if (el >= 2000) this.once('dry', () => this.setBlock(-46, 10, -40, 0, false));
+        for (const p of [this.me, ...this.bots]) if (gs.win && gs.win.ids.includes(p.id) && !p.spectator) this.podiumHold(p); // winners stand still on the podium, facing the audience
         break;
       }
     }
@@ -395,16 +395,17 @@ falls: [], // falling block entities (sand, gravel, anvil) — animated on every
         RAU.stopBgm(); const w = gs.win || { ids: [], names: '' }; const iWon = w.ids.includes(me.id);
         if (RUI.gui) RUI.close(true); if (RUI.chatOpen) RUI.closeChat(); RUI.paused = false; $('rbPause').classList.add('hide'); // the cutscene takes the whole screen (RR.cutCam)
         if (me.spectator) { RUI.follow = null; this.tp(me, RV.aud, 90); }
-        if (!me.spectator) { if (iWon) this.tp(me, RV.podium, -90); else this.tp(me, RV.aud, 90); me.pitch = 0; me.mode = 'adventure'; me.clearInv(); me.clearEff(); }
-        for (const b of this.bots) { if (w.ids.includes(b.id)) this.tp(b, RV.podium, -90); else this.tp(b, RV.aud, 90); b.clearInv(); }
+        if (!me.spectator) { if (iWon) this.tp(me, RV.podium, -90); else this.tp(me, RV.aud, 90); me.pitch = 0; me.mode = 'adventure'; me.clearInv(); me.clearEff(); if (iWon) this.podiumHold(me); }
+        for (const b of this.bots) { if (w.ids.includes(b.id)) { this.tp(b, RV.podium, -90); this.podiumHold(b); } else this.tp(b, RV.aud, 90); b.clearInv(); }
         this.title((w.names || '아무도 없음') + ' 님 승리!', '');
-        this.setBlock(-46, 10, -40, RBLK.K('water|0'), false);
         if (fresh) RAU.sfx(w.snd || 'sfx_win_yay');
         if (iWon && fresh) { this.wins++; this.saveStats(); if (this.wins === 1) this.achieve('ac_firstwin', '§5[달콤한 첫 승]§r', 'sfx_rare'); if (this.wins === 5) this.achieve('ac_win5', '§5[5번째 승리]§r', 'sfx_rare'); }
         break;
       }
     }
   },
+  // winner on the podium: held in place facing the audience (+x), no fire, no effects, full health (instead of the old splash of water)
+  podiumHold(p) { this.tp(p, RV.podium, -90); p.pitch = 0; p.fire = 0; p.clearEff(); p.hp = 20; p.food = 20; p.sat = Math.max(p.sat || 0, 5); p.hurtTime = 0; p.sprinting = p.sneaking = false; if (p.inp) { p.inp.f = p.inp.s = 0; p.inp.jump = p.inp.sneak = p.inp.sprint = false; } },
   achieve(tag, label, snd) { if (this.ach[tag]) return; this.ach[tag] = 1; this.saveStats(); const m = this.me.name + ' 님이 ' + label + ' 도전과제를 달성하였습니다!'; this.chat('* ' + m); this.emit({ k: 'chat', m: '* ' + m }); if (snd === 'levelup') RAU.play('levelup', 1, true); else RAU.sfx(snd, true); },
   achTick() { const pt = this.playtime; if (pt >= 3600) this.achieve('rb_pt1', '§a[1시간의 묘미]§r', 'levelup'); if (pt >= 7200) this.achieve('rb_pt2', '§a[2시간의 묘미]§r', 'levelup'); if (pt >= 21600) this.achieve('rb_pt6', '§5[6시간의 묘미]§r', 'sfx_rare'); if (pt >= 43200) this.achieve('rb_pt12', '§5[랜덤블록 중독자]§r', 'sfx_rare'); },
   // ---------- host: the round state machine ----------

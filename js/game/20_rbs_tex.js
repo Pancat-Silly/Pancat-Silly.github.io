@@ -46,6 +46,7 @@ RTEX.PAINT = {
   crafting_table_top(t) { this.img(t, (x, y, r) => (x === 0 || y === 0 || x === 15 || y === 15) ? this.sh([109, 85, 50], .9) : (x % 5 === 0 || y % 5 === 0) ? this.sh([90, 66, 36], 1) : this.sh([170, 130, 80], .9 + r * .15)); },
   crafting_table_side(t) { this.img(t, (x, y, r) => y < 3 ? this.sh([109, 85, 50], .9 + r * .1) : (x === 3 || x === 12) && y > 5 ? [60, 60, 60] : this.sh([162, 130, 78], .9 + r * .15)); },
   crafting_table_front(t) { this.img(t, (x, y, r) => y < 3 ? this.sh([109, 85, 50], .9 + r * .1) : (y > 5 && y < 13 && x > 3 && x < 12 && (x + y) % 3 === 0) ? [180, 180, 180] : this.sh([162, 130, 78], .9 + r * .15)); },
+  glass_pane_top(t) { this.img(t, (x, y) => (x === 7 || x === 8) ? [220, 235, 240, 255] : [0, 0, 0, 0]); }, // the edge strip of a glass pane (x 7-8)
   glass(t) { this.img(t, (x, y, r) => (x === 0 || y === 0 || x === 15 || y === 15) ? [220, 235, 240, 255] : ((x - y === 3 || x - y === 4) && x > 4 && x < 10) ? [255, 255, 255, 170] : [0, 0, 0, 0]); },
   bedrock(t) { this.img(t, (x, y, r) => this.sh([85, 85, 85], .4 + r * 1.1)); },
   deny(t) { this.img(t, (x, y, r) => ((x + y) >> 2) % 2 ? [30, 30, 30] : [230, 200, 40]); },
