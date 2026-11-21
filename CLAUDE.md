@@ -33,7 +33,7 @@ js/data/              생성된 데이터 (손으로 고치지 말고 tools/ 스
 js/game/              게임 코드. 파일 이름 순서로 로드하는 일반 <script>들 (전역 공유)
 rbs/music/            랜덤블록 BGM mp3 (선택)
 sounds/               효과음 파일 (apvp/, rbs/, jobs/<직업>/). 랜덤블록 sfx_gameover·sfx_error·sfx_win_sin*는 사용자 요청으로 저장소에 안 올림(.gitignore, RB_SFX에서도 뺌 → 합성음). 예전에 js/data 안에 base64로 있던 것 (tools/split_sounds.py)
-tools/                [로컬 전용 · .gitignore로 저장소에 안 올림] mkdance.py + fbxbin.py + dance/*.fbx, mkentry.py, split_sounds.py, bump_version.py, hooks/pre-commit, build_single.py, rbsconv.py, rbsassets.py, mkmodjobs.py, mkassets.py, modjobs/*.txt
+tools/                [로컬 전용 · .gitignore로 저장소에 안 올림] mkdance.py + fbxbin.py + dance/*.fbx, mkentry.py, split_sounds.py, bump_version.py, hooks/pre-commit, build_single.py, rbsconv.py, rbsassets.py, mkmodjobs.py, mkassets.py, modjobs/*.txt, normalize_sounds.py + sound_norm.json + sounds_orig/
 ```
 모듈을 새로 추가하면 **index.html에 `<script src>`도 추가**해야 한다. 순서는 파일 이름 순이다.
 
@@ -161,6 +161,7 @@ python3 tools/mkmodjobs.py          # tools/modjobs/*.txt -> js/data/jobs_builti
 python3 tools/mkdance.py           # tools/dance/*.fbx (Mixamo) -> js/data/dances.js (목록은 LIST)
 python3 tools/mkextrasnd.py         # tools/sounds/*.wav|mp3 -> js/data/apvp_extra_snd.js (ffmpeg 필요, G.sound('<파일 이름>'))
 python3 tools/split_sounds.py       # 위 스크립트들이 넣은 base64 효과음 -> sounds/*.mp3 (생성 스크립트 다음에 항상 실행)
+python3 tools/normalize_sounds.py   # 4중인격 효과음(sounds/apvp, sounds/jobs) 음량을 -16 LUFS·피크 -1dB로. 새 파일만 처리(tools/sound_norm.json 해시), --all은 tools/sounds_orig 원본에서 전부 다시. split_sounds.py 끝과 pre-commit(--staged)이 자동 실행
 python3 tools/mkentry.py            # 바로 들어가기 페이지 6개
 python3 tools/build_single.py       # 저장소 -> dist/index.html (한 파일 배포용, sounds/는 다시 base64로 넣음)
 ```
