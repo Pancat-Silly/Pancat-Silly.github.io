@@ -108,6 +108,12 @@ body.mobile #chatbar{top:max(8px,env(safe-area-inset-top));bottom:auto}
 #prompt{left:50%;top:62%;transform:translateX(-50%);background:rgba(0,0,0,.6);padding:6px 12px;font-size:15px;display:none;pointer-events:auto;cursor:pointer}
 #hurt{inset:0;background:radial-gradient(ellipse at center,transparent 40%,rgba(200,0,0,.7));opacity:0}
 #tags{inset:0;overflow:hidden}
+/* dude 댄스 가사: my own above the actionbar, others' above their head (.tag u); sung words turn yellow */
+#lyrics{left:0;right:0;bottom:176px;text-align:center;font-size:20px;color:#fff;text-shadow:2px 2px 0 #3f3f3f;display:none}
+#lyrics .bk,.tag u .bk{font-size:.72em;opacity:.85}
+#lyrics b,.tag u b{font-weight:normal;transition:color .08s}#lyrics b.on,.tag u b.on{color:#ffdf3a}
+.tag u{display:block;text-decoration:none;font-size:15px;color:#fff;margin-bottom:2px;text-shadow:1px 1px 0 #000}
+body.mobile #lyrics{bottom:154px}
 .tag{position:absolute;left:0;top:0;text-align:center;font-size:13px;text-shadow:1px 1px 0 #000;white-space:nowrap}
 .tag em{display:block;font-style:normal;font-size:12px;color:#ffdf6e;background:rgba(0,0,0,.35);padding:0 4px;margin-bottom:1px;border-radius:2px}
 .tag.ally{color:#8f8}.tag.ally i b{background:#3c3}

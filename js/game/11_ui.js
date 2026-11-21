@@ -338,6 +338,8 @@ const UI = {
     const gun = me.inv[me.sel] && ITEMS[me.inv[me.sel].id] && ITEMS[me.inv[me.sel].id].use === 'gun'; // 권총 in hand: crosshair even in PE (it fires straight where you look)
     $('cross').style.display = me.spectator || !me.alive || (this.mobile && TCTL.scheme === 'pe' && !gun) ? 'none' : 'block'; // PE touch mode: no crosshair (Bedrock)
     if (G.tick !== this._ct) { this._ct = G.tick; const on = me.spectator ? false : gun ? !!SK.aimTarget(me, 80) : !!me.findTarget(this.atkOpt()).t; $('cross').classList.toggle('on', on); }
+    // dude 댄스 가사 (mine, above the actionbar)
+    { const t = G.dancers.has(me.id) ? LYR.of(me.id) : null, h = t === null ? '' : LYR.html(t), el = $('lyrics'); if (el._h !== h) { el._h = h; el.innerHTML = h; } el.style.display = h ? 'block' : 'none'; }
     // tags (hp above head)
     this.tags();
     if (this.tabOpen) this.drawTab();
@@ -350,10 +352,11 @@ const UI = {
       const pr = R.project(p.x, p.y + p.h + .35 * sc, p.z); if (!pr || pr.d > 48) continue;
       const glow = p.local ? p.eff('glowing') : p.glowing;
       if (!glow) { const e = G.camPos; const d = { x: p.x - e.x, y: p.y + p.h - e.y, z: p.z - e.z }; const l = Math.hypot(d.x, d.y, d.z); if (G.world.ray(e, { x: d.x / l, y: d.y / l, z: d.z / l }, l - .3)) continue; }
-      let el = this.tagPool[n]; if (!el) { el = document.createElement('div'); el.className = 'tag'; el.innerHTML = '<em></em><span></span><i><b></b></i>'; wrap.appendChild(el); this.tagPool[n] = el; }
+      let el = this.tagPool[n]; if (!el) { el = document.createElement('div'); el.className = 'tag'; el.innerHTML = '<u></u><em></em><span></span><i><b></b></i>'; wrap.appendChild(el); this.tagPool[n] = el; }
       n++; el.style.display = 'block'; el.classList.toggle('ally', G.sameTeam(p.id, G.me.id)); el.style.transform = `translate(${pr.x}px,${pr.y}px) translate(-50%,-100%) scale(${clamp(8 / pr.d, .55, 1.2)})`;
-      const J = JOBS[p.job], jt = J ? J.icon + ' ' + J.name : ''; const em = el.firstChild; if (em.textContent !== jt) em.textContent = jt; em.style.display = jt ? '' : 'none';
-      const hs = el.children[1], hb = el.lastChild; hs.style.display = hb.style.display = this.showHp ? '' : 'none';
+      { const t = G.dancers.has(p.id) ? LYR.of(p.id) : null, h = t === null ? '' : LYR.html(t), u = el.firstChild; if (u._h !== h) { u._h = h; u.innerHTML = h; } u.style.display = h ? '' : 'none'; } // dude 댄스 가사 above the head
+      const J = JOBS[p.job], jt = J ? J.icon + ' ' + J.name : ''; const em = el.children[1]; if (em.textContent !== jt) em.textContent = jt; em.style.display = jt ? '' : 'none';
+      const hs = el.children[2], hb = el.lastChild; hs.style.display = hb.style.display = this.showHp ? '' : 'none';
       hs.textContent = ((p.local ? G.tick < (p.prot || 0) : p.protF) ? '🛡 ' : '') + Math.ceil(hp) + ' ❤'; hb.firstChild.style.width = clamp(hp / mx, 0, 1) * 100 + '%';
     }
     for (let i = n; i < this.tagPool.length; i++) this.tagPool[i].style.display = 'none';

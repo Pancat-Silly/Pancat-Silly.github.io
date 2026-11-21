@@ -34,12 +34,13 @@ const AU = {
       const b = this.buf[name]; if (!b) return;
       const s = c.createBufferSource(); s.buffer = b; s.loop = true; const g = c.createGain(); g.gain.value = 0; s.connect(g);
       let pn = null; if (c.createStereoPanner) { pn = c.createStereoPanner(); g.connect(pn); pn.connect(this.abBus); } else g.connect(this.abBus);
-      s.start(); L = this.pl[key] = { s, g, pn };
+      s.start(); L = this.pl[key] = { s, g, pn, t0: c.currentTime };
     }
     L.f = this.plF + 1; const t = c.currentTime;
     L.g.gain.setTargetAtTime(this.gainFor(pos, vol, range), t, .05);
     if (L.pn && R.cam) { const e = R.cam.eye, f = lookVec(R.cam.yaw, 0); const dx = pos.x - e.x, dz = pos.z - e.z, l = Math.hypot(dx, dz); L.pn.pan.setTargetAtTime(l > .5 ? clamp((dx * -f.z + dz * f.x) / l * .6, -1, 1) : 0, t, .05); }
   },
+  loopPos(key) { const L = this.pl[key]; if (!L || !this.ctx) return null; const d = L.s.buffer.duration; return ((this.ctx.currentTime - L.t0) % d + d) % d; }, // seconds into a posLoop (dude 댄스 가사)
   endLoops() {
     this.plF++; if (!this.ctx) return;
     for (const k in this.pl) { const L = this.pl[k]; if (L.f === this.plF) continue; try { L.g.gain.setTargetAtTime(0, this.ctx.currentTime, .03); L.s.stop(this.ctx.currentTime + .2); } catch (e) { } delete this.pl[k]; }
