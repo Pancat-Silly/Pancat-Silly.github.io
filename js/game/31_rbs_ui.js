@@ -228,7 +228,8 @@ const RUI = {
     if (on) { const ar = RG.area(me); if ((ar === 'arena' || ar === 'dm') && me.mode === 'survival') { this.chat('§c경기 중에는 관전할 수 없어요'); return; } me.mode = 'spectator'; RG.rd = 0; this.follow = null; const ph = RG.gs.ph; if (ph === 'dm') RG.tp(me, [3.5, 80, .5]); else if (ph !== 'lobby' && ph !== 'prep') RG.tp(me, [.5, 213, .5]); this.chat('§b👁 관전 모드 · 클릭하면 플레이어를 따라가요. 메뉴 상자(M)에서 끝낼 수 있어요'); this.specNext(1); }
     else { if (me.mode === 'spectator') { me.mode = 'adventure'; this.follow = null; RG.toSpawn(me); if (!quiet) this.chat('§7관전을 끝냈어요'); } }
   },
-  specList() { return RG.players().filter(p => p !== RG.me && !p.spectator && p.alive !== false); },
+  specOk(p) { if (!p || p === RG.me || p.spectator || p.alive === false) return false; const a = RG.area(p); return a === 'arena' || a === 'dm'; }, // spectating picks only players in the match (arena / deathmatch)
+  specList() { return RG.players().filter(p => this.specOk(p)); },
   specNext(dir) { const L = this.specList(); if (!L.length) { this.follow = null; return; } let i = L.findIndex(p => p.id === this.follow); i = (i + dir + L.length) % L.length; this.follow = L[i].id; },
   specJump(i) { const L = this.specList(); if (L[i]) this.follow = L[i].id; },
   // ---------- interaction with blocks (right click) ----------

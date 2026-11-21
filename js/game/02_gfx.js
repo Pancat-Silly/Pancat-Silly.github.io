@@ -40,12 +40,12 @@ const tUV = t => [(t % ATL) / ATL, Math.floor(t / ATL) / ATL, 1 / ATL];
 const VS = `attribute vec3 aP;attribute vec2 aT;attribute vec4 aC;uniform mat4 uVP;uniform vec3 uCam;varying vec2 vT;varying vec4 vC;varying float vD;
 void main(){gl_Position=uVP*vec4(aP,1.);vT=aT;vC=aC;vD=distance(aP,uCam);}`;
 const FS = `precision mediump float;uniform sampler2D uTex;uniform vec3 uFog;uniform vec2 uFR;uniform vec4 uTint;uniform float uFlat;varying vec2 vT;varying vec4 vC;varying float vD;
-void main(){vec4 t=texture2D(uTex,vT);if(t.a<.08)discard;vec4 c=t*vC;c.rgb=mix(c.rgb,uTint.rgb,uTint.a);if(uFlat>.5){c=vec4(uTint.rgb,.55);}
+void main(){vec4 t=texture2D(uTex,vT);if(t.a<.08)discard;vec4 c=t*vC;c.rgb=mix(c.rgb,uTint.rgb,uTint.a);if(uFlat>.5){c=vec4(uTint.rgb,uFlat>1.5?uTint.a:.55);}
 float f=clamp((vD-uFR.x)/(uFR.y-uFR.x),0.,1.);c.rgb=mix(c.rgb,uFog,f);gl_FragColor=c;}`;
 class Gfx {
   constructor(cv) {
-    const gl = this.gl = cv.getContext('webgl', { antialias: false, alpha: false, powerPreference: 'high-performance' }) || cv.getContext('experimental-webgl');
-    if (!gl) throw new Error('WebGL 미지원');
+    const gl = this.gl = cv.getContext('webgl', { antialias: false, alpha: false, stencil: true, powerPreference: 'high-performance' }) || cv.getContext('experimental-webgl');
+    if (!gl) throw new Error('WebGL 미지원'); this.stencil = !!(gl.getContextAttributes() || {}).stencil; // stencil: 랜덤블록 spectator outlines
     const sh = (t, s) => { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; };
     const p = this.p = gl.createProgram(); gl.attachShader(p, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(p, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(p); gl.useProgram(p);
     this.a = { P: gl.getAttribLocation(p, 'aP'), T: gl.getAttribLocation(p, 'aT'), C: gl.getAttribLocation(p, 'aC') };

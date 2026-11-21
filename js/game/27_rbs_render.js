@@ -89,6 +89,7 @@ const RR = {
     gl.viewport(0, 0, W, H); this.rebuild(RG.gs.ph === 'prep' ? 40 : 8);
     for (const r of RG.remotes.values()) { r.interp(); if (r.bots) for (const b of r.bots) b.interp(); }
     // camera: me / third person / spectator following someone
+    if (RUI.follow && me.spectator && !RUI.specOk(RG.byId(RUI.follow))) RUI.specNext(1); // the followed player left the match (died, back to the lobby): next one, or free camera
     let eye, yaw, pitch, roll = 0; const fol = RUI.follow ? RG.byId(RUI.follow) : null; const cut = this.cutCam();
     if (cut) { eye = cut.eye; yaw = cut.yaw; pitch = cut.pitch; } // victory cutscene: everyone's camera flies to the winner on the podium
     else if (fol && me.spectator && fol.alive !== false) { const fx = fol.local ? lerp(fol.px, fol.x, alpha) : fol.x, fy = fol.local ? lerp(fol.py, fol.y, alpha) : fol.y, fz = fol.local ? lerp(fol.pz, fol.z, alpha) : fol.z; eye = { x: fx, y: fy + (fol.sneaking ? 1.27 : 1.62), z: fz }; yaw = fol.yaw || 0; pitch = fol.pitch || 0; if (RUI.followThird) { const d = lookVec(yaw, pitch); const h = RW.w.ray(eye, { x: -d.x, y: -d.y, z: -d.z }, 4); const dd = h ? Math.max(.3, h.t - .2) : 4; eye = { x: eye.x - d.x * dd, y: eye.y - d.y * dd, z: eye.z - d.z * dd }; } }
@@ -147,9 +148,31 @@ const RR = {
         for (const q of bx) bt.box(null, P.x + q[0] - e, P.y + q[1] - e, P.z + q[2] - e, P.x + q[3] + e, P.y + q[4] + e, P.z + q[5] + e, [1, 1, 1], tl, -1, 1, false); } g.drawBatch(bt); }
     }
     g.drawChunks('t', eye, visF); gl.depthMask(true); gl.disable(gl.BLEND);
+    if (me.spectator && !cut) { this.drawGlow(alpha, fol); g.setU(vp, eye, fogA, fogB); g.bind(); }
     // first person hand / held item
     if (!this.third && !cut && !me.spectator && me.alive) this.drawHand(alpha);
     RUI.tags(vp, W / dpr, H / dpr);
+  },
+  // spectators: players in the match that are far away (12+ blocks) or behind blocks get a white outline drawn through walls
+  // (like Minecraft's glowing effect). Stencil: mark the player's silhouette, then draw a slightly grown copy (about 2 px on
+  // screen at any distance) only outside it.
+  drawGlow(alpha, fol) {
+    const g = this.gfx, gl = g.gl; if (!g.stencil) return; const e = this.cam.eye, T = [];
+    for (const p of RUI.specList()) { if (!this.sameZone(p.y) || (fol === p && !RUI.followThird)) continue;
+      const hx = p.x, hy = p.y + 1.5, hz = p.z, d = Math.hypot(hx - e.x, hy - e.y, hz - e.z); if (d < .5) continue;
+      let show = d > 12; if (!show) { const h = RW.w.ray(e, { x: (hx - e.x) / d, y: (hy - e.y) / d, z: (hz - e.z) / d }, d); show = !!(h && h.t < d - .6); }
+      if (show) T.push([p, d]); }
+    if (!T.length) return;
+    const b = this.bg || (this.bg = new Batch(6000)); const px = 2 * Math.tan(RUI.fov * D2R / 2) / this.H * 2.2 * Math.min(window.devicePixelRatio || 1, 2);
+    gl.enable(gl.STENCIL_TEST); gl.disable(gl.DEPTH_TEST); gl.depthMask(false); gl.disable(gl.BLEND); gl.uniform2f(g.u.uFR, 1e5, 2e5); g.bind();
+    for (const [p, d] of T) {
+      b.reset(); this.drawPlayer(b, p, alpha); if (!b.ni) continue; gl.clear(gl.STENCIL_BUFFER_BIT);
+      gl.colorMask(false, false, false, false); gl.stencilFunc(gl.ALWAYS, 1, 0xff); gl.stencilOp(gl.KEEP, gl.KEEP, gl.REPLACE); gl.uniform1f(g.u.uFlat, 0); g.drawBatch(b);
+      const ex = px * d, cx = p.x, cy = p.y + (p.sneaking ? .75 : .9), cz = p.z, sx = 1 + ex / .4, sy = 1 + ex / .95, v = b.v; // grow around the body centre
+      for (let i = 0; i < b.nv; i++) { const o = i * 9; v[o] = cx + (v[o] - cx) * sx; v[o + 1] = cy + (v[o + 1] - cy) * sy; v[o + 2] = cz + (v[o + 2] - cz) * sx; }
+      gl.colorMask(true, true, true, true); gl.stencilFunc(gl.NOTEQUAL, 1, 0xff); gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP); gl.uniform4f(g.u.uTint, 1, 1, 1, 1); gl.uniform1f(g.u.uFlat, 2); g.drawBatch(b);
+    }
+    gl.disable(gl.STENCIL_TEST); gl.enable(gl.DEPTH_TEST); gl.depthMask(true); gl.uniform1f(g.u.uFlat, 0); gl.uniform4f(g.u.uTint, 0, 0, 0, 0);
   },
   drawHand(alpha) {
     const g = this.gfx, gl = g.gl, me = RG.me; gl.clear(gl.DEPTH_BUFFER_BIT);
