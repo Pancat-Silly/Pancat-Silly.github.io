@@ -148,7 +148,16 @@ const R = {
       const a = C.a, b = C.b, mx = (a[0] + b[0]) / 2, my = Math.max(a[1], b[1]) + 1.1, mz = (a[2] + b[2]) / 2, dx = b[0] - a[0], dz = b[2] - a[2], L = Math.hypot(dx, dz) || 1;
       let nx = -dz / L, nz = dx / L; if (nx * (C.c0.eye.x - mx) + nz * (C.c0.eye.z - mz) < 0) { nx = -nx; nz = -nz; } // the side the camera was already on
       const asp = this.cv.clientWidth / Math.max(1, this.cv.clientHeight), D = Math.max(3.5, (L / 2 + 2.3) / (Math.tan(35 * D2R) * Math.min(asp, 1.8)) + .5);
-      const e = { x: mx + nx * D, y: my + .6, z: mz + nz * D }; C.side = { eye: e, yaw: yawTo(mx - e.x, mz - e.z), pitch: Math.atan2(.6 + .2, D) };
+      // blocks in the way -> the other side, then turned around the two (±30°…±90°), higher, closer; the most visible one if none is clear
+      const W = G.world, pts = [[a[0], a[1] + 1.6, a[2]], [a[0], a[1] + .6, a[2]], [b[0], b[1] + 1.6, b[2]], [b[0], b[1] + .6, b[2]], [mx, my - .3, mz]];
+      const vis = e => { if (W.solidAt(e.x, e.y, e.z)) return -1; let n = 0; for (const q of pts) { const vx = q[0] - e.x, vy = q[1] - e.y, vz = q[2] - e.z, l = Math.hypot(vx, vy, vz) || 1; if (!W.ray(e, { x: vx / l, y: vy / l, z: vz / l }, l - .05)) n++; } return n; };
+      let best = null;
+      search: for (const k of [1, .75, .5]) for (const up of [.6, 2, 4]) for (const ang of [0, 180, 30, -30, 210, 150, 60, -60, 240, 120, 90, -90]) {
+        const r = ang * D2R, cx = nx * Math.cos(r) - nz * Math.sin(r), cz = nx * Math.sin(r) + nz * Math.cos(r), d = Math.max(3, D * k);
+        const e = { x: mx + cx * d, y: my + up, z: mz + cz * d }, v = vis(e);
+        if (!best || v > best.v) best = { e, v, d, up }; if (v === pts.length) break search;
+      }
+      const e = best.e; C.side = { eye: e, yaw: yawTo(mx - e.x, mz - e.z), pitch: Math.atan2(best.up + .2, best.d) };
     }
     const S = C.side, ph = t < T[0] ? 0 : t < T[0] + T[1] ? 1 : 2;
     if (ph) return { eye: S.eye, yaw: S.yaw, pitch: S.pitch, ph, k: ph === 2 ? (t - T[0] - T[1]) / T[2] : 0 };
