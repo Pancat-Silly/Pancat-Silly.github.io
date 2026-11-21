@@ -228,3 +228,4 @@ body.mobile #actionbar{bottom:128px}
 #siteVerNote .svt{color:#ffff55;font-weight:bold}#siteVerNote .svt b{color:#55ff55}#siteVerNote .svs{font-size:12px;color:#aaa;margin:4px 0 8px}
 #siteVerNote .svb{display:flex;gap:8px;justify-content:center}#siteVerNote button{padding:7px 16px;font-size:14px;cursor:pointer;color:#fff;background:#6f6f6f;border:2px solid;border-color:#aaa #333 #333 #aaa}#siteVerNote .svy{background:#2f7d32;border-color:#6c6 #1b4d1d #1b4d1d #6c6}
 .sitever{color:#aaa}
+body.apvpcut #hud{display:none!important}

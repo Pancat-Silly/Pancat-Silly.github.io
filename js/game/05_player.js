@@ -122,7 +122,7 @@ class Player {
   heal(n) { this.hp = Math.min(this.maxHp(), this.hp + n); }
   // ---------- movement ----------
   physics() {
-    const W = G.world; const inp = this.st.dance ? NO_INP : this.inp; // dude 댄스: dancing in place
+    const W = G.world; const inp = this.st.dance || this.st.cutUntil > G.tick ? NO_INP : this.inp; // dude 댄스: dancing in place
     const inLava = aabbBlocks(W, this, d => d.lava);
     const inSnow = aabbBlocks(W, this, d => d.snow) && this.job !== 'spider_' ;
     const fx = Math.floor(this.x), fz = Math.floor(this.z);
@@ -222,7 +222,7 @@ class Player {
     return { t: best };
   }
   attack(opt = {}) {
-    if (this.st.dance) return;
+    if (this.st.dance || this.st.cutUntil > G.tick) return;
     if (this.spectator || !this.alive || this.st.rewind) return;
     this.prot = 0; this.swing++; this.swingT = 6;
     let best = null;
@@ -262,7 +262,7 @@ class Player {
     if (this.spectator || !this.alive || this.st.rewind) return;
     const slot = this.inv[this.sel]; const D = slot ? ITEMS[slot.id] : null;
     if (D && D.use === 'skill') {
-      if (this.cdLeft(D.group) > 0 || (this.st.dance && D.cast !== 'dance')) return;
+      if (this.cdLeft(D.group) > 0 || (this.st.dance && D.cast !== 'dance') || this.st.cutUntil > G.tick) return;
       const ok = SK[D.cast](this, slot); if (ok === false) { if (this.st.aiSteal) SK.aiAfterUse(this, slot, ok); return; } this.prot = 0;
       if (this.job === 'bilcorner' && SK.BIL_SKILLS.has(D.cast)) SK.addFollowers(this);
       if (D.cd && ok !== 'nocd') this.setCd(D.group, D.cd);
@@ -278,11 +278,12 @@ class Player {
     const held = this.inp.use && this.alive;
     this.useHeld = false; let block = false;
     if (held) {
-      if (D && D.use === 'bow') { if (this.count('arrow') > 0) { this.drawT++; this.useHeld = true; } }
+      if (D && D.use === 'bow') { if (this.count('arrow') > 0) { this.drawT++; this.useHeld = true; this.drawGun = false; } }
+      else if (D && D.use === 'gun') { if (this.count('dude_bullet') > 0 && !this.st.dance && !this.st.cutUntil) { this.drawT++; this.useHeld = true; this.drawGun = true; } }
       else if (D && D.use === 'shield') block = true;
       else if (!D || !D.use || (D.use === 'skill' && this.cdLeft(D.group) > 0) || (D.use === 'crossbow' && this.cdLeft(D.group) > 0)) { if (this.off && ITEMS[this.off.id].use === 'shield') block = true; }
     }
-    if (!held && this.drawT > 0) { SK.shootBow(this, this.drawT); this.drawT = 0; this.prot = 0; }
+    if (!held && this.drawT > 0) { if (this.drawGun) SK.gunFire(this); else SK.shootBow(this, this.drawT); this.drawT = 0; this.prot = 0; }
     if (block && G.tick >= this.shieldOff) { this.blockT++; this.useHeld = true; } else this.blockT = 0;
     this.blocking = this.blockT >= 5;
     this.sprinting = this.sprinting && !this.useHeld;

@@ -63,7 +63,8 @@ const ITEMS = {
   pot_swift: { name: '신속 포션', icon: '💨', use: 'skill', cd: 10, group: 'pot_s', cast: 'pot_swift', consume: true, lore: '신속 I 3분' },
   aglet: { name: '애글릿', icon: '🔗', aglet: true, lore: '들고 있으면 이동속도 +0.05' },
   dance: { name: '댄스', icon: '🕺', use: 'skill', cd: 15, group: 'dance', cast: 'dance', col: [.35, .75, .3], lore: '누르면 춤 시작 / 다시 누르면 그만 · 1초마다 개구리가 모여 같이 춤춤 · 그만두면 모은 개구리만큼 신속·힘·회복·체력 증가 + 개구리당 5% 총알' },
-  dude_bullet: { name: '총알', icon: '🔸', stack: true, col: [.85, .7, .3], lore: '다른 능력에 쓸 총알 (아직 쓸 곳 없음)' },
+  dude_bullet: { name: '총알', icon: '🔸', stack: true, col: [.85, .7, .3], lore: '권총에 쓰는 총알 (댄스로 얻음)' },
+  pistol: { name: '권총', icon: '🔫', use: 'gun', col: [.22, .22, .25], lore: '총알 1개 · 꾹 누르면 느려지며 조준, 떼면 일직선으로 발사 · 플레이어를 맞히면 컷씬 후 즉사' },
   boots: { name: '돛새치 부츠', icon: '👢', use: 'skill', cd: 0, group: 'boots', cast: 'equipboots', consume: true, lore: '착용: 이동속도 +0.1' },
   fish: { name: '물고기', icon: '🐟', stack: true },
   chang: { name: '창', icon: '💧', dmg: 4, spd: 1.6, chang: true, col: [.4, .75, 1], lore: '창찬 주무기 · 맞히면 주위에 "창!"' },
@@ -102,7 +103,7 @@ const JOBS = {
   summoner: { name: '소환사', icon: '🐕', desc: '미완성 직업 · 지팡이 + 개 2마리 / 송곳니(직선·원형)', kit: [['sstaff'], ['dogs'], ['fangl'], ['fangc']], wip: true },
   bilcorner: { name: '창찬', icon: '📱', desc: '미완성 직업 · 스킬마다 팔로워↑ · 100명이면 자멸 · 50% 쉰팝 각성', kit: [['chang'], ['gather'], ['bdash'], ['squid'], ['drug']], wip: true },
   dude: { name: 'dude', icon: '🎣', desc: '미완성 직업 · 철퇴 + 낚시 크레이트', kit: [['mace'], ['rodwood']], maxHp: 40, wip: true, vars: [['dude_new', 'New'], ['dude', 'old']] },
-  dude_new: { name: 'dude', icon: '🎣', desc: '미완성 직업 · New · 댄스 (개구리를 모아 버프)', kit: [['dance']], wip: true, varOf: 'dude' }, // New variant of dude: picked on the dude card (not in JOB_ORDER)
+  dude_new: { name: 'dude', icon: '🎣', desc: '미완성 직업 · New · 댄스 (개구리를 모아 버프) + 권총', kit: [['dance'], ['pistol']], wip: true, varOf: 'dude' }, // New variant of dude: picked on the dude card (not in JOB_ORDER)
 };
 const JOB_ORDER = ['rusher', 'policer', 'spider', '360', 'ice_wizard', 'randomizer', 'suno', 'mefab3', 'slime', 'viggle', 'summoner', 'seryong', 'ai', 'bilcorner', 'dude'];
 function mkSlot(id, count = 1) { return { id, count }; }

@@ -35,6 +35,7 @@ const R = {
     else if (D.use === 'shield') { b.box(m, -.04, -.25, -.2, .04, .45, .25, c); b.box(m, -.05, .05, -.05, .05, .15, .05, [.7, .7, .7]); }
     else if (D.use === 'bow' || D.use === 'crossbow') { b.box(m, -.02, -.25, -.02, .02, .45, .02, c); b.box(m, -.02, .08, .02, .02, .12, .25, [.85, .85, .85]); if (D.use === 'crossbow') b.box(m, -.25, .05, -.02, .25, .09, .02, c); }
     else if (id === 'rod0' || id === 'rod6' || id === 'rodwood') { b.box(m, -.02, -.1, -.02, .02, .8, .02, c); b.box(m, -.005, .3, -.005, .005, .8, .005, [.9, .9, .9]); }
+    else if (D.use === 'gun') { b.box(m, -.035, 0, -.06, .035, .09, .32, c); b.box(m, -.03, -.2, -.05, .03, .02, .05, [.3, .22, .15]); b.box(m, -.012, -.06, .05, .012, 0, .1, c); }
     else if (D.staff) { b.box(m, -.025, -.15, -.025, .025, .6, .025, [.35, .25, .18]); b.box(m, -.06, .58, -.06, .06, .7, .06, [.85, .75, .3]); b.box(m, -.045, .64, -.045, .045, .76, .045, c); }
     else if (id === 'breeze_rod') { b.box(m, -.035, -.1, -.035, .035, .6, .035, c); }
     else { const s = big ? .12 : .1; b.box(m, -s, .05 - s, -s, s, .05 + s, s, c); }
@@ -59,6 +60,7 @@ const R = {
     let base = M4.T(M4.id(), x, y, z); base = M4.RY(base, -(dd ? dd.yaw : e.yaw)); base = M4.S(base, k, k, k);
     if (sneak) base = M4.T(base, 0, -2, 0);
     if (D) { base = M4.RY(base, D.yaw); base = M4.T(base, D.off[0], D.off[1], D.off[2]); }
+    const fall = e.cutFall || 0; if (fall) base = M4.RX(base, -fall * 1.5); // 권총 컷씬: falling flat on the back
     const S = !!(sb && sk && !glowB); const W1 = tint([1, 1, 1]);
     // body part: skin-textured (with overlay layer) or flat colored
     const part = (m, x0, y0, z0, x1, y1, z1, uv, ov, flat, front) => {
@@ -85,15 +87,15 @@ const R = {
     for (const sd of [-1, 1]) {
       let m = M4.T(bm, sd * ao, 10, 0);
       let ax = -sd * armA; if (sd === -1 && swingP > 0) ax -= Math.sin(swingP * Math.PI) * 1.4; if (aiming) ax = -Math.PI / 2 - e.pitch;
-      if (sd === 1 && e.blocking) ax = -.9;
+      if (sd === 1 && e.blocking) ax = -.9; if (fall) ax = -fall * 2.3 + sd * .15;
       m = D ? DANCE.rot(m, sd < 0 ? D.rarm : D.larm) : M4.RX(m, ax);
       part(m, -aw / 2, -10, -2, aw / 2, 2, 2, sd < 0 ? [40, 16] : [32, 48], sd < 0 ? [40, 32] : [48, 48], skin);
       if (ac) armor(m, -aw / 2 - .6, -3, -2.6, aw / 2 + .6, 2.6, 2.6, ac);
       const iid = sd === -1 ? heldId : offId;
-      if (iid && !glowB && ITEMS[iid]) { let im = M4.T(m, 0, -9, 1); im = M4.S(im, 16 / .9375, 16 / .9375, 16 / .9375); im = M4.RX(im, Math.PI / 2 * (ITEMS[iid].use === 'shield' ? 0 : 1)); if (ITEMS[iid].use === 'shield') im = M4.RY(im, Math.PI / 2); this.drawItem(b, im, iid, false, e.drawT || 0); }
+      if (iid && (!glowB || e.cutWhite) && ITEMS[iid]) { let im = M4.T(m, 0, -9, 1); im = M4.S(im, 16 / .9375, 16 / .9375, 16 / .9375); im = M4.RX(im, Math.PI / 2 * (ITEMS[iid].use === 'shield' ? 0 : 1)); if (ITEMS[iid].use === 'shield') im = M4.RY(im, Math.PI / 2); this.drawItem(b, im, iid, false, e.drawT || 0); }
     }
     // head
-    let hm = M4.T(bm, 0, 12, 0); if (sneak) hm = M4.RX(hm, -.5); hm = D ? DANCE.rot(hm, D.head) : M4.RX(hm, e.pitch);
+    let hm = M4.T(bm, 0, 12, 0); if (sneak) hm = M4.RX(hm, -.5); hm = D ? DANCE.rot(hm, D.head) : M4.RX(hm, e.pitch); if (fall || e.cutJerk) hm = M4.RX(hm, -.6 * fall - (e.cutJerk || 0));
     if (S) { part(hm, -4, 0, -4, 4, 8, 4, [0, 0], [32, 0, .5]); if (helm) armor(hm, -4.7, 4.2, -4.7, 4.7, 8.8, 4.7, helm); }
     else if (glowB) glowB.box(hm, -4, 0, -4, 4, 8, 4, [1, 1, 1]);
     else { b.box(hm, -4, 0, -4, 4, 8, 4, tint([.8, .6, .45]), 0, 16); b.box(hm, -4.2, 6, -4.2, 4.2, 8.3, 4.2, tint(helm || [.3, .2, .1])); if (!helm) b.box(hm, -4.2, 5, -4.2, 4.2, 8.3, -2, tint([.3, .2, .1])); }
@@ -135,6 +137,37 @@ const R = {
       const pop = clamp((now - f.s0) / 250, 0, 1); this.drawFrog(b, f.x, f.y, f.z, f.yaw, (now - d.t0) / 1000, .8 * (pop < 1 ? pop * (1.15 - .15 * pop) : 1));
     }
     flush();
+  },
+  // 권총 컷씬 (G.cut, shooter + target only): 0) camera eases (easeOutCubic) from where it was to the side of the two, midway, both in view
+  // 1) black  2) soft red background, only the two players + the bullet in white, the target slowly falls on its back
+  cutCam(eye, yaw, pitch) {
+    const C = G.cut; document.body.classList.toggle('apvpcut', !!C); if (!C) return null;
+    const T = SK.CUT_T, t = (performance.now() - C.t0) / 1000; if (t >= T[0] + T[1] + T[2]) { G.cut = null; document.body.classList.remove('apvpcut'); return null; }
+    if (!C.c0) C.c0 = { eye: { ...eye }, yaw, pitch };
+    if (!C.side) {
+      const a = C.a, b = C.b, mx = (a[0] + b[0]) / 2, my = Math.max(a[1], b[1]) + 1.1, mz = (a[2] + b[2]) / 2, dx = b[0] - a[0], dz = b[2] - a[2], L = Math.hypot(dx, dz) || 1;
+      let nx = -dz / L, nz = dx / L; if (nx * (C.c0.eye.x - mx) + nz * (C.c0.eye.z - mz) < 0) { nx = -nx; nz = -nz; } // the side the camera was already on
+      const asp = this.cv.clientWidth / Math.max(1, this.cv.clientHeight), D = Math.max(3.5, (L / 2 + 2.3) / (Math.tan(35 * D2R) * Math.min(asp, 1.8)) + .5);
+      const e = { x: mx + nx * D, y: my + .6, z: mz + nz * D }; C.side = { eye: e, yaw: yawTo(mx - e.x, mz - e.z), pitch: Math.atan2(.6 + .2, D) };
+    }
+    const S = C.side, ph = t < T[0] ? 0 : t < T[0] + T[1] ? 1 : 2;
+    if (ph) return { eye: S.eye, yaw: S.yaw, pitch: S.pitch, ph, k: ph === 2 ? (t - T[0] - T[1]) / T[2] : 0 };
+    const k = 1 - Math.pow(1 - t / T[0], 3), A = C.c0; // easeOutCubic
+    return { eye: { x: lerp(A.eye.x, S.eye.x, k), y: lerp(A.eye.y, S.eye.y, k), z: lerp(A.eye.z, S.eye.z, k) }, yaw: lerpA(A.yaw, S.yaw, k), pitch: lerp(A.pitch, S.pitch, k), ph: 0 };
+  },
+  cutDraw(cut, alpha) {
+    const gl = this.gfx.gl, C = G.cut;
+    if (cut.ph === 1) { gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); return; }
+    gl.clearColor(.72, .13, .15, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); // soft red
+    const k = cut.k, hitK = .3, sm = x => x * x * (3 - 2 * x), fall = sm(clamp((k - hitK + .02) / (1 - hitK), 0, 1));
+    const proxy = (id, P, o) => { const src = G.entity(id) || {}; return Object.assign(Object.create(src), { id: 'cut:' + id, local: false, x: P[0], y: P[1], z: P[2], yaw: P[3], pitch: 0, walkA: 0, walkP: 0, _af: this.frameN, hurtTime: 0, swingT: 0, sneaking: false, blocking: false, scale: src.scale || 1, armorType: null, offId: null, heldId: null, drawT: 0, cutWhite: 1 }, o); };
+    const A = proxy(C.by, C.a, { drawT: 10, heldId: 'pistol' }), B = proxy(C.tid, C.b, { cutFall: fall, cutJerk: k > hitK ? .35 * Math.max(0, 1 - (k - hitK) * 6) : 0 });
+    const w = this.bg; w.reset(); this.drawPlayer(w, A, alpha, w); this.drawPlayer(w, B, alpha, w);
+    // bullet: from the muzzle to the target's head, then impact streaks
+    const f = lookVec(C.a[3], 0), m0 = { x: C.a[0] + f.x * 1.05, y: C.a[1] + 1.38, z: C.a[2] + f.z * 1.05 }, h = { x: C.b[0], y: C.b[1] + 1.6, z: C.b[2] }, bk = sm(clamp(k / hitK, 0, 1));
+    if (k < hitK + .05) { const bx = lerp(m0.x, h.x, bk), by = lerp(m0.y, h.y, bk), bz = lerp(m0.z, h.z, bk); let bm = M4.T(M4.id(), bx, by, bz); bm = M4.RY(bm, -C.a[3]); w.box(bm, -.04, -.04, -.12, .04, .04, .12, [1, 1, 1]); }
+    if (k > hitK && k < hitK + .45) { const s = (k - hitK) / .45; for (let i = 0; i < 7; i++) { const a = i / 7 * Math.PI * 2 + .3; let sm2 = M4.T(M4.id(), h.x, h.y, h.z); sm2 = M4.RY(sm2, -C.a[3] + Math.PI / 2); sm2 = M4.RX(sm2, a); const r0 = .35 + s * .5; w.box(sm2, -.02, r0, -.02, .02, r0 + .3 * (1 - s) + .05, .02, [1, 1, 1]); } }
+    gl.uniform1f(this.gfx.u.uFlat, 2); gl.uniform4f(this.gfx.u.uTint, 1, 1, 1, 1); this.gfx.drawBatch(w); gl.uniform1f(this.gfx.u.uFlat, 0); gl.uniform4f(this.gfx.u.uTint, 0, 0, 0, 0); w.reset();
   },
   drawDog(b, m, x, y, z) {
     const k = .85 / 17; let base = M4.T(M4.id(), x, y, z); base = M4.RY(base, -m.yaw); base = M4.S(base, k, k, k);
@@ -210,6 +243,7 @@ const R = {
         eye = { x: eye.x + dir.x * dd, y: eye.y + dir.y * dd, z: eye.z + dir.z * dd }; if (this.third === 2) { yaw += Math.PI; pitch = -pitch; }
       }
     } else { const t = performance.now() / 1000 * .06; eye = { x: 36 + Math.cos(t) * 34, y: 38, z: 35 + Math.sin(t) * 34 }; yaw = yawTo(36 - eye.x, 35 - eye.z); pitch = .45; }
+    const cut = this.cutCam(eye, yaw, pitch); if (cut) { eye = cut.eye; yaw = cut.yaw; pitch = cut.pitch; roll = 0; }
     G.camPos = eye; this.cam = { eye, yaw, pitch }; G.dogLoops();
     let fov = this.fov; if (me && G.phase === 'game') { const f = clamp(me.moveSpeed() / me.baseSpd, .5, 3); this.fovS = lerp(this.fovS || 1, me.sprinting ? 1.1 * (1 + (f - 1) * .25) : 1 + (f - 1) * .25, .15); fov *= this.fovS; if (me.drawT > 0) fov *= 1 - .15 * Math.min(1, me.drawT / 20); }
     this.cam.fov = fov; this.cam.asp = W / H;
@@ -219,12 +253,13 @@ const R = {
     this.vp = vp; this.W = W; this.H = H;
     gl.clearColor(gfx.sky[0], gfx.sky[1], gfx.sky[2], 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gfx.setU(vp, eye, 70, 160);
+    if (cut && cut.ph > 1) return this.cutDraw(cut, alpha);
     gl.disable(gl.BLEND); gl.depthMask(true); gfx.drawChunks('o', eye);
     // dynamic opaque
     const b = this.bo; b.reset(); const bg = this.bg; bg.reset(); const bt = this.bt; bt.reset();
     for (const p of G.players()) {
       if (p.spectator) continue;
-      if (p === me && !this.third && !G.dancers.has(me.id)) { if (p.job === 'suno' && p.st.rewind) { const r = p.st.rewind, i0 = r.path.length - 1 - 2 * r.k, i1 = Math.max(0, r.path.length - 65); for (let i = i0; i >= i1; i -= 3) { const q = r.path[i]; bt.cube(q[0], q[1] + .1, q[2], .06, [1, .1, .1], 0, .9); } } continue; }
+      if (p === me && !this.third && !G.dancers.has(me.id) && !G.cut) { if (p.job === 'suno' && p.st.rewind) { const r = p.st.rewind, i0 = r.path.length - 1 - 2 * r.k, i1 = Math.max(0, r.path.length - 65); for (let i = i0; i >= i1; i -= 3) { const q = r.path[i]; bt.cube(q[0], q[1] + .1, q[2], .06, [1, .1, .1], 0, .9); } } continue; }
       if ((p.local ? G.tick < (p.prot || 0) : p.protF) && (performance.now() / 120 | 0) % 2) continue;
       const sk = SKIN.get(p.skin);
       if (sk) { this.bs.reset(); this.drawPlayer(b, p, alpha, null, this.bs, sk); gfx.bind(sk.tex); gfx.drawBatch(this.bs); gfx.bind(); }
@@ -262,7 +297,7 @@ const R = {
     if (bg.ni) { gl.disable(gl.DEPTH_TEST); gl.uniform1f(gfx.u.uFlat, 1); gl.uniform4f(gfx.u.uTint, 1, 1, .85, 1); gfx.drawBatch(bg); gl.uniform1f(gfx.u.uFlat, 0); gl.uniform4f(gfx.u.uTint, 0, 0, 0, 0); gl.enable(gl.DEPTH_TEST); }
     gl.depthMask(true); gl.disable(gl.BLEND);
     // view model
-    if (G.phase === 'game' && me && !this.third && !me.spectator && !G.dancers.has(me.id)) {
+    if (G.phase === 'game' && me && !this.third && !me.spectator && !G.dancers.has(me.id) && !G.cut) {
       gl.clear(gl.DEPTH_BUFFER_BIT); const bv = this.bv; bv.reset();
       const vproj = M4.persp(70 * D2R, W / H, .01, 10); const vview = M4.lookAt({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 1 }, { x: 0, y: 1, z: 0 });
       gfx.setU(M4.mul(vproj, vview), { x: 0, y: 0, z: 0 }, 100, 200);

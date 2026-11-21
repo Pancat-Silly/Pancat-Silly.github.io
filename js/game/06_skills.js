@@ -369,6 +369,21 @@ const SK = {
     p.msg('§a[댄스] §f개구리 ' + n + '마리' + (n ? ' → ' + [spd && '신속 ' + R[spd - 1], str && '힘 ' + R[str - 1], hb && '체력 +' + hb * 4, '회복 ' + n * 2].filter(Boolean).join(' · ') + (ammo ? ' · §6총알 ' + ammo + '개' : '') : ''));
     if (n) AU.sfx('levelup', p); p.setCd('dance', ITEMS.dance.cd); return 'nocd';
   },
+  // ---------- dude New: 권총 ----------
+  // one bullet, hitscan in a straight line (aim time doesn't matter). Hitting a player starts the 컷씬 for the shooter and the target
+  // (G.cut, R.cutFrame: camera eases to the side 0.977s -> black 0.088s -> red 1.167s with the target falling back), then the target dies.
+  CUT_T: [0.977, 0.088, 1.167],
+  gunFire(p) {
+    if (p.count('dude_bullet') < 1) return; p.take('dude_bullet', 1);
+    const o = { x: p.x, y: p.y + p.eye - .1, z: p.z }, d = lookVec(p.yaw, p.pitch), MAX = 80; const wall = G.world.ray(o, d, MAX, B => B.solid); let lim = wall ? wall.t : MAX, hit = null;
+    for (const t of otherPlayers(p, MAX + 2)) { const h = rayAABB(o, d, t, lim, .05); if (h !== null && h < lim) { lim = h; hit = t; } }
+    const e = { x: o.x + d.x * lim, y: o.y + d.y * lim, z: o.z + d.z * lim };
+    G.emitAndApply({ k: 'gshot', a: [r1(o.x), r1(o.y), r1(o.z)], b: [r1(e.x), r1(e.y), r1(e.z)] });
+    if (!hit) { AU.sfx('explode', p, .35, 2); return; }
+    const n = Math.round((SK.CUT_T[0] + SK.CUT_T[1] + SK.CUT_T[2]) * 20); p.st.cutUntil = G.tick + n; if (hit.local) hit.st.cutUntil = G.tick + n;
+    G.emitAndApply({ k: 'gcut', by: p.id, tid: hit.id, a: [r1(p.x), r1(p.y), r1(p.z), r1(yawTo(hit.x - p.x, hit.z - p.z))], b: [r1(hit.x), r1(hit.y), r1(hit.z), r1(yawTo(p.x - hit.x, p.z - hit.z))] });
+    const tid = hit.id; G.after(n, () => { const t = G.entity(tid); if (t && t.alive) G.damage(t, 1000, { type: 'magic', by: p.id, nokb: true }); });
+  },
   // ---------- 세룡이 (user-made job from the dev tool, ported natively) ----------
   // 성진이 소환: a pig hovers 4 blocks above the target's spot for 1 s (warning ring), falls in 8 ticks, 5 magic in r 1.6.
   // Everyone sees it (event); each client resolves the landing for its own players / mobs (no ping error).

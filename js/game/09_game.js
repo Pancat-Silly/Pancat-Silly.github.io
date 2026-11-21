@@ -5,11 +5,11 @@ const PAD_POS = { red: [21, 21, 13], lime: [66, 21, 24], purple: [9, 21, 46], bl
 const PAD_ORDER = ['red', 'lime', 'purple', 'blue'];
 const PAD_KO = { red: '빨강', lime: '연두', purple: '보라', blue: '파랑' };
 const G = {
-  tick: 0, phase: 'menu', world: null, me: null, bots: [], remotes: new Map(), mobs: [], rmobs: new Map(), arrows: [], drops: [], chains: [], parts: [], timers: [], ices: [], vigs: [], pigs: [], dancers: new Map(), domains: [], ghosts: [], dashFx: new Map(), fangs: [], fangLines: [], zones: [], fangHit: new Map(),
+  tick: 0, phase: 'menu', world: null, me: null, bots: [], remotes: new Map(), mobs: [], rmobs: new Map(), arrows: [], drops: [], chains: [], parts: [], timers: [], ices: [], vigs: [], pigs: [], dancers: new Map(), cut: null, domains: [], ghosts: [], dashFx: new Map(), fangs: [], fangLines: [], zones: [], fangHit: new Map(),
   match: false, winShown: false, kills: {}, mobN: 0, fangN: 0, arrowN: 0, dropN: 0, practice: false, nid: uid(6),
   pads: PAD_ORDER.map(k => ({ x: PAD_POS[k][0], y: PAD_POS[k][1], z: PAD_POS[k][2], k })),
   initWorld() { const [sx, sy, sz] = MAPDATA.size; this.world = new World(sx, sy, sz); this.world.loadRLE(MAPDATA.rle); this.orig = this.world.b.slice(); },
-  resetWorld() { this.world.b.set(this.orig); for (let i = 0; i < this.world.cx * this.world.cy * this.world.cz; i++) this.world.dirty.add(i); this.ices = []; this.vigs = []; this.fangs = []; this.fangLines = []; this.zones = []; this.fangHit.clear(); MOD.proj = []; this.pigs = []; this.dancers.clear(); this.domains = []; this.ghosts = []; this.dashFx.clear(); },
+  resetWorld() { this.world.b.set(this.orig); for (let i = 0; i < this.world.cx * this.world.cy * this.world.cz; i++) this.world.dirty.add(i); this.ices = []; this.vigs = []; this.fangs = []; this.fangLines = []; this.zones = []; this.fangHit.clear(); MOD.proj = []; this.pigs = []; this.dancers.clear(); this.cut = null; this.domains = []; this.ghosts = []; this.dashFx.clear(); },
   // ---------- entity queries ----------
   players() {
     const a = []; if (this.phase === 'game' && this.me) a.push(this.me); for (const b of this.bots) a.push(b);
@@ -130,6 +130,13 @@ const G = {
         if (ev.on) this.dancers.set(ev.by, { t0: performance.now(), yaw: ev.yaw || 0, frogs: [] });
         else { const d = this.dancers.get(ev.by); if (d) for (const f of d.frogs) this.particles('poof', f.x, f.y + .6, f.z, 6); this.dancers.delete(ev.by); }
         break;
+      case 'gshot': SK.srLine({ x: ev.a[0], y: ev.a[1], z: ev.a[2] }, { x: ev.b[0], y: ev.b[1], z: ev.b[2] }, [1, .92, .6], .35); this.particles('crit', ev.b[0], ev.b[1], ev.b[2], 4); break;
+      case 'gcut': { // 권총 hit: the shooter and the target see the 컷씬, everyone else just hears the shot
+        const mine = me && (ev.by === me.id || ev.tid === me.id), pos = { x: ev.b[0], y: ev.b[1], z: ev.b[2] };
+        if (mine) { this.cut = { t0: performance.now(), by: ev.by, tid: ev.tid, a: ev.a, b: ev.b }; if (ev.tid === me.id) me.st.cutUntil = this.tick + Math.round((SK.CUT_T[0] + SK.CUT_T[1] + SK.CUT_T[2]) * 20); AU.play('dudeshot', {}); }
+        else AU.play('dudeshot', { pos, range: 40 });
+        break;
+      }
       case 'dfrog': { const d = this.dancers.get(ev.by); if (d && d.frogs.length < 40) { d.frogs.push({ x: ev.x, y: ev.y, z: ev.z, yaw: ev.yaw || 0, s0: performance.now() }); this.particles('poof', ev.x, ev.y + .4, ev.z, 5); } break; }
       case 'srpig': this.pigs.push({ x: ev.x, y: ev.y, z: ev.z, by: ev.by, yaw: ev.yaw || 0, t0: this.tick }); break;
       case 'srbeam': SK.srLine({ x: ev.a[0], y: ev.a[1], z: ev.a[2] }, { x: ev.b[0], y: ev.b[1], z: ev.b[2] }, ev.c || [1, .15, .15], .3); this.particles('glow', ev.b[0], ev.b[1], ev.b[2]); break;
