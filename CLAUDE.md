@@ -33,7 +33,7 @@ js/data/              생성된 데이터 (손으로 고치지 말고 tools/ 스
   dances.js           공용 춤 DANCE_DATA (마카레나·강남스타일, Mixamo FBX → mkdance.py). 두 게임이 같이 쓴다
 js/game/              게임 코드. 파일 이름 순서로 로드하는 일반 <script>들 (전역 공유)
 rbs/music/            랜덤블록 BGM mp3 (선택)
-lyrics/               가사 타이밍 도구 (게임과 따로인 한 파일 사이트, 사이트주소/lyrics). 노래+가사를 넣고 문장·단어·글자 단위로 TAP해서 시간을 찍고 파형 위 세로선을 끌어 고친다. 확장 LRC(txt)·JSON·게임 JS(DUDE_LYRICS 형식)로 내보냄. examples/dude_dance.lrc = 지금 게임 가사. ?audio=&lrc=로 바로 불러옴
+(가사 타이밍 도구는 사이트에 안 올림: 로컬 tools/lyrics/lyrics_timing.html 한 파일, 사용자에게 파일로 전달) 노래+가사를 넣고 문장·단어·글자 단위로 TAP해서 시간을 찍고 파형 위 세로선을 끌어 고친다. 확장 LRC(txt)·JSON·게임 JS(DUDE_LYRICS 형식)로 내보냄. examples/dude_dance.lrc = 지금 게임 가사. ?audio=&lrc=로 바로 불러옴
 sounds/               효과음 파일 (apvp/, rbs/, jobs/<직업>/). 랜덤블록 sfx_gameover·sfx_error·sfx_win_sin*는 사용자 요청으로 저장소에 안 올림(.gitignore, RB_SFX에서도 뺌 → 합성음). 예전에 js/data 안에 base64로 있던 것 (tools/split_sounds.py)
 tools/                [로컬 전용 · .gitignore로 저장소에 안 올림] mkdance.py + fbxbin.py + dance/*.fbx, mkentry.py, split_sounds.py, bump_version.py, hooks/pre-commit, build_single.py, rbsconv.py, rbsassets.py, mkmodjobs.py, mkassets.py, modjobs/*.txt, normalize_sounds.py + sound_norm.json + sounds_orig/
 ```
