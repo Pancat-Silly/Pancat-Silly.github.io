@@ -44,7 +44,7 @@ tools/                [로컬 전용 · .gitignore로 저장소에 안 올림] m
 | 01_core.js | 공통: `SELF_HTML`, `DEV_VER`, `World`(복셀), 수학·유틸 (`$`, `clamp`, `uid`, `M4` 행렬 …) |
 | 01b_dance.js | 공용 춤 재생 `DANCE`: `pick(seed)`, `pose(이름, 초)` → root yaw·엉덩이 위치 + 몸·머리·팔·다리 각도(MC ModelPart식 RZ·RY·RX, `DANCE.rot`). 4중인격에서도 그대로 쓰면 된다 |
 | 02_gfx.js / 02b_skin.js | WebGL1 렌더러(`Gfx`)와 아틀라스 / 마크 닉네임 스킨 (mc-heads.net → minotar.net, 2곳만) |
-| 03_audio.js / 03b_pack.js | 4중인격 오디오(`AU`) / 바닐라 리소스팩 다운로드(`PACK`) |
+| 03_audio.js / 03b_pack.js | 4중인격 오디오(`AU`: master ← `sfxBus` 게임 효과음(합성음·바닐라 팩) / `abBus` 능력 효과음(추가한 파일·모드 합성음), 설정의 볼륨·게임 효과음·능력 효과음 = `vol`·`vSfx`·`vAb`, 저장 `apvp`) / 바닐라 리소스팩 다운로드(`PACK`) |
 | 04_items.js | 인격·효과·아이템·직업 정의 `JOBS`, `JOB_ORDER`, 아이템 테이블 |
 | 05_player.js / 06_skills.js | 플레이어 물리·전투(20TPS, MC 물리) / 직업 스킬 |
 | 07_net.js | `NET`: PeerJS P2P → BroadcastChannel → 오프라인. `NG()`/`NB()`가 앱별 훅으로 연결한다 (G = 4중인격, RG = 랜덤블록). `NET.blob`으로 큰 데이터를 보낸다 |

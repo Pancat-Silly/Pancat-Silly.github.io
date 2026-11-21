@@ -1,12 +1,15 @@
 // ===================== audio =====================
 const AU = {
-  ctx: null, buf: {}, master: null, vol: 0.8, loops: {}, last: {},
+  ctx: null, buf: {}, master: null, vol: 0.8, vSfx: 1, vAb: 1, sfxBus: null, abBus: null, // sfxBus = game sounds (synth / vanilla pack), abBus = ability sounds (added files, mod synth)
+  setVol(k, v) { this[k] = v; const b = { vol: this.master, vSfx: this.sfxBus, vAb: this.abBus }[k]; if (b) b.gain.value = v; }, loops: {}, last: {},
   stop(name) { const s = this.last[name]; if (s) { try { s.stop(); } catch (e) { } this.last[name] = null; } },
   init() {
     if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
     const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
     try { this.ctx = new AC(); } catch (e) { return; }
     this.master = this.ctx.createGain(); this.master.gain.value = this.vol; this.master.connect(this.ctx.destination);
+    this.sfxBus = this.ctx.createGain(); this.sfxBus.gain.value = this.vSfx; this.sfxBus.connect(this.master);
+    this.abBus = this.ctx.createGain(); this.abBus.gain.value = this.vAb; this.abBus.connect(this.master);
     const nb = this.ctx.createBuffer(1, this.ctx.sampleRate, this.ctx.sampleRate); const d = nb.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; this.noise = nb;
     setTimeout(() => { PACK.decode(); MOD.decodeAll(); }, 0);
     for (const k in SOUNDS) sndBytes(SOUNDS[k]).then(a => this.ctx.decodeAudioData(a)).then(b => { this.buf[k] = b; }).catch(() => { }); // sounds/apvp/*.mp3
@@ -19,7 +22,7 @@ const AU = {
     if (!this.ctx) return null; const b = this.buf[name]; if (!b) return null;
     const g = this.gainFor(opt.pos, opt.vol || 1, opt.range || 24); if (g <= 0.01) return null;
     const s = this.ctx.createBufferSource(); s.buffer = b; if (opt.rate) s.playbackRate.value = opt.rate;
-    const gn = this.ctx.createGain(); gn.gain.value = g * (opt.gain || 1); s.connect(gn); gn.connect(this.master); s.loop = !!opt.loop; s.start(); this.last[name] = s; return s;
+    const gn = this.ctx.createGain(); gn.gain.value = g * (opt.gain || 1); s.connect(gn); gn.connect(this.abBus); s.loop = !!opt.loop; s.start(); this.last[name] = s; return s;
   },
   loop(name, on) { if (on) { if (!this.loops[name]) this.loops[name] = this.play(name, { loop: true }); } else if (this.loops[name]) { try { this.loops[name].stop(); } catch (e) { } this.loops[name] = null; } },
   stopAll(name) { this.loop(name, false); },
@@ -30,7 +33,7 @@ const AU = {
     if (!L) {
       const b = this.buf[name]; if (!b) return;
       const s = c.createBufferSource(); s.buffer = b; s.loop = true; const g = c.createGain(); g.gain.value = 0; s.connect(g);
-      let pn = null; if (c.createStereoPanner) { pn = c.createStereoPanner(); g.connect(pn); pn.connect(this.master); } else g.connect(this.master);
+      let pn = null; if (c.createStereoPanner) { pn = c.createStereoPanner(); g.connect(pn); pn.connect(this.abBus); } else g.connect(this.abBus);
       s.start(); L = this.pl[key] = { s, g, pn };
     }
     L.f = this.plF + 1; const t = c.currentTime;
@@ -47,7 +50,7 @@ const AU = {
     if (PACK.play(kind, pos, vol, pitch)) return; // vanilla resource pack sound when the player loaded one
     if (kind === 'wolfhurt' || kind === 'bigfall' || kind === 'smallfall') kind = 'hurt'; else if (kind === 'chainplace') kind = 'chain'; else if (kind.startsWith('st_') || kind.startsWith('atk_')) return; // vanilla-only
     const g0 = this.gainFor(pos, vol, 16); if (g0 <= 0.01) return;
-    const c = this.ctx, t = c.currentTime; const out = c.createGain(); out.connect(this.master);
+    const c = this.ctx, t = c.currentTime; const out = c.createGain(); out.connect(this.sfxBus);
     const env = (g, a, d, peak = 1) => { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak * g0, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d); };
     const noise = (f, q, type = 'bandpass', a = .005, d = .15, peak = 1, rate = 1) => { const s = c.createBufferSource(); s.buffer = this.noise; s.playbackRate.value = rate; const fl = c.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = q; const g = c.createGain(); env(g, a, d, peak); s.connect(fl); fl.connect(g); g.connect(out); s.start(t, Math.random() * .5); s.stop(t + a + d + .05); };
     const tone = (f, type, a, d, peak = .4, f2) => { const o = c.createOscillator(); o.type = type; o.frequency.setValueAtTime(f * pitch, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2 * pitch, t + a + d); const g = c.createGain(); env(g, a, d, peak); o.connect(g); g.connect(out); o.start(t); o.stop(t + a + d + .05); };

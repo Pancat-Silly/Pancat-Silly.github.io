@@ -27,9 +27,9 @@ const UI = {
     this.kbLoad(); setTimeout(() => this.mcPause(), 0);
     this.mobile = matchMedia('(pointer: coarse)').matches || ('ontouchstart' in window && navigator.maxTouchPoints > 0);
     document.body.classList.toggle('mobile', this.mobile);
-    try { const s = JSON.parse(localStorage.getItem('apvp') || '{}'); this.name = s.name || ''; this.skinName = s.skin || ''; this.deathMode = s.death || 'simple'; this.persona = s.persona | 0; this.sens = s.sens || 1; this.pcLock = s.pcLock !== false; R.fov = clamp(+s.fov || 70, 30, 110); this.vol = s.vol === undefined ? .8 : s.vol; this.room = s.room || 'main'; this.botLv = s.botLv === undefined ? 1 : clamp(s.botLv | 0, 0, 2); } catch (e) { this.room = 'main'; this.vol = .8; }
+    try { const s = JSON.parse(localStorage.getItem('apvp') || '{}'); this.name = s.name || ''; this.skinName = s.skin || ''; this.deathMode = s.death || 'simple'; this.persona = s.persona | 0; this.sens = s.sens || 1; this.pcLock = s.pcLock !== false; R.fov = clamp(+s.fov || 70, 30, 110); this.vol = s.vol === undefined ? .8 : s.vol; AU.vSfx = s.vSfx === undefined ? 1 : +s.vSfx; AU.vAb = s.vAb === undefined ? 1 : +s.vAb; this.room = s.room || 'main'; this.botLv = s.botLv === undefined ? 1 : clamp(s.botLv | 0, 0, 2); } catch (e) { this.room = 'main'; this.vol = .8; }
     if (!this.name) this.name = '플레이어' + randi(100, 999);
-    $('nick').value = this.name; $('skinName').value = this.skinName || ''; $('room').value = this.room; $('sens').value = this.sens; $('pFov').value = R.fov; $('fovv').textContent = R.fov; $('vol').value = this.vol;
+    $('nick').value = this.name; $('skinName').value = this.skinName || ''; $('room').value = this.room; $('sens').value = this.sens; $('pFov').value = R.fov; $('fovv').textContent = R.fov; $('vol').value = this.vol; $('vSfx').value = AU.vSfx; $('vAb').value = AU.vAb;
     this.buildMenu(); this.bindInput(); this.buildHotbar(); this.layout();
     setInterval(() => { if (G.phase === 'menu' && this.menuDirty) { this.menuDirty = false; this.refreshMenu(); } }, 300);
     NET.onChange = () => { this.menuDirty = true; };
@@ -93,7 +93,7 @@ const UI = {
     if (c === b.fwd) { const n = performance.now(); if (n - this.lastW < 280) this.sprintW = true; this.lastW = n; }
   },
   release(c) { const b = this.kb; if (c === b.attack) this.mouse.l = false; if (c === b.use) this.mouse.r = false; if (c === b.list) { this.tabOpen = false; $('tab').classList.add('hide'); } },
-  save() { try { localStorage.setItem('apvp', JSON.stringify({ name: this.name, skin: this.skinName, death: this.deathMode, persona: this.persona, sens: this.sens, pcLock: this.pcLock, botLv: this.botLv, fov: R.fov, vol: this.vol, room: this.room })); } catch (e) { } },
+  save() { try { localStorage.setItem('apvp', JSON.stringify({ name: this.name, skin: this.skinName, death: this.deathMode, persona: this.persona, sens: this.sens, pcLock: this.pcLock, botLv: this.botLv, fov: R.fov, vol: this.vol, vSfx: AU.vSfx, vAb: AU.vAb, room: this.room })); } catch (e) { } },
   // ---------- menu ----------
   buildMenu() {
     const pe = $('personas'); pe.innerHTML = '';
@@ -119,7 +119,8 @@ const UI = {
     $('upFile').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; await UPJ.upload(f); this.refreshMenu(); };
     $('pGod').onchange = e => this.setTest('god', e.target.checked); $('pNoAI').onchange = e => this.setTest('noai', e.target.checked);
     $('pFov').oninput = e => { R.fov = +e.target.value; $('fovv').textContent = R.fov; this.save(); };
-    $('vol').oninput = e => { this.vol = +e.target.value; AU.vol = this.vol; if (AU.master) AU.master.gain.value = this.vol; this.save(); };
+    $('vol').oninput = e => { this.vol = +e.target.value; AU.setVol('vol', this.vol); this.save(); };
+    for (const k of ['vSfx', 'vAb']) $(k).oninput = e => { AU.setVol(k, +e.target.value); this.save(); };
     $('pResume').onclick = () => this.resume();
     $('pStart').onclick = () => { G.startMatch(true); this.resume(); };
     $('pView').onclick = () => { R.third = (R.third + 1) % 3; };
@@ -200,7 +201,7 @@ const UI = {
   openSettings() { this.modeSync(); $('pP2P').checked = SITE.p2pNow(); document.body.classList.add('setmenu'); $('pause').classList.remove('hide'); this.mcPage('set'); },
   // Minecraft-style options: every row becomes one stone button — toggles read "이름: 켜짐", choices cycle on click, sliders fill the button
   mcPause() {
-    const pct = new Set(['vol']);
+    const pct = new Set(['vol', 'vSfx', 'vAb']);
     for (const lb of document.querySelectorAll('#pause .inner > label')) {
       const inp = lb.querySelector('input,select'); if (!inp) continue;
       const name = [...lb.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join(' ').replace(/\s+/g, ' ').trim();
@@ -225,7 +226,7 @@ const UI = {
     this.PAGES = {
       main: { t: '게임 메뉴', up: null, el: [[$('pResume'), 'pfull'], nav('경기 설정...', 'match', 'gameonly'), $('pStart'), $('pView'), nav('설정...', 'set'), $('pDeskX'), $('pWinMode'), [$('pLobby'), 'pfull']] },
       match: { t: '경기 설정', up: 'main', el: [byIn('pGod'), byIn('pNoAI'), byIn('pMode'), byIn('pUniq')] },
-      set: { t: '설정', up: 'main', el: [byIn('vol'), byIn('pFov'), byIn('pP2P'), byIn('pLock'), nav('화면 설정...', 'video'), nav('조작 설정...', 'ctrl')] },
+      set: { t: '설정', up: 'main', el: [[byIn('vol'), 'pfull'], byIn('vSfx'), byIn('vAb'), [byIn('pFov'), 'pfull'], byIn('pP2P'), byIn('pLock'), nav('화면 설정...', 'video'), nav('조작 설정...', 'ctrl')] },
       video: { t: '화면 설정', up: 'set', el: [byIn('pRes'), byIn('pHp'), byIn('pBob'), byIn('pDeath')] },
       ctrl: { t: '조작 설정', up: 'set', el: [[sensL, this.mobile ? '' : 'pfull'], byIn('pAssist'), byIn('pCtl'), byIn('pMove'), byIn('pSneakM'), $('pEdit'), ...kbBox] },
     };

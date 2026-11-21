@@ -147,7 +147,7 @@ const PACK = {
     if (!this.on || !AU.ctx) return false; const L = this.bufs[kind]; if (!L || !L.length) return false;
     const g0 = AU.gainFor(pos, vol, 16); if (g0 <= 0.01) return true;
     const c = AU.ctx, s = c.createBufferSource(); s.buffer = L[Math.random() * L.length | 0]; s.playbackRate.value = pitch * (kind.startsWith('st_') || kind === 'hurt' || kind === 'spider' || kind === 'wolfhurt' ? .9 + Math.random() * .2 : 1);
-    const g = c.createGain(); g.gain.value = g0; s.connect(g); g.connect(AU.master); s.start(); return true;
+    const g = c.createGain(); g.gain.value = g0; s.connect(g); g.connect(AU.sfxBus || AU.master); s.start(); return true;
   },
 };
 
