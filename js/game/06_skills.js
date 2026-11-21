@@ -381,11 +381,17 @@ const SK = {
     for (const t of otherPlayers(p, MAX + 2)) { const h = rayAABB(o, d, t, lim, .05); if (h !== null && h < lim) { lim = h; hit = t; } }
     const e = { x: o.x + d.x * lim, y: o.y + d.y * lim, z: o.z + d.z * lim };
     G.emitAndApply({ k: 'gshot', a: [r1(o.x), r1(o.y), r1(o.z)], b: [r1(e.x), r1(e.y), r1(e.z)] });
-    if (!hit) { AU.sfx('explode', p, .35, 2); return; }
+    const safe = hit && ((hit.local ? G.tick < (hit.prot || 0) : hit.protF) || G.sameTeam(p.id, hit.id)); // won't die -> no 컷씬
+    if (!hit || safe) { AU.sfx('explode', p, .35, 2); return; }
     // the target dies right away (respawn waits for the 컷씬 to end, Player.die), the shooter blinks in place, invulnerable (prot)
     const n = Math.round((SK.CUT_T[0] + SK.CUT_T[1] + SK.CUT_T[2]) * 20); p.st.cutUntil = G.tick + n; p.prot = G.tick + n; if (hit.local) hit.st.cutUntil = G.tick + n;
     G.emitAndApply({ k: 'gcut', by: p.id, tid: hit.id, a: [r1(p.x), r1(p.y), r1(p.z), r1(yawTo(hit.x - p.x, hit.z - p.z))], b: [r1(hit.x), r1(hit.y), r1(hit.z), r1(yawTo(p.x - hit.x, p.z - hit.z))] });
     G.damage(hit, 1000, { type: 'magic', by: p.id, nokb: true, exact: true, noinvul: true });
+    if (hit.local && hit.alive) G.emitAndApply({ k: 'gcutx', by: p.id, tid: hit.id }); // survived (revive, resistance…) -> no 컷씬; a remote target checks itself (09_game 'gcut')
+  },
+  onGunCancel(ev) { // 'gcutx': the target didn't die -> stop the 컷씬, free the shooter + target
+    if (G.cut && G.cut.tid === ev.tid) { G.cut = null; document.body.classList.remove('apvpcut'); }
+    for (const q of [G.me, ...G.bots]) { if (!q) continue; if (q.id === ev.tid) q.st.cutUntil = 0; if (q.id === ev.by) { q.st.cutUntil = 0; q.prot = 0; } }
   },
   // ---------- 세룡이 (user-made job from the dev tool, ported natively) ----------
   // 성진이 소환: a pig hovers 4 blocks above the target's spot for 1 s (warning ring), falls in 8 ticks, 5 magic in r 1.6.

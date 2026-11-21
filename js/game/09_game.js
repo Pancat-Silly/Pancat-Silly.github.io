@@ -133,10 +133,11 @@ const G = {
       case 'gshot': SK.srLine({ x: ev.a[0], y: ev.a[1], z: ev.a[2] }, { x: ev.b[0], y: ev.b[1], z: ev.b[2] }, [1, .92, .6], .35); this.particles('crit', ev.b[0], ev.b[1], ev.b[2], 4); break;
       case 'gcut': { // 권총 hit: the shooter and the target see the 컷씬, everyone else just hears the shot
         const mine = me && (ev.by === me.id || ev.tid === me.id), pos = { x: ev.b[0], y: ev.b[1], z: ev.b[2] };
-        if (mine) { this.cut = { t0: performance.now(), by: ev.by, tid: ev.tid, a: ev.a, b: ev.b }; if (ev.tid === me.id) me.st.cutUntil = this.tick + Math.round((SK.CUT_T[0] + SK.CUT_T[1] + SK.CUT_T[2]) * 20); AU.play('dudeshot', {}); }
+        if (mine) { this.cut = { t0: performance.now(), by: ev.by, tid: ev.tid, a: ev.a, b: ev.b }; if (ev.tid === me.id) { me.st.cutUntil = this.tick + Math.round((SK.CUT_T[0] + SK.CUT_T[1] + SK.CUT_T[2]) * 20); if (!self) this.after(3, () => { if (me.alive && me.st.cutUntil > this.tick) this.emitAndApply({ k: 'gcutx', by: ev.by, tid: me.id }); }); } AU.play('dudeshot', {}); } // the shot (sent right after) didn't kill me -> cancel
         else AU.play('dudeshot', { pos, range: 40 });
         break;
       }
+      case 'gcutx': SK.onGunCancel(ev); break;
       case 'dfrog': { const d = this.dancers.get(ev.by); if (d && d.frogs.length < 40) { d.frogs.push({ x: ev.x, y: ev.y, z: ev.z, yaw: ev.yaw || 0, s0: performance.now() }); this.particles('poof', ev.x, ev.y + .4, ev.z, 5); } break; }
       case 'srpig': this.pigs.push({ x: ev.x, y: ev.y, z: ev.z, by: ev.by, yaw: ev.yaw || 0, t0: this.tick }); break;
       case 'srbeam': SK.srLine({ x: ev.a[0], y: ev.a[1], z: ev.a[2] }, { x: ev.b[0], y: ev.b[1], z: ev.b[2] }, ev.c || [1, .15, .15], .3); this.particles('glow', ev.b[0], ev.b[1], ev.b[2]); break;
