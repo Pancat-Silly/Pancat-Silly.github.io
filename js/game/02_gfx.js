@@ -69,8 +69,8 @@ class Gfx {
     for (const k of ['o', 't']) { const s = arrs[k]; c[k].n = s.i.length; if (!s.i.length) continue; gl.bindBuffer(gl.ARRAY_BUFFER, c[k].vb); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(s.v), gl.STATIC_DRAW); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, c[k].ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(s.i), gl.STATIC_DRAW); }
     c.center = arrs.center;
   }
-  drawChunks(pass, cam) {
-    const gl = this.gl; const list = [...this.chunks.values()].filter(c => c[pass].n);
+  drawChunks(pass, cam, vis) { // vis(key): optional chunk filter (랜덤블록: only the camera's area, in the view frustum)
+    const gl = this.gl; const list = []; for (const [k, c] of this.chunks) if (c[pass].n && (!vis || vis(k))) list.push(c);
     if (pass === 't') list.sort((a, b) => dist3(b.center, cam) - dist3(a.center, cam));
     for (const c of list) { gl.bindBuffer(gl.ARRAY_BUFFER, c[pass].vb); this.bindAttr(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, c[pass].ib); gl.drawElements(gl.TRIANGLES, c[pass].n, gl.UNSIGNED_SHORT, 0); }
   }

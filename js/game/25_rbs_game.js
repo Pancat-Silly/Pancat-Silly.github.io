@@ -47,14 +47,14 @@ const RG = {
   emit(ev) { if (NET.mode !== 'off') NET.emit(ev); },
   chat(m) { RUI.chat(m); }, title(t, s, o) { RUI.title(t, s, o); },
   particles(kind, x, y, z, n = 6, col) {
-    const C = { crit: [1, 1, .7], heart: [1, .2, .3], smoke: [.5, .5, .5], splash: [1, .3, .4], xp: [.6, 1, .3], fw: null, water: [.3, .5, 1], gas: [.3, .1, .35], totem: [.9, .9, .2] }; const c0 = col || C[kind] || [1, 1, 1];
+    const C = { crit: [1, 1, .7], heart: [1, .2, .3], smoke: [.5, .5, .5], splash: [1, .3, .4], xp: [.6, 1, .3], fw: null, water: [.3, .5, 1], gas: [.3, .1, .35], totem: [.9, .9, .2] }; const c0 = col || C[kind] || [1, 1, 1]; if (!RR.fxOk(x, y, z)) return; // only where I can see them (RR.fxOk)
     for (let i = 0; i < n; i++) { const c = kind === 'fw' ? [Math.random(), Math.random(), Math.random()] : c0; this.parts.push({ x: x + rand(-.3, .3), y: y + rand(-.3, .3), z: z + rand(-.3, .3), vx: rand(-.12, .12) * (kind === 'fw' ? 3 : 1), vy: rand(0, .15) * (kind === 'fw' ? 2 : 1), vz: rand(-.12, .12) * (kind === 'fw' ? 3 : 1), life: 14 + Math.random() * 14, s: kind === 'block' ? .06 : .05, col: c, g: kind === 'fw' ? .01 : .02 }); }
   },
   // MC: breaking spawns a 4x4x4 grid of terrain particles flying outward from the centre; hitting spawns a few on the hit face
-  blockParts(x, y, z, id) { const B = BL[id]; if (!B || B.air) return; const [ox, oy] = RTEX.xy(B.tiles[0] || B.tiles[4] || 0);
+  blockParts(x, y, z, id) { const B = BL[id]; if (!B || B.air || !RR.fxOk(x + .5, y + .5, z + .5)) return; const [ox, oy] = RTEX.xy(B.tiles[0] || B.tiles[4] || 0);
     for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) for (let k = 0; k < 4; k++) { if (Math.random() < .45) continue; const px = (i + .5) / 4, py = (j + .5) / 4, pz = (k + .5) / 4;
       this.parts.push({ x: x + px, y: y + py, z: z + pz, vx: (px - .5) * rand(.1, .25), vy: (py - .5) * rand(.1, .25) + .05, vz: (pz - .5) * rand(.1, .25), life: 8 + Math.random() * 24, s: rand(.05, .1), tex: [ox + (Math.random() * 12 | 0), oy + (Math.random() * 12 | 0)], g: .04, col: 1 }); } },
-  hitParts(x, y, z, id, n = 3) { const B = BL[id]; if (!B || B.air) return; const [ox, oy] = RTEX.xy(B.tiles[0] || B.tiles[4] || 0); const P = RW.P(x, y, z); const cam = RR.cam ? RR.cam.eye : P;
+  hitParts(x, y, z, id, n = 3) { const B = BL[id]; if (!B || B.air) return; const P = RW.P(x, y, z); if (!RR.fxOk(P.x + .5, P.y + .5, P.z + .5)) return; const [ox, oy] = RTEX.xy(B.tiles[0] || B.tiles[4] || 0); const cam = RR.cam ? RR.cam.eye : P;
     for (let i = 0; i < n; i++) { let px = P.x + Math.random(), py = P.y + Math.random(), pz = P.z + Math.random(); const dx = cam.x - (P.x + .5), dy = cam.y - (P.y + .5), dz = cam.z - (P.z + .5); const ax = Math.abs(dx), ay = Math.abs(dy), az = Math.abs(dz);
       if (ax >= ay && ax >= az) px = P.x + (dx > 0 ? 1.03 : -.03); else if (ay >= az) py = P.y + (dy > 0 ? 1.03 : -.03); else pz = P.z + (dz > 0 ? 1.03 : -.03);
       this.parts.push({ x: px, y: py, z: pz, vx: rand(-.03, .03), vy: rand(0, .06), vz: rand(-.03, .03), life: 6 + Math.random() * 10, s: rand(.04, .07), tex: [ox + (Math.random() * 12 | 0), oy + (Math.random() * 12 | 0)], g: .04, col: 1 }); } },

@@ -10,6 +10,23 @@ const RR = {
     for (const k of seen) W.dirty.add(k);
     this.signTex = [];
   },
+  // ---------- visibility ----------
+  // The areas sit one above another in the same world (arena y200+, playground 84-105, deathmatch 61-81, lobby 29-43, winner podium 5-16).
+  // Only the band the camera is in is drawn (blocks, players, items, particles); between bands (nothing is built there) everything is.
+  // Inside a band, chunks outside the view frustum or past the fog are skipped too.
+  ZONES: [[190, 1e9], [82, 125], [55, 82], [22, 55], [-1e9, 22]],
+  zoneOf(y) { const Z = this.ZONES; for (let i = 0; i < Z.length; i++) if (y >= Z[i][0] && y < Z[i][1]) return i; return -1; },
+  sameZone(y) { const z = this.camZ; return z === undefined || z < 0 || this.zoneOf(y) === z; },
+  planes(m) { const r = i => [m[i], m[4 + i], m[8 + i], m[12 + i]], R0 = r(0), R1 = r(1), R2 = r(2), R3 = r(3), P = [];
+    for (const [a, s] of [[R0, 1], [R0, -1], [R1, 1], [R1, -1], [R2, 1], [R2, -1]]) P.push([R3[0] + s * a[0], R3[1] + s * a[1], R3[2] + s * a[2], R3[3] + s * a[3]]); return P; },
+  boxVis(x0, y0, z0, x1, y1, z1) { const F = this.fr; if (!F) return true; for (const p of F) if (p[0] * (p[0] > 0 ? x1 : x0) + p[1] * (p[1] > 0 ? y1 : y0) + p[2] * (p[2] > 0 ? z1 : z0) + p[3] < 0) return false; return true; },
+  chunkVis(k) { const W = RW.w, cx = k % W.cx, cz = Math.floor(k / W.cx) % W.cz, cy = Math.floor(k / (W.cx * W.cz)); const y0 = cy * CH, y1 = y0 + CH;
+    const z = this.camZ; if (z >= 0) { const Z = this.ZONES[z]; if (y1 <= Z[0] || y0 >= Z[1]) return false; }
+    const x0 = cx * CH, z0 = cz * CH, e = this.cam.eye; const dx = Math.max(x0 - e.x, 0, e.x - x0 - CH), dy = Math.max(y0 - e.y, 0, e.y - y1), dz = Math.max(z0 - e.z, 0, e.z - z0 - CH); if (dx * dx + dy * dy + dz * dz > this.fogB * this.fogB) return false;
+    return this.boxVis(x0, y0, z0, x0 + CH, y1, z0 + CH); },
+  // particles are only made where this player can see them (same area, close, roughly on screen): a round start breaks the
+  // blocks around every spawn at once, which used to build thousands of particles nobody could see
+  fxOk(x, y, z) { if (!this.cam) return true; if (RG.parts.length > 3000 || !this.sameZone(y)) return false; const e = this.cam.eye; if ((x - e.x) ** 2 + (y - e.y) ** 2 + (z - e.z) ** 2 > 32 * 32) return false; const m = 1.5; return this.boxVis(x - m, y - m, z - m, x + m, y + m, z + m); },
   rebuild(max = 99) { const W = RW.w; let n = 0; for (const k of [...W.dirty]) { if (n++ >= max) break; W.dirty.delete(k); const cx = k % W.cx, cz = Math.floor(k / W.cx) % W.cz, cy = Math.floor(k / (W.cx * W.cz)); this.gfx.upload(k, RMESH.chunk(W, cx, cy, cz)); } },
   // box with a tile per face [S,N,W,E,U,D] (block items, held blocks)
   boxT(b, m, x0, y0, z0, x1, y1, z1, tiles, col = [1, 1, 1], a = 1) {
@@ -81,7 +98,7 @@ const RR = {
       if (!this.third && RUI.bob) eye.y += Math.abs(Math.cos(this.bobP)) * .06 * this.bobA;
       if (this.third) { const d = lookVec(yaw, pitch); const sg = this.third === 1 ? -1 : 1; const dir = { x: d.x * sg, y: d.y * sg, z: d.z * sg }; const h = RW.w.ray(eye, dir, 4); const dd = h ? Math.max(.3, h.t - .2) : 4; eye = { x: eye.x + dir.x * dd, y: eye.y + dir.y * dd, z: eye.z + dir.z * dd }; if (this.third === 2) { yaw += Math.PI; pitch = -pitch; } }
     }
-    this.cam = { eye, yaw, pitch };
+    this.cam = { eye, yaw, pitch }; this.camZ = this.zoneOf(eye.y);
     const area = RG.area({ x: eye.x, y: eye.y, z: eye.z }); const nether = area === 'dm' || area === 'dmspec';
     g.sky = nether ? [.33, .08, .06] : area === 'arena' ? [.08, .08, .1] : area === 'winner' ? [.1, .1, .12] : [.53, .72, 1];
     let fov = RUI.fov; this.fovS = lerp(this.fovS || 1, me.sprinting ? 1.12 : 1, .2); fov *= this.fovS;
@@ -90,17 +107,19 @@ const RR = {
     const vp = M4.mul(proj, M4.lookAt(eye, { x: eye.x + d.x, y: eye.y + d.y, z: eye.z + d.z }, up)); this.vp = vp; this.W = W; this.H = H; this.proj = proj; this.rayF = { d, up, t: Math.tan(fov * D2R / 2), asp: W / H };
     gl.clearColor(g.sky[0], g.sky[1], g.sky[2], 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     const fogA = nether ? 40 : 90, fogB = nether ? 110 : 220; g.setU(vp, eye, fogA, fogB); g.bind();
-    gl.disable(gl.BLEND); gl.depthMask(true); g.drawChunks('o', eye);
+    this.fr = this.planes(vp); this.fogB = fogB; const vis = new Set(); for (const k of g.chunks.keys()) if (this.chunkVis(k)) vis.add(k); const visF = k => vis.has(k); this.visN = vis.size;
+    gl.disable(gl.BLEND); gl.depthMask(true); g.drawChunks('o', eye, visF);
     const b = this.bo; b.reset(); const bt = this.bt; bt.reset();
     // players
     for (const p of RG.players()) {
-      if (p.spectator || p.alive === false) continue; if (p === me && !this.third && !cut) continue; if (fol && p === fol && !RUI.followThird && me.spectator && !cut) continue;
+      if (p.spectator || p.alive === false || !this.sameZone(p.y)) continue; if (p === me && !this.third && !cut) continue; if (fol && p === fol && !RUI.followThird && me.spectator && !cut) continue;
       const sk = SKIN.get(p.skin);
       if (sk) { this.bs.reset(); this.drawPlayer(b, p, alpha, this.bs, sk); g.bind(sk.tex); g.drawBatch(this.bs); g.bind(); } else this.drawPlayer(b, p, alpha);
     }
     // dropped items / xp orbs
     const tt = (RG.tick + alpha);
     for (const e of RG.items.values()) {
+      if (!this.sameZone(e.y)) continue;
       if (e.st.id === 'xp') { const s = .08 + Math.min(.08, e.st.n * .006); b.cube(e.x, e.y + .15, e.z, s, [.5 + .4 * Math.sin(tt * .3), 1, .3]); continue; }
       // Minecraft ItemEntityRenderer: spin = (age + partialTick) / 20 rad + a random start angle per item, bob = sin(t / 10 + start) * .1 + .1 (smooth, ticks not frames)
       const hs = e.hs !== undefined ? e.hs : (e.hs = Math.random() * Math.PI * 2), ta = e.age + alpha;
@@ -109,7 +128,7 @@ const RR = {
     // falling blocks (sand / gravel / anvil)
     for (const f of RG.falls) { const B = BL[f.id]; if (!B) continue; const P = RW.P(f.x, lerp(f.py, f.y, alpha), f.z); const bx = B.full ? [[0, 0, 0, 1, 1, 1]] : (B.boxes || [[0, 0, 0, 1, 1, 1]]); for (const q of bx) this.boxT(b, null, P.x + q[0], P.y + q[1], P.z + q[2], P.x + q[3], P.y + q[4], P.z + q[5], B.tiles); }
     for (const o of RG.projs) { let m = M4.T(M4.id(), o.x, o.y, o.z); const cy = this.cam.yaw; m = M4.RY(m, -cy); this.sprite(b, M4.S(m, .35, .35, .35), RTEX.T(o.kind === 'xp' ? 'item/experience_bottle' : 'item/splash_potion')); }
-    for (const p of RG.parts) { if (p.tex) { const u = p.tex[0] / RTEX.cv.width, v = p.tex[1] / RTEX.cv.width, s = 4 / RTEX.cv.width; const cy = this.cam.yaw; const r = p.s; const ax = Math.cos(cy) * r, az = Math.sin(cy) * r; b.quadUV([p.x - ax, p.y - r, p.z - az], [p.x + ax, p.y - r, p.z + az], [p.x + ax, p.y + r, p.z + az], [p.x - ax, p.y + r, p.z - az], u, v, u + s, v + s, [1, 1, 1]); b.quadUV([p.x + ax, p.y - r, p.z + az], [p.x - ax, p.y - r, p.z - az], [p.x - ax, p.y + r, p.z - az], [p.x + ax, p.y + r, p.z + az], u, v, u + s, v + s, [.8, .8, .8]); } else b.cube(p.x, p.y, p.z, p.s * (p.life < 5 ? p.life / 5 : 1), p.col, 0); }
+    for (const p of RG.parts) { if (b.full()) break; if (p.tex) { const u = p.tex[0] / RTEX.cv.width, v = p.tex[1] / RTEX.cv.width, s = 4 / RTEX.cv.width; const cy = this.cam.yaw; const r = p.s; const ax = Math.cos(cy) * r, az = Math.sin(cy) * r; b.quadUV([p.x - ax, p.y - r, p.z - az], [p.x + ax, p.y - r, p.z + az], [p.x + ax, p.y + r, p.z + az], [p.x - ax, p.y + r, p.z - az], u, v, u + s, v + s, [1, 1, 1]); b.quadUV([p.x + ax, p.y - r, p.z + az], [p.x - ax, p.y - r, p.z - az], [p.x - ax, p.y + r, p.z - az], [p.x + ax, p.y + r, p.z + az], u, v, u + s, v + s, [.8, .8, .8]); } else b.cube(p.x, p.y, p.z, p.s * (p.life < 5 ? p.life / 5 : 1), p.col, 0); }
     // selection outline
     const sel = RIN.target; if (sel && sel.block && !me.spectator) { const [x, y, z] = [sel.x, sel.y, sel.z]; const B = BL[RW.w.get(x, y, z)]; const bx = B.full ? [[0, 0, 0, 1, 1, 1]] : (RW.w.shape(x, y, z, B) || [[0, 0, 0, 1, 1, 1]]); const e = .002, t = .012, c = [.05, .05, .05];
       for (const q of bx) { const x0 = x + q[0] - e, y0 = y + q[1] - e, z0 = z + q[2] - e, x1 = x + q[3] + e, y1 = y + q[4] + e, z1 = z + q[5] + e;
@@ -126,7 +145,7 @@ const RR = {
       if (D.length) { bt.reset(); for (const [x, y, z, st] of D) { const P = RW.P(x, y, z); const B = BL[RW.w.get(P.x, P.y, P.z)]; if (!B || B.air) continue; const tl = RTEX.T('destroy_stage_' + st); const bx = B.full ? [[0, 0, 0, 1, 1, 1]] : (RW.w.shape(P.x, P.y, P.z, B) || [[0, 0, 0, 1, 1, 1]]); const e = .004;
         for (const q of bx) bt.box(null, P.x + q[0] - e, P.y + q[1] - e, P.z + q[2] - e, P.x + q[3] + e, P.y + q[4] + e, P.z + q[5] + e, [1, 1, 1], tl, -1, 1, false); } g.drawBatch(bt); }
     }
-    g.drawChunks('t', eye); gl.depthMask(true); gl.disable(gl.BLEND);
+    g.drawChunks('t', eye, visF); gl.depthMask(true); gl.disable(gl.BLEND);
     // first person hand / held item
     if (!this.third && !cut && !me.spectator && me.alive) this.drawHand(alpha);
     RUI.tags(vp, W / dpr, H / dpr);

@@ -18,7 +18,8 @@ const RAU = {
   // custom pack sfx (sfx_hurry, sfx_rare, sfx_win_*...). gated = only when the player's 효과음 setting (sef) is on
   sfx(k, gated) { if (gated && !RUI.sfxOn) return; this.init(); if (this.buf[k]) this.src(this.buf[k], 1); else this.synth('toast', 1); },
   // vanilla-style sound: pack sample if downloaded, else synth
-  play(k, pitch = 1, gated, vol = 1) { if (gated && !RUI.sfxOn) return; if (!this.ctx) return; const L = this.pack[k]; if (L && L.length) { this.src(L[Math.floor(Math.random() * L.length)], vol, pitch); return; } this.synth(k, pitch, vol); },
+  play(k, pitch = 1, gated, vol = 1) { if (gated && !RUI.sfxOn) return; if (!this.ctx) return;
+    { const n = performance.now(), q = this._rl || (this._rl = {}), r = q[k]; if (r && n - r.t < 80) { if (r.n >= 3) return; r.n++; } else q[k] = { t: n, n: 1 }; } /* at most 3 of the same sound per 80 ms (a round start breaks blocks around every spawn at once) */ const L = this.pack[k]; if (L && L.length) { this.src(L[Math.floor(Math.random() * L.length)], vol, pitch); return; } this.synth(k, pitch, vol); },
   dist(p) { const c = RR.cam ? RR.cam.eye : p; const d = Math.hypot(p.x - c.x, p.y - c.y, p.z - c.z); return d > 16 ? 0 : 1 - d / 18; },
   at(k, p, pitch) { const v = p === RG.me ? 1 : this.dist(p); if (v > 0) this.play(k, pitch || (.9 + Math.random() * .2), false, v); },
   blk(kind, mat, p) { const v = this.dist(p); if (v > 0) this.play(kind + '_' + (mat || 'stone'), kind === 'hit' ? .5 : .8 + Math.random() * .1, false, v * (kind === 'hit' ? .3 : .9)); },
