@@ -335,8 +335,9 @@ const UI = {
     const pr = $('prompt'); if (me.onPad && !me.spectator) { const k = PAD_ORDER.indexOf(me.onPad); pr.style.display = 'block'; pr.innerHTML = me.pad === k ? mcfmt('§a✔ ' + PAD_KO[me.onPad] + ' 스폰포인트') : mcfmt((this.mobile ? '' : '§e[E] ') + '§f' + PAD_KO[me.onPad] + ' 스폰포인트 설정'); pr.onclick = () => this.setSpawn(); } else pr.style.display = 'none';
     $('tSpawn') && ($('tSpawn').style.display = me.onPad && PAD_ORDER.indexOf(me.onPad) !== me.pad ? 'flex' : 'none');
     // crosshair
-    $('cross').style.display = me.spectator || (this.mobile && TCTL.scheme === 'pe') ? 'none' : 'block'; // PE touch mode: no crosshair (Bedrock)
-    if (G.tick !== this._ct) { this._ct = G.tick; const f = me.spectator ? {} : me.findTarget(this.atkOpt()); $('cross').classList.toggle('on', !!f.t); }
+    const gun = me.inv[me.sel] && ITEMS[me.inv[me.sel].id] && ITEMS[me.inv[me.sel].id].use === 'gun'; // 권총 in hand: crosshair even in PE (it fires straight where you look)
+    $('cross').style.display = me.spectator || !me.alive || (this.mobile && TCTL.scheme === 'pe' && !gun) ? 'none' : 'block'; // PE touch mode: no crosshair (Bedrock)
+    if (G.tick !== this._ct) { this._ct = G.tick; const on = me.spectator ? false : gun ? !!SK.aimTarget(me, 80) : !!me.findTarget(this.atkOpt()).t; $('cross').classList.toggle('on', on); }
     // tags (hp above head)
     this.tags();
     if (this.tabOpen) this.drawTab();
@@ -345,7 +346,7 @@ const UI = {
   tags() {
     let n = 0; const wrap = $('tags');
     for (const p of G.players()) { // job above every head; hp + bar with the 체력 표시 setting
-      if (p === G.me || p.spectator) continue; const sc = p.scale || 1; const hp = p.local ? p.hp : p.hp; const mx = p.local ? p.maxHp() : p.maxHp;
+      if (p === G.me || p.spectator || !p.alive) continue; const sc = p.scale || 1; const hp = p.local ? p.hp : p.hp; const mx = p.local ? p.maxHp() : p.maxHp;
       const pr = R.project(p.x, p.y + p.h + .35 * sc, p.z); if (!pr || pr.d > 48) continue;
       const glow = p.local ? p.eff('glowing') : p.glowing;
       if (!glow) { const e = G.camPos; const d = { x: p.x - e.x, y: p.y + p.h - e.y, z: p.z - e.z }; const l = Math.hypot(d.x, d.y, d.z); if (G.world.ray(e, { x: d.x / l, y: d.y / l, z: d.z / l }, l - .3)) continue; }

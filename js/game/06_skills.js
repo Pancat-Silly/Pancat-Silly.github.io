@@ -382,9 +382,10 @@ const SK = {
     const e = { x: o.x + d.x * lim, y: o.y + d.y * lim, z: o.z + d.z * lim };
     G.emitAndApply({ k: 'gshot', a: [r1(o.x), r1(o.y), r1(o.z)], b: [r1(e.x), r1(e.y), r1(e.z)] });
     if (!hit) { AU.sfx('explode', p, .35, 2); return; }
-    const n = Math.round((SK.CUT_T[0] + SK.CUT_T[1] + SK.CUT_T[2]) * 20); p.st.cutUntil = G.tick + n; if (hit.local) hit.st.cutUntil = G.tick + n;
+    // the target dies right away (respawn waits for the 컷씬 to end, Player.die), the shooter blinks in place, invulnerable (prot)
+    const n = Math.round((SK.CUT_T[0] + SK.CUT_T[1] + SK.CUT_T[2]) * 20); p.st.cutUntil = G.tick + n; p.prot = G.tick + n; if (hit.local) hit.st.cutUntil = G.tick + n;
     G.emitAndApply({ k: 'gcut', by: p.id, tid: hit.id, a: [r1(p.x), r1(p.y), r1(p.z), r1(yawTo(hit.x - p.x, hit.z - p.z))], b: [r1(hit.x), r1(hit.y), r1(hit.z), r1(yawTo(p.x - hit.x, p.z - hit.z))] });
-    const tid = hit.id; G.after(n, () => { const t = G.entity(tid); if (t && t.alive) G.damage(t, 1000, { type: 'magic', by: p.id, nokb: true }); });
+    G.damage(hit, 1000, { type: 'magic', by: p.id, nokb: true, exact: true, noinvul: true });
   },
   // ---------- 세룡이 (user-made job from the dev tool, ported natively) ----------
   // 성진이 소환: a pig hovers 4 blocks above the target's spot for 1 s (warning ring), falls in 8 ticks, 5 magic in r 1.6.

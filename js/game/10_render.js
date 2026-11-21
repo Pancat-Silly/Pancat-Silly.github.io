@@ -258,7 +258,7 @@ const R = {
     // dynamic opaque
     const b = this.bo; b.reset(); const bg = this.bg; bg.reset(); const bt = this.bt; bt.reset();
     for (const p of G.players()) {
-      if (p.spectator) continue;
+      if (p.spectator || !p.alive) continue; // !alive: shot by the 권총, waiting for the 컷씬 to end
       if (p === me && !this.third && !G.dancers.has(me.id) && !G.cut) { if (p.job === 'suno' && p.st.rewind) { const r = p.st.rewind, i0 = r.path.length - 1 - 2 * r.k, i1 = Math.max(0, r.path.length - 65); for (let i = i0; i >= i1; i -= 3) { const q = r.path[i]; bt.cube(q[0], q[1] + .1, q[2], .06, [1, .1, .1], 0, .9); } } continue; }
       if ((p.local ? G.tick < (p.prot || 0) : p.protF) && (performance.now() / 120 | 0) % 2) continue;
       const sk = SKIN.get(p.skin);

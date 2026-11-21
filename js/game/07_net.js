@@ -165,7 +165,7 @@ class Remote {
     const s = p.s; if (!s) return;
     this.buf.push({ t: performance.now(), x: s[0], y: s[1], z: s[2], yaw: s[3], pitch: s[4] }); if (this.buf.length > 20) this.buf.shift();
     this.hp = s[5]; this.maxHp = s[6]; this.flags = s[7]; this.swingN = s[8]; this.heldId = s[9]; this.scale = s[10] || 1; this.offId = s[11]; this.armorType = s[12] || null; this.drawT = s[13] || 0;
-    this.spectator = !!(this.flags & 16); this.sneaking = !!(this.flags & 1); this.blocking = !!(this.flags & 2); this.glowing = !!(this.flags & 4); this.protF = !!(this.flags & 128); this.rewindF = !!(this.flags & 256);
+    this.spectator = !!(this.flags & 16); this.sneaking = !!(this.flags & 1); this.blocking = !!(this.flags & 2); this.glowing = !!(this.flags & 4); this.protF = !!(this.flags & 128); this.rewindF = !!(this.flags & 256); this.alive = !(this.flags & 512); // 512: dead, waiting for the 권총 컷씬 to end
     if (this.flags & 8) { if (!this._hurtF) this.hurtTime = 10; this._hurtF = true; } else this._hurtF = false;
     if (this.swingN !== this._lastSwing) { this._lastSwing = this.swingN; this.swingT = 6; }
     if (!this.buf[1]) { this.x = s[0]; this.y = s[1]; this.z = s[2]; }

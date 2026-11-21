@@ -335,7 +335,7 @@ const G = {
   buildPresence() {
     const me = this.me; const o = { fm: this.roomArr(), H: this.isHost() ? 1 : 0, uj: this.isHost() && UPJ.files.size ? UPJ.list() : undefined, hs: this.since, nid: this.nid, n: UI.name, sk: UI.skinName || '', pe: UI.persona, j: UI.job, jt: UI.job ? (UI.jobT || 0) : 0, ph: this.phase };
     if (this.phase === 'game' && me) {
-      let fl = 0; if (me.sneaking) fl |= 1; if (me.blocking) fl |= 2; if (me.eff('glowing')) fl |= 4; if (me.hurtTime > 5) fl |= 8; if (me.spectator) fl |= 16; if (me.sprinting) fl |= 32; if (me.fire > 0) fl |= 64; if (G.tick < (me.prot || 0)) fl |= 128; if (me.st.rewind) fl |= 256;
+      let fl = 0; if (me.sneaking) fl |= 1; if (me.blocking) fl |= 2; if (me.eff('glowing')) fl |= 4; if (me.hurtTime > 5) fl |= 8; if (me.spectator) fl |= 16; if (me.sprinting) fl |= 32; if (me.fire > 0) fl |= 64; if (G.tick < (me.prot || 0)) fl |= 128; if (me.st.rewind) fl |= 256; if (!me.alive) fl |= 512;
       o.s = [r1(me.x), r1(me.y), r1(me.z), r1(me.yaw), r1(me.pitch), r1(me.hp), me.maxHp(), fl, me.swing % 100, me.inv[me.sel] ? me.inv[me.sel].id : 0, r1(me.scale), me.off ? me.off.id : 0, me.armorType || 0, me.drawT];
       o.d = me.deaths; o.m = this.mobs.filter(m => m.alive).slice(0, 48).map(m => [+m.id.split(':m')[1], MOB_TYPES.indexOf(m.type), r1(m.x), r1(m.y), r1(m.z), r1(m.yaw), m.hurtTime > 5 ? 1 : 0]);
     }

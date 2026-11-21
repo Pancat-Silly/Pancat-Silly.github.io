@@ -283,7 +283,7 @@ class Player {
       else if (D && D.use === 'shield') block = true;
       else if (!D || !D.use || (D.use === 'skill' && this.cdLeft(D.group) > 0) || (D.use === 'crossbow' && this.cdLeft(D.group) > 0)) { if (this.off && ITEMS[this.off.id].use === 'shield') block = true; }
     }
-    if (!held && this.drawT > 0) { if (this.drawGun) SK.gunFire(this); else SK.shootBow(this, this.drawT); this.drawT = 0; this.prot = 0; }
+    if (!held && this.drawT > 0) { this.prot = 0; if (this.drawGun) SK.gunFire(this); else SK.shootBow(this, this.drawT); this.drawT = 0; }
     if (block && G.tick >= this.shieldOff) { this.blockT++; this.useHeld = true; } else this.blockT = 0;
     this.blocking = this.blockT >= 5;
     this.sprinting = this.sprinting && !this.useHeld;
@@ -336,6 +336,7 @@ class Player {
   }
   die(src) {
     if (SK.bilRevive(this)) return;
+    const hold = (this.st.cutUntil || 0) - G.tick; // 권총 컷씬 victim: dead now, respawn when the 컷씬 ends
     this.hp = 0; const killer = (this.lastAtk && G.tick - this.lastAtk.t < 100) ? this.lastAtk.id : (src.by || null);
     G.onDeath(this, killer, src.type);
     this.deaths++;
@@ -343,6 +344,7 @@ class Player {
     this.effects = {}; this.fire = 0; this.vx = this.vy = this.vz = 0; this.fallDist = 0; this.lastAtk = null; this.blockT = 0; this.drawT = 0; this.st = {};
     this.updAttr();
     if (G.match && this.deaths >= 11) { this.spectator = true; this.alive = true; this.hp = this.maxHp(); if (this === G.me) UI.title('§c탈락', '관전자 모드로 전환되었습니다'); G.checkWin(); return; }
+    if (hold > 0) { this.alive = false; this.st.cutUntil = G.tick + hold; G.after(hold, () => { if (!this.alive && !this.spectator) this.respawn(); }); return; }
     this.respawn();
   }
   refillV4() { const s = this.inv.find(s => s && s.id === 'v4'); if (s) s.count = 3; else this.addItem('v4', 3); }
