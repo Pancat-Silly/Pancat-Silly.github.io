@@ -10,7 +10,7 @@ const RIN = {
     addEventListener('mousemove', e => { if (document.pointerLockElement !== cv || RUI.gui) return; const k = .0022 * RUI.sens; const me = RG.me; me.yaw += e.movementX * k; me.pitch = clamp(me.pitch + e.movementY * k, -1.55, 1.55); });
     addEventListener('wheel', e => { if (e.ctrlKey) { e.preventDefault(); return; } if (RUI.gui || !document.pointerLockElement) return; const me = RG.me; if (me.spectator) { RUI.specNext(e.deltaY > 0 ? 1 : -1); return; } me.sel = (me.sel + (e.deltaY > 0 ? 1 : 8)) % 9; }, { passive: false });
     document.addEventListener('pointerlockchange', () => { if (document.pointerLockElement && (RUI.gui || RUI.paused || RUI.chatOpen)) { document.exitPointerLock(); return; } // a late lock must never hide the cursor over a screen
-      if (!document.pointerLockElement && !RUI.gui && !RUI.chatOpen && !RUI.mobile && RUI.started) RUI.pause(true); });
+      if (!document.pointerLockElement && !RUI.gui && !RUI.chatOpen && !RUI.paused && !RUI.mobile && RUI.started) RUI.pause(true); }); // already in the menu (e.g. 핫바 멀티플레이 설정 opened page 'multi'): don't reset it to the main page
     addEventListener('blur', () => { this.keys = {}; this.lmb = this.rmb = false; });
     addEventListener('message', e => { const m = e.data; if (m && m.site && m.t === 'blur') { this.keys = {}; this.lmb = this.rmb = false; if (document.pointerLockElement) document.exitPointerLock(); } });
   },
