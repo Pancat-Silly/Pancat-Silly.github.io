@@ -516,6 +516,8 @@ const SK = {
     G.fangLines = L.filter(l => l.n < 12);
   },
   // each client resolves fangs against its own player/bots/mobs (no ping error); one hit per cast per target
+  // a swarm (spiders...) touching the fangs together: at most 2 hit sounds per 5 ticks instead of one per mob stacked on top of each other
+  fangMobSnd(m) { if (SK._fsT === undefined || G.tick - SK._fsT >= 5 || G.tick < SK._fsT) { SK._fsT = G.tick; SK._fsN = 0; } if (SK._fsN >= 2) return; SK._fsN++; G.sound('aosonggotnie2b', m); },
   fangTick() {
     SK.fangLineTick();
     const F = G.fangs; if (!F.length) return;
@@ -529,7 +531,7 @@ const SK = {
         if (t.id === f.by || hit.has(t.id) || G.sameTeam(t.id, f.by) || !touch(t, f)) continue;
         const dz0 = t.deaths; if (t.hurt(SK.FANG_DMG, { type: 'magic', by: f.by })) { hit.add(t.id); if (t.deaths === dz0) { t.addEff('slowness', 1, SK.FANG_DEBUFF); t.addEff('weakness', 0, SK.FANG_DEBUFF); } G.sound('aosonggotnie2b', t); }
       }
-      for (const m of G.mobs) { if (!m.alive || m.owner === f.by || hit.has(m.id) || !touch(m, f)) continue; if (m.hurt(SK.FANG_DMG, { type: 'magic', by: f.by, nokb: true })) { hit.add(m.id); G.sound('aosonggotnie2b', m); } }
+      for (const m of G.mobs) { if (!m.alive || m.owner === f.by || hit.has(m.id) || !touch(m, f)) continue; if (m.hurt(SK.FANG_DMG, { type: 'magic', by: f.by, nokb: true })) { hit.add(m.id); SK.fangMobSnd(m); } }
     }
     G.fangs = F.filter(f => G.tick < f.end); if (!G.fangs.length) G.fangHit.clear();
   },
