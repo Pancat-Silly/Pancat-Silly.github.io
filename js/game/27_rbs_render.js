@@ -22,11 +22,12 @@ const RR = {
   boxVis(x0, y0, z0, x1, y1, z1) { const F = this.fr; if (!F) return true; for (const p of F) if (p[0] * (p[0] > 0 ? x1 : x0) + p[1] * (p[1] > 0 ? y1 : y0) + p[2] * (p[2] > 0 ? z1 : z0) + p[3] < 0) return false; return true; },
   chunkVis(k) { const W = RW.w, cx = k % W.cx, cz = Math.floor(k / W.cx) % W.cz, cy = Math.floor(k / (W.cx * W.cz)); const y0 = cy * CH, y1 = y0 + CH;
     const z = this.camZ; if (z >= 0) { const Z = this.ZONES[z]; if (y1 <= Z[0] || y0 >= Z[1]) return false; }
-    const x0 = cx * CH, z0 = cz * CH, e = this.cam.eye; const dx = Math.max(x0 - e.x, 0, e.x - x0 - CH), dy = Math.max(y0 - e.y, 0, e.y - y1), dz = Math.max(z0 - e.z, 0, e.z - z0 - CH); if (dx * dx + dy * dy + dz * dz > this.fogB * this.fogB) return false;
+    const x0 = cx * CH, z0 = cz * CH, e = this.cam.eye;
+    if (z === 0) { const rd = RUI.rdist || 8; if (Math.max(Math.abs(cx - Math.floor(e.x / CH)), Math.abs(cz - Math.floor(e.z / CH)), Math.abs(cy - Math.floor(e.y / CH))) > rd) return false; } // 설정 '경기장 렌더 거리' (chunks around the camera's chunk) const dx = Math.max(x0 - e.x, 0, e.x - x0 - CH), dy = Math.max(y0 - e.y, 0, e.y - y1), dz = Math.max(z0 - e.z, 0, e.z - z0 - CH); if (dx * dx + dy * dy + dz * dz > this.fogB * this.fogB) return false;
     return this.boxVis(x0, y0, z0, x0 + CH, y1, z0 + CH); },
   // particles are only made where this player can see them (same area, close, roughly on screen): a round start breaks the
   // blocks around every spawn at once, which used to build thousands of particles nobody could see
-  fxOk(x, y, z) { if (!this.cam) return true; if (RG.parts.length > 3000 || !this.sameZone(y)) return false; const e = this.cam.eye; if ((x - e.x) ** 2 + (y - e.y) ** 2 + (z - e.z) ** 2 > 32 * 32) return false; const m = 1.5; return this.boxVis(x - m, y - m, z - m, x + m, y + m, z + m); },
+  fxOk(x, y, z) { const pm = RUI.pmax === undefined ? 3000 : RUI.pmax; if (RG.parts.length >= pm) return false; if (!this.cam) return true; if (!this.sameZone(y)) return false; /* 설정 '파티클' = max count */ const e = this.cam.eye; if ((x - e.x) ** 2 + (y - e.y) ** 2 + (z - e.z) ** 2 > 32 * 32) return false; const m = 1.5; return this.boxVis(x - m, y - m, z - m, x + m, y + m, z + m); },
   rebuild(max = 99) { const W = RW.w; let n = 0; for (const k of [...W.dirty]) { if (n++ >= max) break; W.dirty.delete(k); const cx = k % W.cx, cz = Math.floor(k / W.cx) % W.cz, cy = Math.floor(k / (W.cx * W.cz)); this.gfx.upload(k, RMESH.chunk(W, cx, cy, cz)); } },
   // box with a tile per face [S,N,W,E,U,D] (block items, held blocks)
   boxT(b, m, x0, y0, z0, x1, y1, z1, tiles, col = [1, 1, 1], a = 1) {
@@ -106,7 +107,7 @@ const RR = {
     const up = { x: Math.sin(roll) * Math.cos(yaw), y: Math.cos(roll), z: Math.sin(roll) * Math.sin(yaw) };
     const vp = M4.mul(proj, M4.lookAt(eye, { x: eye.x + d.x, y: eye.y + d.y, z: eye.z + d.z }, up)); this.vp = vp; this.W = W; this.H = H; this.proj = proj; this.rayF = { d, up, t: Math.tan(fov * D2R / 2), asp: W / H };
     gl.clearColor(g.sky[0], g.sky[1], g.sky[2], 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    const fogA = nether ? 40 : 90, fogB = nether ? 110 : 220; g.setU(vp, eye, fogA, fogB); g.bind();
+    let fogA = nether ? 40 : 90, fogB = nether ? 110 : 220; if (this.camZ === 0) { fogB = Math.min(fogB, (RUI.rdist || 8) * CH); fogA = Math.min(fogA, fogB * .6); } // arena: fog ends at the render distance g.setU(vp, eye, fogA, fogB); g.bind();
     this.fr = this.planes(vp); this.fogB = fogB; const vis = new Set(); for (const k of g.chunks.keys()) if (this.chunkVis(k)) vis.add(k); const visF = k => vis.has(k); this.visN = vis.size;
     gl.disable(gl.BLEND); gl.depthMask(true); g.drawChunks('o', eye, visF);
     const b = this.bo; b.reset(); const bt = this.bt; bt.reset();

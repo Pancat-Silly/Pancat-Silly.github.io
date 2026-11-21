@@ -1,14 +1,14 @@
 // ===================== Random Block Survival: UI (HUD, chat, containers, menu chest) =====================
 const RUI = {
-  name: '', skin: '', sens: 1, fov: 70, vol: .8, mvol: 1, res: 1, bob: true, musicOn: true, sfxOn: true, gmuc: 0, winSnd: 'sfx_win_yay', lobbyMusic: false, autoFs: true, room: 'main', // BGM / win sound / lobby music choices removed for now (defaults only). room: 기본 멀티 방 이름
+  name: '', skin: '', sens: 1, fov: 70, vol: .8, mvol: 1, res: 1, bob: true, musicOn: true, sfxOn: true, gmuc: 0, winSnd: 'sfx_win_yay', lobbyMusic: false, autoFs: true, room: 'main', rdist: 8, pmax: 3000, sndLim: false, // rdist: 경기장 렌더 거리(청크), pmax: 파티클 최대 개수, sndLim: 같은 소리 제한. BGM / win sound / lobby music choices removed for now (defaults only). room: 기본 멀티 방 이름
   mobile: false, god: false, botAI: true, gui: null, paused: false, chatOpen: false, promptOpen: false, follow: null, followThird: false, hideHud: false, started: false, cursor: null, iconCache: {},
   load() {
     let s = {}; try { s = JSON.parse(localStorage.getItem('rbs_set') || '{}'); } catch (e) { }
     let ap = {}; try { ap = JSON.parse(localStorage.getItem('apvp') || '{}'); } catch (e) { }
     this.name = s.name || ap.name || ('플레이어' + randi(100, 999)); this.skin = s.skin !== undefined ? s.skin : (ap.skin || '');
-    for (const k of ['sens', 'fov', 'vol', 'mvol', 'res', 'bob', 'sfxOn', 'autoFs', 'room']) if (s[k] !== undefined) this[k] = s[k]; if (!this.room) this.room = 'main';
+    for (const k of ['sens', 'fov', 'vol', 'mvol', 'res', 'bob', 'sfxOn', 'autoFs', 'room', 'rdist', 'pmax', 'sndLim']) if (s[k] !== undefined) this[k] = s[k]; if (!this.room) this.room = 'main';
   },
-  save() { try { const o = {}; for (const k of ['name', 'skin', 'sens', 'fov', 'vol', 'mvol', 'res', 'bob', 'musicOn', 'sfxOn', 'gmuc', 'winSnd', 'lobbyMusic', 'autoFs', 'room']) o[k] = this[k]; localStorage.setItem('rbs_set', JSON.stringify(o)); } catch (e) { } },
+  save() { try { const o = {}; for (const k of ['name', 'skin', 'sens', 'fov', 'vol', 'mvol', 'res', 'bob', 'musicOn', 'sfxOn', 'gmuc', 'winSnd', 'lobbyMusic', 'autoFs', 'room', 'rdist', 'pmax', 'sndLim']) o[k] = this[k]; localStorage.setItem('rbs_set', JSON.stringify(o)); } catch (e) { } },
   // ---------- § colour codes ----------
   COL: { 0: '#000', 1: '#00a', 2: '#0a0', 3: '#0aa', 4: '#a00', 5: '#a0a', 6: '#fa0', 7: '#aaa', 8: '#555', 9: '#55f', a: '#5f5', b: '#5ff', c: '#f55', d: '#f5f', e: '#ff5', f: '#fff' },
   fmt(s) { let out = '', col = null, b = false, it = false; const parts = String(s).split('§'); const open = () => { const st = (col ? 'color:' + col + ';' : '') + (b ? 'font-weight:bold;' : '') + (it ? 'font-style:italic;' : ''); return st ? '<span style="' + st + '">' : '<span>'; };
@@ -179,6 +179,10 @@ const RUI = {
       h += R('시야각', 50, 110, 1, this.fov, v => String(Math.round(v)), v => { this.fov = v; });
       const RES = [[1, '기본'], [.75, '낮게 (빠름)'], [.5, '매우 낮게']]; const ri = Math.max(0, RES.findIndex(r => r[0] === this.res));
       h += B('해상도: ' + RES[ri][1], () => { this.res = RES[(ri + 1) % RES.length][0]; this.save(); this.menuDraw(); });
+      h += R('경기장 렌더 거리', 2, 16, 1, this.rdist, v => Math.round(v) + '청크', v => { this.rdist = Math.round(v); }); // arena only: chunks farther than this (around the camera's chunk) are not drawn
+      const PM = [[0, '끔'], [500, '적게'], [3000, '보통'], [10000, '많이']]; const pi = Math.max(0, PM.findIndex(r => r[0] === this.pmax));
+      h += B('파티클: ' + PM[pi][1], () => { this.pmax = PM[(pi + 1) % PM.length][0]; this.save(); this.menuDraw(); }, '', '블록 부수기 · 타격 파티클 최대 개수 (끔 0 / 적게 500 / 보통 3000 / 많이 10000) · 보이는 곳에만 만들어요');
+      h += T('같은 소리 제한', this.sndLim, () => { this.sndLim = !this.sndLim; this.save(); this.menuDraw(); }, '', '같은 효과음이 0.08초 안에 3개 넘게 겹치면 나머지는 안 내요 (경기 시작 때처럼 블록이 한꺼번에 부서질 때)');
       h += T('화면 흔들림', this.bob, () => { this.bob = !this.bob; this.save(); this.menuDraw(); });
       h += T('HUD 숨기기 (F1)', this.hideHud, () => { this.hideHud = !this.hideHud; this.menuDraw(); });
       if (this.mobile) {
