@@ -121,9 +121,10 @@ Object.assign(RUI, {
     e.preventDefault(); this.click(+el.dataset.s, e.button, e.shiftKey);
   },
   guiTouch(e) { const el = e.target.closest && e.target.closest('.rs'); if (!el) return; e.preventDefault(); this._tipHold = true; this.tapTip(el, e.touches[0]); this._tch = { s: +el.dataset.s, t: performance.now() }; this._tlong = setTimeout(() => { if (this._tch) { this.click(this._tch.s, 2, false); this._tch = null; } }, 420); },
-  guiTouchEnd(e) { clearTimeout(this._tlong); this._tipHold = false; $('rbTip').style.display = 'none'; if (this._tch) { const s = this._tch.s; this._tch = null; e.preventDefault(); this.click(s, 0, this.armTap(s)); } else { const t = e.target; if (t.dataset && (t.dataset.en !== undefined || t.dataset.bk)) { e.preventDefault(); this.guiDown({ target: t, button: 0, preventDefault() { } }); } } },
-  // phones: with the sneak button on, tapping armor in the inventory puts it on (like shift-click)
-  armTap(i) { const g = this.gui, S = g && g.S[i]; if (!S || g.type !== 'inv' || !S.inv || !RIN.touch.sneak) return false; const st = S.get(); return !!(st && RIT[st.id] && RIT[st.id].armor); },
+  guiTouchEnd(e) { clearTimeout(this._tlong); this._tipHold = false; $('rbTip').style.display = 'none'; if (this._tch) { const s = this._tch.s; this._tch = null; e.preventDefault(); const dbl = this._lastTap && this._lastTap.s === s && performance.now() - this._lastTap.t < 400; this._lastTap = dbl ? null : { s, t: performance.now() }; this.click(s, 0, false); if (dbl && this.armTap(s)) this.click(s, 0, true); } else { const t = e.target; if (t.dataset && (t.dataset.en !== undefined || t.dataset.bk)) { e.preventDefault(); this.guiDown({ target: t, button: 0, preventDefault() { } }); } } },
+  // phones (no sneak inside the inventory): double-tapping armor puts it on. The 1st tap picks it up, the 2nd puts it back, then it's
+  // shift-moved onto its armor slot (only when that slot is empty, otherwise it just stays where it was)
+  armTap(i) { const g = this.gui, S = g && g.S[i]; if (!S || g.type !== 'inv' || !S.inv || this.cursor) return false; const st = S.get(); return !!(st && RIT[st.id] && RIT[st.id].armor && g.S.some(T => T.arm && !T.get() && T.accept(st))); },
   click(i, btn, shift) {
     const g = this.gui; const S = g.S[i]; if (!S) return; const me = RG.me;
     if (S.act) { S.act(btn, shift); return; }
