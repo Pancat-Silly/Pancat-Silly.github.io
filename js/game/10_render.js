@@ -98,38 +98,40 @@ const R = {
     else if (glowB) glowB.box(hm, -4, 0, -4, 4, 8, 4, [1, 1, 1]);
     else { b.box(hm, -4, 0, -4, 4, 8, 4, tint([.8, .6, .45]), 0, 16); b.box(hm, -4.2, 6, -4.2, 4.2, 8.3, 4.2, tint(helm || [.3, .2, .1])); if (!helm) b.box(hm, -4.2, 5, -4.2, 4.2, 8.3, -2, tint([.3, .2, .1])); }
   },
-  // dude 댄스 frogs: Frog Marauder mesh (js/data/frog.js, tools/mkfrog.py) cut into 6 rigid parts, posed by the shared DANCE clips
+  // dude 댄스 frogs: Frog Marauder mesh (js/data/frog.js, tools/mkfrog.py), skinned to 6 parts (2 parts per vertex) posed by the shared DANCE clips
   frogTex: null, frogM: null, bf: null,
   frogInit() {
     if (this.frogM || typeof FROG === 'undefined') return !!this.frogM;
-    this.frogM = {}; for (const k in FROG.parts) { const Pt = FROG.parts[k], v = Pt.v, n = v.length / 8, a = new Float32Array(n * 8); for (let i = 0; i < n * 8; i++) a[i] = v[i] / ((i % 8) < 6 ? 100 : 10000); this.frogM[k] = { p: Pt.p, v: a, n, i: Pt.i }; }
-    this.bf = new Batch(60000); const im = new Image(); im.onload = () => { this.frogTex = this.gfx.makeTex(im); }; im.src = FROG.tex; return true;
+    const v = FROG.v, n = v.length / 8, a = new Float32Array(n * 8); for (let i = 0; i < n * 8; i++) a[i] = v[i] / ((i % 8) < 6 ? 100 : 10000);
+    const parts = FROG.pn.map(k => { const P = FROG.parts[k], f = P.f; return { k, p: P.p, a: P.a, F: new Float32Array([f[0], f[3], f[6], 0, f[1], f[4], f[7], 0, f[2], f[5], f[8], 0, 0, 0, 0, 1]) }; });
+    this.frogM = { v: a, n, w: FROG.w, i: FROG.i, parts, ix: Object.fromEntries(FROG.pn.map((k, i) => [k, i])) };
+    this.bf = new Batch(60000); this.bf.i = new Uint16Array(60000 * 6); const im = new Image(); im.onload = () => { this.frogTex = this.gfx.makeTex(im); }; im.src = FROG.tex; return true;
   },
-  frogPart(b, m, k) {
-    const P = this.frogM[k], v = P.v, out = b.v, base = b.nv; let o = base * 9; const L = [.32, .86, .4];
-    for (let i = 0; i < P.n; i++) {
-      const j = i * 8, x = v[j], y = v[j + 1], z = v[j + 2];
-      out[o++] = m[0] * x + m[4] * y + m[8] * z + m[12]; out[o++] = m[1] * x + m[5] * y + m[9] * z + m[13]; out[o++] = m[2] * x + m[6] * y + m[10] * z + m[14];
-      out[o++] = v[j + 6]; out[o++] = v[j + 7];
-      const nx = m[0] * v[j + 3] + m[4] * v[j + 4] + m[8] * v[j + 5], ny = m[1] * v[j + 3] + m[5] * v[j + 4] + m[9] * v[j + 5], nz = m[2] * v[j + 3] + m[6] * v[j + 4] + m[10] * v[j + 5], nl = Math.hypot(nx, ny, nz) || 1;
-      const s = .55 + .45 * Math.max(0, (nx * L[0] + ny * L[1] + nz * L[2]) / nl); out[o++] = s; out[o++] = s; out[o++] = s; out[o++] = 1;
-    }
-    const I = b.i, src = P.i; let q = b.ni; for (let i = 0; i < src.length; i++) I[q++] = base + src[i]; b.ni = q; b.nv += P.n;
-  },
-  frogVerts() { let n = 0; for (const k in this.frogM) n += this.frogM[k].n; return n; },
   drawFrog(b, x, y, z, yaw, t, sc) {
-    const k = sc / 16, P = DANCE.pose('gangnam', t), M = this.frogM; let base = M4.T(M4.id(), x, y, z); base = M4.RY(base, -yaw); base = M4.S(base, k, k, k);
+    const k = sc / 16, P = DANCE.pose('gangnam', t), M = this.frogM, pi = M.parts, ix = M.ix; let base = M4.T(M4.id(), x, y, z); base = M4.RY(base, -yaw); base = M4.S(base, k, k, k);
     if (P) { base = M4.RY(base, P.yaw); base = M4.T(base, P.off[0], P.off[1], P.off[2]); }
-    const at = (m, p) => M4.T(m, p[0], p[1], p[2]), R = (m, e) => P ? DANCE.rot(m, e) : m;
-    const bm = R(at(base, M.body.p), P && P.body); this.frogPart(b, bm, 'body');
-    for (const s of ['rleg', 'lleg']) this.frogPart(b, R(at(base, M[s].p), P && P[s]), s);
-    for (const s of ['rarm', 'larm', 'head']) this.frogPart(b, R(at(bm, M[s].p), P && P[s]), s);
+    const at = (m, p) => M4.T(m, p[0], p[1], p[2]), R = (m, e) => P ? DANCE.rot(m, e) : m, pose = {};
+    pose.body = R(at(base, pi[ix.body].p), P && P.body);
+    for (const s of ['rleg', 'lleg']) pose[s] = R(at(base, pi[ix[s]].p), P && P[s]);
+    for (const s of ['rarm', 'larm', 'head']) pose[s] = R(at(pose.body, pi[ix[s]].p), P && P[s]);
+    const W = pi.map(q => { const a = q.a; return M4.T(M4.mul(pose[q.k], q.F), -a[0], -a[1], -a[2]); }); // model space -> world for each part
+    const v = M.v, w = M.w, out = b.v, nv0 = b.nv; let o = nv0 * 9; const L0 = .32, L1 = .86, L2 = .4;
+    for (let i = 0; i < M.n; i++) {
+      const j = i * 8, x0 = v[j], y0 = v[j + 1], z0 = v[j + 2], nx0 = v[j + 3], ny0 = v[j + 4], nz0 = v[j + 5], A = W[w[i * 3]], B = W[w[i * 3 + 1]], wa = w[i * 3 + 2] / 100, wb = 1 - wa;
+      out[o++] = wa * (A[0] * x0 + A[4] * y0 + A[8] * z0 + A[12]) + wb * (B[0] * x0 + B[4] * y0 + B[8] * z0 + B[12]);
+      out[o++] = wa * (A[1] * x0 + A[5] * y0 + A[9] * z0 + A[13]) + wb * (B[1] * x0 + B[5] * y0 + B[9] * z0 + B[13]);
+      out[o++] = wa * (A[2] * x0 + A[6] * y0 + A[10] * z0 + A[14]) + wb * (B[2] * x0 + B[6] * y0 + B[10] * z0 + B[14]);
+      out[o++] = v[j + 6]; out[o++] = v[j + 7];
+      const nx = wa * (A[0] * nx0 + A[4] * ny0 + A[8] * nz0) + wb * (B[0] * nx0 + B[4] * ny0 + B[8] * nz0), ny = wa * (A[1] * nx0 + A[5] * ny0 + A[9] * nz0) + wb * (B[1] * nx0 + B[5] * ny0 + B[9] * nz0), nz = wa * (A[2] * nx0 + A[6] * ny0 + A[10] * nz0) + wb * (B[2] * nx0 + B[6] * ny0 + B[10] * nz0), nl = Math.hypot(nx, ny, nz) || 1;
+      const s = .55 + .45 * Math.max(0, (nx * L0 + ny * L1 + nz * L2) / nl); out[o++] = s; out[o++] = s; out[o++] = s; out[o++] = 1;
+    }
+    const I = b.i, src = M.i; let q = b.ni; for (let i = 0; i < src.length; i++) I[q++] = nv0 + src[i]; b.ni = q; b.nv += M.n;
   },
   drawFrogs() {
-    if (!G.dancers.size || !this.frogInit() || !this.frogTex) return; const b = this.bf, per = this.frogVerts(), now = performance.now(); b.reset();
+    if (!G.dancers.size || !this.frogInit() || !this.frogTex) return; const b = this.bf, M = this.frogM, now = performance.now(); b.reset();
     const flush = () => { if (!b.ni) return; this.gfx.bind(this.frogTex); this.gfx.drawBatch(b); this.gfx.bind(); b.reset(); };
     for (const d of G.dancers.values()) for (const f of d.frogs) {
-      if (b.nv + per > b.cap) flush();
+      if (b.nv + M.n > b.cap || b.ni + M.i.length > b.i.length) flush(); // vertex AND index room (indices overflowed with many frogs)
       const pop = clamp((now - f.s0) / 250, 0, 1); this.drawFrog(b, f.x, f.y, f.z, f.yaw, (now - d.t0) / 1000, .8 * (pop < 1 ? pop * (1.15 - .15 * pop) : 1));
     }
     flush();
@@ -198,8 +200,8 @@ const R = {
       const ft = Math.min(5, (this.dt || 16.7) / 50); const bob = me.onGround && !me.spectator ? Math.hypot(me.x - me.px, me.z - me.pz) / me.scale : 0; this.bobP = (this.bobP || 0) + bob * 0.6 * Math.PI * ft; this.bobA = (this.bobA || 0) + (Math.min(1, bob * 5) - (this.bobA || 0)) * (1 - Math.pow(0.6, ft));
       if (!this.third && UI.bob) { eye.y += Math.abs(Math.cos(this.bobP)) * .07 * this.bobA * me.scale; }
       const dd = G.dancers.get(me.id);
-      if (dd) { // dude 댄스: camera in front of the dancer (4 ahead of the back of the head, 3 up), facing them
-        const f = lookVec(dd.yaw, 0), head = { x: eye.x - f.x * .25, y: eye.y + .1, z: eye.z - f.z * .25 }, dir = { x: f.x * 4, y: 3, z: f.z * 4 }, L = 5;
+      if (dd) { // dude 댄스: like the F5 front view (facing the dancer), a bit farther back (5.5) and higher (1.6)
+        const f = lookVec(dd.yaw, 0), head = { x: eye.x, y: eye.y, z: eye.z }, dir = { x: f.x * 5.5, y: 1.6, z: f.z * 5.5 }, L = Math.hypot(5.5, 1.6);
         const u = { x: dir.x / L, y: dir.y / L, z: dir.z / L }, h = G.world.ray(head, u, L), dl = h ? Math.max(.5, h.t - .2) : L;
         eye = { x: head.x + u.x * dl, y: head.y + u.y * dl, z: head.z + u.z * dl }; yaw = yawTo(head.x - eye.x, head.z - eye.z); pitch = Math.atan2(eye.y - head.y + .4, Math.hypot(head.x - eye.x, head.z - eye.z));
       } else if (this.third) {
