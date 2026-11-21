@@ -311,6 +311,6 @@ function devDownload() { if (window.SITE_MULTI) { devToolHTMLMulti().then(html =
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([devToolHTML()], { type: 'text/html;charset=utf-8' })); a.download = 'apvp4_devtool.html'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 3000); }
 function DEV_BUILTIN() {
   const L = [];
-  for (const id of JOB_ORDER) { const J = JOBS[id]; if (!J || J.custom) continue; L.push('- ' + J.name + ' (' + id + ', 체력 ' + (id === 'slime' || id === 'dude' ? 40 : 20) + '): ' + J.kit.filter(Boolean).map(k => { const D = ITEMS[k[0]]; return D.name + (D.dmg ? ' 공격력 ' + D.dmg + '/공속 ' + D.spd : '') + (D.cd ? ' 쿨 ' + D.cd + '초' : '') + (D.lore ? ' — ' + D.lore : ''); }).join(' | ')); }
+  for (const id of JOB_ORDER) { const J = JOBS[id]; if (!J || J.custom) continue; L.push('- ' + J.name + ' (' + id + ', 체력 ' + (J.maxHp || 20) + '): ' + J.kit.filter(Boolean).map(k => { const D = ITEMS[k[0]]; return D.name + (D.dmg ? ' 공격력 ' + D.dmg + '/공속 ' + D.spd : '') + (D.cd ? ' 쿨 ' + D.cd + '초' : '') + (D.lore ? ' — ' + D.lore : ''); }).join(' | ')); }
   return L.join('\n');
 }

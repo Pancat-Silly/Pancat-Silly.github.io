@@ -233,8 +233,8 @@ const R = {
       const ft = Math.min(5, (this.dt || 16.7) / 50); const bob = me.onGround && !me.spectator ? Math.hypot(me.x - me.px, me.z - me.pz) / me.scale : 0; this.bobP = (this.bobP || 0) + bob * 0.6 * Math.PI * ft; this.bobA = (this.bobA || 0) + (Math.min(1, bob * 5) - (this.bobA || 0)) * (1 - Math.pow(0.6, ft));
       if (!this.third && UI.bob) { eye.y += Math.abs(Math.cos(this.bobP)) * .07 * this.bobA * me.scale; }
       const dd = G.dancers.get(me.id);
-      if (dd) { // dude 댄스: behind the dancer (back of the head), 5.5 back and 1.6 up, looking at them
-        const f = lookVec(dd.yaw, 0), head = { x: eye.x, y: eye.y, z: eye.z }, dir = { x: -f.x * 5.5, y: 1.6, z: -f.z * 5.5 }, L = Math.hypot(5.5, 1.6);
+      if (dd) { // dude 댄스: orbit camera, 5.5 behind (along the mouse look) and 1.6 up, looking at the dancer. Starts behind the head (yaw = dance yaw)
+        const f = lookVec(me.yaw, me.pitch), head = { x: eye.x, y: eye.y, z: eye.z }, dir = { x: -f.x * 5.5, y: -f.y * 5.5 + 1.6, z: -f.z * 5.5 }, L = Math.hypot(dir.x, dir.y, dir.z) || 1;
         const u = { x: dir.x / L, y: dir.y / L, z: dir.z / L }, h = G.world.ray(head, u, L), dl = h ? Math.max(.5, h.t - .2) : L;
         eye = { x: head.x + u.x * dl, y: head.y + u.y * dl, z: head.z + u.z * dl }; yaw = yawTo(head.x - eye.x, head.z - eye.z); pitch = Math.atan2(eye.y - head.y + .4, Math.hypot(head.x - eye.x, head.z - eye.z));
       } else if (this.third) {

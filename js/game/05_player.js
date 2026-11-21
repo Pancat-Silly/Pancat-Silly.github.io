@@ -56,7 +56,7 @@ class Player {
   // slime: sprint-jump boost and air control scale with body size like every other slime stat (a 0.5-size slime no longer flies 2x as far as a normal player)
   sizeK() { return this.job === 'slime' ? this.scale : 1; }
   clearEff(n) { if (n) delete this.effects[n]; else this.effects = {}; }
-  maxHp() { const J = JOBS[this.job]; const base = this.st && this.st.awaken ? 12 : J && J.maxHp ? J.maxHp : this.job === 'slime' || this.job === 'dude' ? 40 : 20; return base + 4 * this.eff('health_boost') + (this.st && this.st.srHp || 0) + (this.st && this.st.modHp || 0); }
+  maxHp() { const J = JOBS[this.job]; const base = this.st && this.st.awaken ? 12 : J && J.maxHp ? J.maxHp : 20; return base + 4 * this.eff('health_boost') + (this.st && this.st.srHp || 0) + (this.st && this.st.modHp || 0); }
   cdLeft(g) { return Math.max(0, (this.cds[g] || 0) - G.tick); }
   setCd(g, sec) { this.cds[g] = G.tick + Math.round(sec * 20); this.cdLen[g] = Math.round(sec * 20); }
   updAttr() {
@@ -279,7 +279,7 @@ class Player {
     this.useHeld = false; let block = false;
     if (held) {
       if (D && D.use === 'bow') { if (this.count('arrow') > 0) { this.drawT++; this.useHeld = true; this.drawGun = false; } }
-      else if (D && D.use === 'gun') { if (this.count('dude_bullet') > 0 && !this.st.dance && !this.st.cutUntil) { this.drawT++; this.useHeld = true; this.drawGun = true; } }
+      else if (D && D.use === 'gun') { if (this.count('dude_bullet') > 0 && !this.st.dance && !(this.st.cutUntil > G.tick)) { this.drawT++; this.useHeld = true; this.drawGun = true; } }
       else if (D && D.use === 'shield') block = true;
       else if (!D || !D.use || (D.use === 'skill' && this.cdLeft(D.group) > 0) || (D.use === 'crossbow' && this.cdLeft(D.group) > 0)) { if (this.off && ITEMS[this.off.id].use === 'shield') block = true; }
     }

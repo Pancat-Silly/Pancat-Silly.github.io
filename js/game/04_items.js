@@ -29,6 +29,7 @@ const ITEMS = {
   xbow3: { digit: '3', name: '3', icon: '3️⃣', use: 'crossbow', cd: 5, group: 'xbow3', col: [.45, .3, .2], lore: '다중 발사 · 착탄 시 폭발 8 피해' },
   frost: { name: '서리 검', icon: '❄️', dmg: 6, spd: 1.6, sword: true, frost: true, col: [.6, .85, 1], lore: '얼빙 전용 · 공격력 6 · 완충 공격 시 구속 I 1초' },
   icejail: { name: '얼음 감옥', icon: '🧊', use: 'skill', cd: 10, group: 'ice', cast: 'icejail', lore: '15칸 내 가장 가까운 플레이어 가두기 · 감옥 안: 나는 힘 I, 적은 나약함 I' },
+  stone_sword: { name: '돌 검', icon: '🗡️', dmg: 5, spd: 1.6, sword: true, col: [.55, .55, .55] },
   iron_sword: { name: '철 검', icon: '🗡️', dmg: 6, spd: 1.6, sword: true, col: [.85, .85, .85] },
   bow: { name: '활', icon: '🏹', use: 'bow', col: [.5, .35, .2] },
   arrow: { name: '화살', icon: '➶', stack: true },
@@ -96,14 +97,14 @@ const JOBS = {
   randomizer: { name: '랜더마이져', icon: '🎲', desc: '랜덤형 · 철 검 + 활 + 럭키 박스', kit: [['iron_sword'], ['bow'], ['luckybox']] },
   suno: { name: '수노', icon: '💿', desc: '되감기형 · wait / 공부좀 하고옴', kit: [['create'], ['wait'], ['study']] },
   mefab3: { name: '그랩', icon: '⛓️', desc: '끌어오기형 · 웅크려 차징', kit: [['stick_mace'], ['grab'], ['grabex']] },
-  slime: { name: '슬라임', icon: '🟦', desc: 'HP 연동 스케일형 · 최대 HP 40', kit: [['slime_axe'], ['cutter']], maxHp: 40 }, // no armor / shield (removed on request)
+  slime: { name: '슬라임', icon: '🟦', desc: 'HP 연동 스케일형 · 최대 HP 20', kit: [['slime_axe'], ['cutter']], maxHp: 20 }, // no armor / shield (removed on request)
   viggle: { name: '비글', icon: '🚀', desc: '파괴형 · 철거 해머 + 드론 / 다 부셔버려 / 360도 회전', kit: [['hammer'], ['drone'], ['destroy'], ['spinpot']] },
   seryong: { name: '세룡이', icon: '🐷', desc: '미완성 직업 · 근접형 · 성진이 낙하 + 레이저 스턴 + 귀멸의 감옥', kit: [['sr_sword'], ['sr_pig'], ['sr_laser'], ['sr_domain']], wip: true },
   ai: { name: 'Ai', icon: '🤖', desc: '미완성 직업 · 해킹형 · 프롬프트 + 능력 훔치기 레이저 + 순간이동', kit: [['ai_prompt'], ['ai_glasses'], ['big_data']], wip: true },
   summoner: { name: '소환사', icon: '🐕', desc: '미완성 직업 · 지팡이 + 개 2마리 / 송곳니(직선·원형)', kit: [['sstaff'], ['dogs'], ['fangl'], ['fangc']], wip: true },
   bilcorner: { name: '창찬', icon: '📱', desc: '미완성 직업 · 스킬마다 팔로워↑ · 100명이면 자멸 · 50% 쉰팝 각성', kit: [['chang'], ['gather'], ['bdash'], ['squid'], ['drug']], wip: true },
   dude: { name: 'dude', icon: '🎣', desc: '미완성 직업 · 철퇴 + 낚시 크레이트', kit: [['mace'], ['rodwood']], maxHp: 40, wip: true, vars: [['dude_new', 'New'], ['dude', 'old']] },
-  dude_new: { name: 'dude', icon: '🎣', desc: '미완성 직업 · New · 댄스 (개구리를 모아 버프) + 권총', kit: [['dance'], ['pistol']], wip: true, varOf: 'dude' }, // New variant of dude: picked on the dude card (not in JOB_ORDER)
+  dude_new: { name: 'dude', icon: '🎣', desc: '미완성 직업 · New · 댄스 (개구리를 모아 버프) + 권총', kit: [['stone_sword'], ['dance'], ['pistol']], maxHp: 40, wip: true, varOf: 'dude' }, // New variant of dude: picked on the dude card (not in JOB_ORDER)
 };
 const JOB_ORDER = ['rusher', 'policer', 'spider', '360', 'ice_wizard', 'randomizer', 'suno', 'mefab3', 'slime', 'viggle', 'summoner', 'seryong', 'ai', 'bilcorner', 'dude'];
 function mkSlot(id, count = 1) { return { id, count }; }

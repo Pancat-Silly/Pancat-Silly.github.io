@@ -16,10 +16,11 @@ const SK = {
     if (p.st.grab) SK.grabTick(p);
   },
   envTick(p) {
-    const W = G.world; const under = W.get(Math.floor(p.x), Math.floor(p.y - 0.5), Math.floor(p.z));
+    const W = G.world, fx = Math.floor(p.x), fy = Math.floor(p.y - 0.5), fz = Math.floor(p.z); const under = W.get(fx, fy, fz);
     if (under === 37 && p.onGround) { p.yaw += 10 * D2R; if (p === G.me) AU.loop('360song', true); p._spin = true; }
     else if (p._spin) { p._spin = false; if (p === G.me) AU.loop('360song', false); }
-    p.onPad = BL[under].pad && p.onGround ? BL[under].pad : null;
+    const pad = BL[under].pad, P = pad && PAD_POS[pad]; // only the 2x2 spawn pads, not every block of that colored concrete in the map
+    p.onPad = P && p.onGround && fy === P[1] - 1 && Math.abs(fx - P[0]) <= 1 && Math.abs(fz - P[2]) <= 1 ? pad : null;
   },
   onDeath(p) { if (p === G.me) AU.loop('360song', false); SK.danceEnd(p, false); },
   // ---------- rusher ----------
@@ -348,7 +349,7 @@ const SK = {
     p.actionbar('§a댄스 시작! §7다시 누르면 그만두고 버프를 받아요'); return 'nocd';
   },
   danceTick(p) {
-    const d = p.st.dance; p.yaw = d.yaw; const a = G.tick - d.t;
+    const d = p.st.dance; const a = G.tick - d.t; // the body keeps facing d.yaw (G.dancers); p.yaw is free for the orbit camera
     if (a > 0 && a % 20 === 0 && d.n < SK.DANCE_MAX) {
       for (let k = 0; k < 8; k++) { // a random free spot on the ground around the dancer
         const ang = Math.random() * Math.PI * 2, r = rand(2, 5.5), x = p.x + Math.cos(ang) * r, z = p.z + Math.sin(ang) * r, gy = SK.fangY(x, p.y + 1, z);
@@ -375,6 +376,7 @@ const SK = {
   CUT_T: [0.977, 0.088, 1.167],
   gunFire(p) {
     if (p.count('dude_bullet') < 1) return; p.take('dude_bullet', 1);
+    if (p.st.aiSteal && p.st.aiSteal.ids.pistol !== undefined) SK.aiAfterUse(p, p.inv.find(s => s && s.id === 'pistol'), true); // Ai: stolen 권총 is one-use
     const o = { x: p.x, y: p.y + p.eye - .1, z: p.z }, d = lookVec(p.yaw, p.pitch), MAX = 80; const wall = G.world.ray(o, d, MAX, B => B.solid); let lim = wall ? wall.t : MAX, hit = null;
     for (const t of otherPlayers(p, MAX + 2)) { const h = rayAABB(o, d, t, lim, .05); if (h !== null && h < lim) { lim = h; hit = t; } }
     const e = { x: o.x + d.x * lim, y: o.y + d.y * lim, z: o.z + d.z * lim };
@@ -427,11 +429,11 @@ const SK = {
     const last = (p.st.aiLast || (p.st.aiLast = {}))[t.id]; if (last !== undefined && G.tick - last < 600) return fail('§c[ai 안경] ' + t.name + ' 다시 훔치기까지 ' + Math.ceil((600 - (G.tick - last)) / 20) + '초');
     // what the target has: its real inventory (bots / me) or, for other players, its job kit
     const src = t.inv ? t.inv.slice(1).map(s => s && s.id) : ((JOBS[t.job] || {}).kit || []).slice(1).map(k => k && k[0]);
-    const got = [...new Set(src.filter(id => id && ITEMS[id] && (ITEMS[id].use === 'skill' || ITEMS[id].use === 'crossbow') && !SK.AI_BASE.has(id) && !p.inv.some(s => s && s.id === id)))];
+    const got = [...new Set(src.filter(id => id && ITEMS[id] && (ITEMS[id].use === 'skill' || ITEMS[id].use === 'crossbow' || ITEMS[id].use === 'gun') && !SK.AI_BASE.has(id) && !p.inv.some(s => s && s.id === id)))];
     if (!got.length) return fail('§7[ai 안경] ' + t.name + '에게 훔칠 능력이 없어요');
     p.st.aiLast[t.id] = G.tick; const ids = {};
     const gi = p.inv.findIndex(s => s && s.id === 'ai_glasses'); if (gi >= 0) p.inv[gi] = null; // glasses leave while the stolen skills are out
-    for (const id of got) { const i = gi >= 0 && !p.inv[gi] ? gi : p.inv.findIndex(s => !s); if (i < 0) break; p.inv[i] = mkSlot(id, 1); ids[id] = 0; if (ITEMS[id].group) delete p.cds[ITEMS[id].group]; }
+    for (const id of got) { const i = gi >= 0 && !p.inv[gi] ? gi : p.inv.findIndex(s => !s); if (i < 0) break; p.inv[i] = mkSlot(id, 1); ids[id] = 0; if (ITEMS[id].group) delete p.cds[ITEMS[id].group]; if (ITEMS[id].use === 'gun') p.addItem('dude_bullet', 1); } // a stolen 권총 comes with one bullet
     p.st.aiSteal = { ids };
     G.particles('glow', p.x, p.y + 1, p.z, 20); G.particles('poof', t.x, t.y + 1, t.z, 10);
     p.actionbar && p.actionbar('§a[ai 안경] ' + t.name + '의 능력 ' + Object.keys(ids).length + '개를 1회용으로 가져왔어요!');
@@ -440,6 +442,7 @@ const SK = {
   // after using a stolen skill: success = used up; a failed use (condition not met) counts, and the 3rd failed try uses it up too
   aiAfterUse(p, slot, ok) {
     const S = p.st.aiSteal; if (!S || !slot || S.ids[slot.id] === undefined) return;
+    if (slot.id === 'dance' && p.st.dance) return; // stolen 댄스: used up when the dance stops, not when it starts
     const failed = ok === false || (ok === 'nocd' && slot.id === 'grab');
     if (failed) { S.ids[slot.id]++; if (S.ids[slot.id] < 3) { p.actionbar && p.actionbar('§7[ai 안경] 사용 실패 ' + S.ids[slot.id] + '/3 — 3번 실패하면 사용한 걸로 쳐요'); return; } }
     const i = p.inv.indexOf(slot); if (i >= 0) p.inv[i] = null; delete S.ids[slot.id];
