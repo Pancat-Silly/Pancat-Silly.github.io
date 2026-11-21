@@ -8,7 +8,8 @@ const RIN = {
     addEventListener('mouseup', e => { if (e.button === 0) this.lmb = false; if (e.button === 2) this.rmb = false; });
     addEventListener('contextmenu', e => { const t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return; e.preventDefault(); }); // right click that opens a menu (핫바 멀티플레이 설정) lands on the menu, not the canvas
     addEventListener('mousemove', e => { if (document.pointerLockElement !== cv || RUI.gui) return; const k = .0022 * RUI.sens; const me = RG.me; me.yaw += e.movementX * k; me.pitch = clamp(me.pitch + e.movementY * k, -1.55, 1.55); });
-    addEventListener('wheel', e => { if (e.ctrlKey) { e.preventDefault(); return; } if (RUI.gui || !document.pointerLockElement) return; const me = RG.me; if (me.spectator) { RUI.specNext(e.deltaY > 0 ? 1 : -1); return; } me.sel = (me.sel + (e.deltaY > 0 ? 1 : 8)) % 9; }, { passive: false });
+    addEventListener('wheel', e => { if (e.ctrlKey) e.preventDefault(); // Ctrl+wheel must not zoom the page, but still scrolls the hotbar (Ctrl = sprint, like 4중인격)
+      if (RUI.gui || !document.pointerLockElement) return; const me = RG.me; if (me.spectator) { RUI.specNext(e.deltaY > 0 ? 1 : -1); return; } me.sel = (me.sel + (e.deltaY > 0 ? 1 : 8)) % 9; }, { passive: false });
     document.addEventListener('pointerlockchange', () => { if (document.pointerLockElement && (RUI.gui || RUI.paused || RUI.chatOpen)) { document.exitPointerLock(); return; } // a late lock must never hide the cursor over a screen
       if (!document.pointerLockElement && !RUI.gui && !RUI.chatOpen && !RUI.paused && !RUI.mobile && RUI.started) RUI.pause(true); }); // already in the menu (e.g. 핫바 멀티플레이 설정 opened page 'multi'): don't reset it to the main page
     addEventListener('blur', () => { this.keys = {}; this.lmb = this.rmb = false; });
