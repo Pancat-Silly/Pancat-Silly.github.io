@@ -257,7 +257,7 @@ const SK = {
   BIL_SKILLS: new Set(['gather', 'bdash', 'squid', 'harder', 'drug']), // only these grow followers
   addFollowers(p, n) {
     if (!n) { p.st.folU = (p.st.folU || 0) + 1; n = Math.round(6.25 * p.st.folU) - Math.round(6.25 * (p.st.folU - 1)); } // 16 skill uses = exactly 100
-    p.st.fol = (p.st.fol || 0) + n;
+    p.st.fol = (p.st.fol || 0) + n; if (p === G.me) UI.folPop(n);
     if (p.st.fol >= 100 && !p.st.follow100 && !p.st.awaken) { p.st.follow100 = true; p.st.dotT = 0; p.title('§c팔로워 100명 찍으면 자살한다', '', { fi: 5, st: 50, fo: 15 }); G.sound('chang_9b', p); }
   },
   bilTick(p) { // followers +1~2 every second; at 100: 1 heart per second until death (ignores armor and resistance)

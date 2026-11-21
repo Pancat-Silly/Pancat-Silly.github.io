@@ -260,6 +260,12 @@ const UI = {
   // ---------- HUD ----------
   chat(t, user) { const d = document.createElement('div'); d.innerHTML = user ? mcfmt(t.split('§f> ')[0] + '§f> ') + esc(t.split('§f> ').slice(1).join('§f> ')) : mcfmt(t); d.dataset.t = performance.now(); $('chat').appendChild(d); while ($('chat').children.length > 8) $('chat').firstChild.remove(); },
   title(t, s, o = {}) { const fi = (o.fi ?? 10) * 50, st = (o.st ?? 70) * 50, fo = (o.fo ?? 20) * 50; this.titleS = { t0: performance.now(), fi, st, fo }; $('tt').innerHTML = mcfmt(t || ''); $('ts').innerHTML = mcfmt(s || ''); },
+  folPop(n) { // 창찬: "+n 팔로워" at a random spot on screen, rising and fading out
+    const hud = $('hud'); if (!hud || hud.querySelectorAll('.folpop').length > 30) return;
+    const e = document.createElement('div'); e.className = 'folpop'; e.textContent = '+' + n + ' 팔로워';
+    e.style.left = (8 + Math.random() * 78) + '%'; e.style.top = (15 + Math.random() * 60) + '%';
+    hud.appendChild(e); setTimeout(() => e.remove(), 1300);
+  },
   actionbar(t) { $('actionbar').innerHTML = mcfmt(t); this.abS = performance.now(); this._abArmed = false; },
   hurtFlash() { const h = $('hurt'); h.style.transition = 'none'; h.style.opacity = .55; requestAnimationFrame(() => { h.style.transition = 'opacity .5s'; h.style.opacity = 0; }); },
   buildHotbar() {
