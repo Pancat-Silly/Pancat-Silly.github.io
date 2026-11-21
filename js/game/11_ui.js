@@ -348,7 +348,7 @@ const UI = {
   tags() {
     let n = 0; const wrap = $('tags');
     for (const p of G.players()) { // job above every head; hp + bar with the 체력 표시 setting
-      if (p === G.me || p.spectator || !p.alive) continue; const sc = p.scale || 1; const hp = p.local ? p.hp : p.hp; const mx = p.local ? p.maxHp() : p.maxHp;
+      if (p === G.me || p.spectator) continue; const sc = p.scale || 1; const hp = p.local ? p.hp : p.hp; const mx = p.local ? p.maxHp() : p.maxHp;
       const pr = R.project(p.x, p.y + p.h + .35 * sc, p.z); if (!pr || pr.d > 48) continue;
       const glow = p.local ? p.eff('glowing') : p.glowing;
       if (!glow) { const e = G.camPos; const d = { x: p.x - e.x, y: p.y + p.h - e.y, z: p.z - e.z }; const l = Math.hypot(d.x, d.y, d.z); if (G.world.ray(e, { x: d.x / l, y: d.y / l, z: d.z / l }, l - .3)) continue; }

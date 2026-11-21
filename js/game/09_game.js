@@ -217,7 +217,9 @@ const G = {
   },
   onDeath(p, killer, type) {
     const pos = { x: r1(p.x), y: r1(p.y), z: r1(p.z) }; this.deathMsg(p.id, killer, type, pos); NET.emit({ k: 'death', v: p.id, by: killer, c: type, p: [pos.x, pos.y, pos.z] });
-    this.particles('poof', p.x, p.y + 1, p.z, 12); AU.sfx('death', p);
+    const hold = (p.st.cutUntil || 0) - this.tick; // 권총 컷씬 victim: still looks alive until the 컷씬 ends -> poof then
+    if (hold > 0) this.after(hold, () => { this.particles('poof', p.x, p.y + 1, p.z, 12); AU.sfx('death', p); });
+    else { this.particles('poof', p.x, p.y + 1, p.z, 12); AU.sfx('death', p); }
     if (p === this.me) { UI.hurtFlash(); if (UI.deathMode !== 'hide') UI.chat('§7사망 ' + (p.deaths + 1) + '회' + (this.match ? ' (11번째 사망 시 탈락)' : '')); }
     this.after(1, () => this.checkWin());
   },
