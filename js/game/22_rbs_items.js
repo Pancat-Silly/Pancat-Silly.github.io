@@ -25,7 +25,7 @@ function rItem(id, o) { RIT[id] = Object.assign({ id, name: id, stack: 64 }, o);
   // menu items (the original pack replaced minecart / painting / saddle / brown dye icons with these)
   rItem('menu_ready', { name: '§f§lReady', stack: 1, img: 'ready', menu: 'ready' }); rItem('menu_settings', { name: '§c§l설정', stack: 1, img: 'settings', menu: 'settings' }); rItem('menu_playground', { name: '§a§l놀이터', stack: 1, img: 'playground', menu: 'playground' });
   rItem('menu_spec', { name: '§b§l관전하기', stack: 1, tex: 'item/ender_eye', menu: 'spec' }); rItem('menu_host', { name: '§6§l호스트 설정', stack: 1, block: 'crafting_table', menu: 'host' }); rItem('menu_more', { name: '§e§l메뉴', stack: 1, block: 'chest|s', menu: 'more' }); rItem('menu_help', { name: '도움말', stack: 1, img: 'help' });
-  rItem('menu_multi', { name: '§b§l멀티플레이', stack: 1, tex: 'item/name_tag', menu: 'multi' });
+  rItem('menu_multi', { name: '§b§l멀티플레이 설정', stack: 1, tex: 'item/name_tag', menu: 'multi' });
   // blocks that exist as items
   const BI = ['stone', 'cobblestone', 'mossy_cobblestone', 'dirt', 'gravel', 'sand', 'oak_planks', 'birch_planks', 'spruce_planks', 'dark_oak_planks', 'oak_leaves', 'iron_ore', 'gold_ore', 'diamond_ore', 'lapis_ore', 'redstone_ore', 'coal_ore',
     'bookshelf', 'crafting_table', 'glass', 'diamond_block', 'iron_block', 'gold_block', 'lapis_block', 'coal_block', 'redstone_block', 'enchanting_table', 'stone_bricks', 'cracked_stone_bricks', 'netherrack', 'nether_bricks', 'glowstone', 'magma_block', 'ancient_debris', 'smooth_stone', 'tnt'];

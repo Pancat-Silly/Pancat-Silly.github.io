@@ -85,6 +85,9 @@ const DESK = {
     // clicking into a game iframe doesn't bubble to us: the top window blurs and activeElement becomes that iframe
     addEventListener('blur', () => setTimeout(() => { const f = document.activeElement; if (f && f.tagName === 'IFRAME') { const w = Object.values(this.wins).find(W => W.frame === f); if (w) this.focus(w.id); } }, 0));
     addEventListener('message', e => this.onMsg(e));
+    // 자동 전체화면 (PC): any click on the desktop itself also goes browser-fullscreen (game windows ask through {t:'fs', auto:1})
+    // skipped on the controls that toggle fullscreen / the setting themselves
+    document.addEventListener('mousedown', e => { if (this.mobile || !SITE.autoFs() || document.fullscreenElement) return; const t = e.target; if (!t.closest || t.closest('#dkExit, #dkStartMenu [data-a="fs"], #setFs')) return; const lb = t.closest('label'); if (lb && lb.querySelector('#setFs')) return; this.goFs(false); }, true);
     const tick = () => { const n = new Date(); $('dkClock').innerHTML = n.toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' }) + '<br><small>' + n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0') + '-' + String(n.getDate()).padStart(2, '0') + '</small>'; };
     tick(); setInterval(tick, 5000);
     this.sync();
@@ -224,7 +227,7 @@ DESK.addApp({ id: 'settings', icon: '⚙️', label: '설정', title: '설정', 
       + '<label><input type="checkbox" id="setP2P"' + (!p || p.allow !== false ? ' checked' : '') + '> P2P 멀티플레이 허용 <small>게임 창을 새로 열 때부터 적용돼요. 열려 있는 게임은 게임 안 설정에서 바꿔요</small></label>'
       + '<label><input type="checkbox" id="setAsk"' + (!p || !p.remember ? ' checked' : '') + '> 게임을 열 때마다 허용할지 물어보기</label>'
       + '<h3>🖥️ 화면</h3>'
-      + '<label><input type="checkbox" id="setFs"' + (SITE.autoFs() ? ' checked' : '') + '> 자동 전체화면 <small>게임 화면을 클릭하면 브라우저를 전체화면으로 바꿔요 (게임 창 크기는 그대로 · PC)</small></label>'
+      + '<label><input type="checkbox" id="setFs"' + (SITE.autoFs() ? ' checked' : '') + '> 자동 전체화면 <small>바탕화면이나 게임 화면을 클릭하면 브라우저를 전체화면으로 바꿔요 (게임 창 크기는 그대로 · PC)</small></label>'
       + '<h3>🖼️ 바탕화면 그림</h3><div class="row"><label class="dkbtn">사진 고르기<input type="file" id="setWallF" accept="image/*" style="display:none"></label><button class="dkbtn" id="setWallR">기본 그림으로</button></div>'
       + '<h3>🪟 창 위치</h3><div class="row"><button class="dkbtn" id="setWinR">모든 창 위치 · 크기 초기화</button></div>'
       + '<p class="dkhint">게임 아이콘을 ' + (DESK.mobile ? '탭' : '더블클릭') + '하면 창으로 열려요. 게임 창 제목줄의 ⛶ 로 꽉 찬 화면을 쓸 수 있어요.</p>';

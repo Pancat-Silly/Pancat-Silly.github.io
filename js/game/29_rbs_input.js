@@ -6,7 +6,7 @@ const RIN = {
     addEventListener('keydown', e => this.key(e, true)); addEventListener('keyup', e => this.key(e, false));
     cv.addEventListener('mousedown', e => { RAU.init(); if (RUI.gui || RUI.paused) return; if (!document.pointerLockElement && !RUI.mobile) { this.lock(); return; } if (e.button === 0) { this.lmb = true; this.atkQ++; } if (e.button === 2) { this.rmb = true; this.useQ++; } if (e.button === 1) this.pick(); });
     addEventListener('mouseup', e => { if (e.button === 0) this.lmb = false; if (e.button === 2) this.rmb = false; });
-    cv.addEventListener('contextmenu', e => e.preventDefault());
+    addEventListener('contextmenu', e => { const t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return; e.preventDefault(); }); // right click that opens a menu (핫바 멀티플레이 설정) lands on the menu, not the canvas
     addEventListener('mousemove', e => { if (document.pointerLockElement !== cv || RUI.gui) return; const k = .0022 * RUI.sens; const me = RG.me; me.yaw += e.movementX * k; me.pitch = clamp(me.pitch + e.movementY * k, -1.55, 1.55); });
     addEventListener('wheel', e => { if (e.ctrlKey) { e.preventDefault(); return; } if (RUI.gui || !document.pointerLockElement) return; const me = RG.me; if (me.spectator) { RUI.specNext(e.deltaY > 0 ? 1 : -1); return; } me.sel = (me.sel + (e.deltaY > 0 ? 1 : 8)) % 9; }, { passive: false });
     document.addEventListener('pointerlockchange', () => { if (document.pointerLockElement && (RUI.gui || RUI.paused || RUI.chatOpen)) { document.exitPointerLock(); return; } // a late lock must never hide the cursor over a screen
@@ -17,6 +17,7 @@ const RIN = {
   lock() { const cv = $('rcv'); try { const p = cv.requestPointerLock && cv.requestPointerLock(); if (p && p.catch) p.catch(() => { }); } catch (e) { } if (!RUI.mobile && SITE.autoFs()) SITE.toParent({ t: 'fs', lock: true, auto: 1 }); }, // browser fullscreen only (the window keeps its size)
   key(e, down) {
     if (e.ctrlKey && ['Equal', 'Minus', 'Digit0', 'NumpadAdd', 'NumpadSubtract', 'KeyW', 'KeyS', 'KeyD', 'KeyF'].includes(e.code)) e.preventDefault();
+    if (!down) this.keys[e.code] = false; // a release is always recorded, even over a menu / chat / gui (or the key stays "held" after closing it)
     if (RUI.chatOpen || RUI.promptOpen) { if (down && e.code === 'Escape') RUI.closeChat(); return; }
     const c = e.code; if (down && (c === 'Tab' || c === 'Space' || c === 'F5' || c === 'F1' || c.startsWith('Arrow'))) e.preventDefault();
     if (RUI.gui) { if (down && (c === 'Escape' || c === 'KeyE')) { RUI.close(); e.preventDefault(); } if (down && /^Digit[1-9]$/.test(c)) RUI.hotkey(+c.slice(5) - 1); if (down && c === 'KeyQ') RUI.dropHover(e.ctrlKey); return; }

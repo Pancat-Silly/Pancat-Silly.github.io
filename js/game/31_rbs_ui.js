@@ -127,7 +127,7 @@ const RUI = {
   // ---------- the one menu (Esc · ☰ · M): 게임 메뉴 -> 설정 -> 화면 · 조작 / 조작법, 호스트 설정. Minecraft-style stone buttons
   // like 4중인격's pause screen; replaces the old menu chest, the lobby hotbar items and the separate settings chests.
   pg: 'main',
-  MPAGE: { main: ['게임 메뉴', null], set: ['설정', 'main'], video: ['화면 · 조작 설정', 'set'], help: ['조작법', 'set'], host: ['호스트 설정', 'main'], multi: ['멀티플레이', null] },
+  MPAGE: { main: ['게임 메뉴', null], set: ['설정', 'main'], video: ['화면 · 조작 설정', 'set'], help: ['조작법', 'set'], host: ['호스트 설정', 'main'], multi: ['멀티플레이 설정', null] },
   pause(on, pg) {
     if (on && (this.gui || this.chatOpen || RG.gs.ph === 'win')) return; this.paused = !!on; $('rbPause').classList.toggle('hide', !on);
     if (on) { if (document.pointerLockElement) document.exitPointerLock(); this.pg = pg || 'main'; this.menuDraw(); }
