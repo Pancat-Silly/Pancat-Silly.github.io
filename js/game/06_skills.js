@@ -263,7 +263,7 @@ const SK = {
   bilTick(p) { // followers +1~2 every second; at 100: 1 heart per second until death (ignores armor and resistance)
     p.st.folT = (p.st.folT || 0) + 1; if (p.st.folT % 20 === 0 && p.alive && !p.spectator) SK.addFollowers(p, randi(1, 2));
     if (!p.st.follow100 || p.st.awaken) return; p.st.dotT++;
-    if (p.st.dotT % 20 === 0) { p.hurt(2, { type: 'follower', exact: true, noinvul: true, nokb: true }); G.particles('red', p.x, p.y + p.h * .6, p.z); G.sound('changchan_follower_hurt', p); } // 팔로워 100명 지속 피해 효과음 (tools/sounds)
+    if (p.st.dotT % 20 === 0) { p.hurt(2, { type: 'follower', exact: true, noinvul: true, nokb: true }); G.particles('red', p.x, p.y + p.h * .6, p.z); G.sound('changchan_follower_hurt', p); if (p === G.me) UI.folPop(0, '출혈이 있다', 'bleed'); } // 팔로워 100명 지속 피해 효과음 (tools/sounds)
   },
   // death while the 100-follower curse is active: 10% totem-like awakening
   bilRevive(p) {

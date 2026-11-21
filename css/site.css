@@ -99,6 +99,7 @@ body.mobile #chatbar{top:max(8px,env(safe-area-inset-top));bottom:auto}
 #ts{font-size:clamp(16px,3vw,28px);text-shadow:3px 3px 0 #3f3f3f;margin-top:6px}
 #actionbar{left:0;right:0;bottom:150px;text-align:center;font-size:17px;text-shadow:2px 2px 0 #3f3f3f;opacity:0}
 .folpop{position:absolute;font-size:clamp(15px,2.4vw,22px);font-weight:700;color:#55ffff;text-shadow:2px 2px 0 #3f3f3f;white-space:nowrap;pointer-events:none;animation:folpop 1.25s ease-out forwards}
+.folpop.bleed{color:#ff3a3a;font-size:clamp(18px,3vw,28px);font-weight:800}
 @keyframes folpop{0%{opacity:0;transform:translateY(8px) scale(.9)}12%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-70px)}}
 #prompt{left:50%;top:62%;transform:translateX(-50%);background:rgba(0,0,0,.6);padding:6px 12px;font-size:15px;display:none;pointer-events:auto;cursor:pointer}
 #hurt{inset:0;background:radial-gradient(ellipse at center,transparent 40%,rgba(200,0,0,.7));opacity:0}
