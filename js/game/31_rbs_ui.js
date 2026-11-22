@@ -383,6 +383,7 @@ body.rbmob #rbTt{font-size:36px}body.rbmob #rbTs{font-size:18px}body.rbmob #rbCh
 .rpbtn{flex-wrap:wrap;gap:6px;margin-top:6px}.rpbtn .rbtn{font-size:13px;padding:7px 10px}.rpsave{background:#3d8a3d!important}
 .rpick{display:grid;grid-template-columns:repeat(auto-fill,34px);gap:3px;max-height:150px;overflow-y:auto;margin-top:6px;padding:4px;background:#8b8b8b;border:2px solid;border-color:#373737 #fff #fff #373737}
 .rpick img{width:32px;height:32px;image-rendering:pixelated;cursor:pointer;background:#9d9d9d}.rpick img:hover{background:#c8e0a8}
+.rgx{position:fixed;top:10px;right:10px;z-index:60;pointer-events:auto;font-size:16px;padding:8px 14px}
 .rpick .rpci{position:relative;display:block;width:32px;height:32px;cursor:pointer;background:#9d9d9d;overflow:hidden}.rpick .rpci:hover{background:#c8e0a8}.rpick .rpci .ric{left:0;top:0;width:32px;height:32px}.rpick .rpci b,.rpick .rpci i{display:none}.rpcat .rpick{max-height:300px}
 .rbotp{width:min(440px,94vw);text-align:center}.rbotp small{display:block;margin:6px 0;color:#333}.rbnrow{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:8px 0}.rbnrow .rbtn{width:44px;font-size:18px}.rbotp .rblv{min-width:150px;margin-right:auto}
 body.rbmob .rrb{width:180px}body.rbmob .rrbg{grid-template-columns:repeat(4,38px)}

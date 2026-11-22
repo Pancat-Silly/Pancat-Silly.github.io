@@ -286,7 +286,7 @@ const UI = {
     }
   },
   drawHearts(me) {
-    const cv = $('heartsC'); const max = me.maxHp(), hp = me.hp > 0 ? Math.ceil(me.hp) : 0; // rounded up like MC: alive = at least half a heart const n = Math.ceil(max / 2); const rows = Math.ceil(n / 10);
+    const cv = $('heartsC'); const max = me.maxHp(), hp = me.hp > 0 ? Math.ceil(me.hp) : 0; /* rounded up like MC: alive = at least half a heart */ const n = Math.ceil(max / 2); const rows = Math.ceil(n / 10);
     const key = Math.ceil(hp) + '/' + max + '/' + me.eff('poison') + '/' + (me.hurtTime > 0 ? 1 : 0) + '/' + (G.tick >> 2 & 1) * (hp <= 4 ? 1 : 0); if (key === this._hk) return; this._hk = key;
     const S = this.mobile ? 2 : 3, P = 8; cv.width = 10 * P * S + S; cv.height = (rows * (P + 1) + 1) * S; const g = cv.getContext('2d');
     const H = ['.XX.XX.', 'XrwXrrX', 'XwrrrrX', 'XrrrrrX', '.XrrrX.', '..XrX..', '...X...'];

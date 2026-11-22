@@ -78,7 +78,9 @@ Object.assign(RUI, {
       case 'book': { const P = this.BOOK; const p = g.ctx.p || 0; h = '<div class="rbook"><div class="rbp">' + this.fmt(P[p]).replace('{{V21}}', '<a class="rblink" href="https://youtu.be/C_QVJYME30A" target="_blank" rel="noopener">랜덤블록 서바이벌 V2.1</a>') + '</div><div class="rbn"><button class="rbtn" data-bk="-1"' + (p ? '' : ' disabled') + '>◀</button><span>' + (p + 1) + ' / ' + P.length + '</span><button class="rbtn" data-bk="1"' + (p < P.length - 1 ? '' : ' disabled') + '>▶</button><button class="rbtn" data-bk="x">닫기</button></div></div>'; break; }
       case 'form': h = g.ctx.html; break;
     }
+    if (this.mobile && !/data-lb=/.test(h) && g.type !== 'book') h += '<button class="rbtn rgx" data-gx="1">✕ 닫기</button>'; // mobile: no Esc / E key, so every container screen gets a close button
     $('rbGui').innerHTML = h; this.paint();
+    { const gx = $('rbGui').querySelector('[data-gx]'); if (gx) gx.onclick = e => { e.stopPropagation(); this.close(); }; }
     if (g.cells) for (const el of $('rbGui').querySelectorAll('[data-li],[data-la],[data-lb]')) el.onclick = e => { e.stopPropagation(); const d = el.dataset; if (d.lb) { if (d.lb === 'x') this.close(); else this.open(g.back || 'menu'); return; } const C = g.cells.find(c => c.i === +(d.la || d.li)); if (C) C.act(d.la ? 2 : 0); if (this.gui && this.gui.cells && this.gui.type === g.type) this.render(); };
     if (g.type === 'form' && g.ctx.bind) g.ctx.bind($('rbGui'));
     if (g.type === 'palette') this.palBind();
