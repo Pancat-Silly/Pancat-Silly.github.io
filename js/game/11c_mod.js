@@ -4,7 +4,7 @@
 // API_DOC is the single source for both the api object's documentation in the AI prompt and the dev log hints.
 const MOD = {
   // src: job id -> the code that registered it (✏️ 수정) · userSnd: sounds added in the dev tool (go into the result)
-  defs: {}, sounds: {}, src: {}, curCode: '', userSnd: new Set(), proj: [], missing: {}, errCount: {}, codeLines: [],
+  defs: {}, sounds: {}, src: {}, curCode: '', userSnd: new Set(), builtinSnd: new Set(), proj: [], missing: {}, errCount: {}, codeLines: [],
   // map a stack trace back to the pasted code (new Function adds 2 header lines)
   where(e) { const m = String(e && e.stack || '').match(/mod_job\.js:(\d+):(\d+)/); if (!m) return ''; const ln = +m[1] - 2, col = +m[2]; const src = (this.codeLines[ln - 1] || '').trim(); return ' (코드 ' + ln + '번째 줄 ' + col + '번째 칸' + (src ? ': ' + src.slice(0, 120) : '') + ')'; },
   err(where, e) {
@@ -224,7 +224,7 @@ const DEV = {
     this.log('info', '붙여넣은 응답 분석: 새 직업 요청 ' + (P.job ? P.job.length + '자' : '없음') + ' · JS 코드 ' + (P.code ? P.code.split('\n').length + '줄' : '없음') + ' · 변경 요청 ' + (P.sys && P.sys !== '없음' ? P.sys.length + '자' : '없음') + ' · 구현 메모 ' + (P.memo && P.memo !== '없음' ? '있음' : '없음'));
     if (!P.code) { this.log('error', 'JS 코드를 찾지 못했어요. AI 응답 전체(=====새 직업 요청 원문===== 부터 =====끝===== 까지)를 붙여넣어 주세요.'); return false; }
     if (P.memo && P.memo !== '없음') { this.memo = P.memo; this.log('warn', 'AI 구현 메모: ' + P.memo.replace(/\n+/g, ' / ').slice(0, 400)); }
-    if (P.snd) for (const line of P.snd.split('\n')) { const m = line.match(/^([^\s:]+)\s*:\s*(data:audio\/[^\s]+)/); if (m) { MOD.userSnd.add(await MOD.addSound(m[1], m[2])); continue; }
+    if (P.snd) for (const line of P.snd.split('\n')) { const m = line.match(/^([^\s:]+)\s*:\s*(data:audio\/[^\s]+)/); if (m) { const n = await MOD.addSound(m[1], m[2]); MOD.userSnd.add(n); MOD.builtinSnd.delete(n); continue; }
       const f = line.match(/^([^\s:]+)\s*:\s*\(파일 따로/); if (f && !MOD.sounds[f[1]]) this.log('warn', '효과음 "' + f[1] + '"은(는) 따로 보낸 파일이에요 → ②에서 그 파일을 넣어 주세요'); }
     try {
       AU.init(); MOD.codeLines = P.code.split('\n'); const before = new Set(Object.keys(MOD.defs)); MOD.curCode = P.code;
@@ -313,7 +313,7 @@ const DEV = {
   },
   sndMode() { const r = document.querySelector('input[name="devSndMode"]:checked'); return r ? r.value : 'embed'; },
   // sounds that belong to this result: added by the user in the dev tool, or used by name in the code (not every built-in job's sound)
-  resultSounds() { const c = this.code || $('devResp').value; return Object.entries(MOD.sounds).filter(([n]) => MOD.userSnd.has(n) || c.includes("'" + n + "'") || c.includes('"' + n + '"') || c.includes('`' + n + '`')); },
+  resultSounds() { const c = this.code || $('devResp').value; return Object.entries(MOD.sounds).filter(([n]) => !MOD.builtinSnd.has(n) && (MOD.userSnd.has(n) || c.includes("'" + n + "'") || c.includes('"' + n + '"') || c.includes('`' + n + '`'))); },
   sndExt(d) { const m = /^data:audio\/([a-z0-9.+-]+)/.exec(d); const t = m ? m[1] : 'mpeg'; return t === 'mpeg' || t === 'mp3' ? 'mp3' : t === 'x-wav' || t === 'wave' ? 'wav' : t === 'mp4' || t === 'x-m4a' ? 'm4a' : t.replace(/[^a-z0-9]/g, '') || 'mp3'; },
   ask(msg) { return new Promise(res => { const box = $('devAsk'); $('devAskMsg').textContent = msg; box.classList.remove('hide'); const done = v => { box.classList.add('hide'); res(v); }; $('devAskYes').onclick = () => done(true); $('devAskNo').onclick = () => done(false); }); },
   async saveResult() {
@@ -350,7 +350,7 @@ const DEV = {
     $('devResult').onclick = () => this.saveResult();
     try { const m = localStorage.getItem('apvp_devsnd'); if (m) for (const r of document.querySelectorAll('input[name="devSndMode"]')) r.checked = r.value === m; } catch (e) { }
     for (const r of document.querySelectorAll('input[name="devSndMode"]')) r.onchange = () => { try { localStorage.setItem('apvp_devsnd', this.sndMode()); } catch (e) { } this.log('info', this.sndMode() === 'file' ? '효과음은 결과물 txt와 따로 파일로 저장돼요 (txt에는 이름만)' : '효과음을 결과물 txt 안에 넣어요 (파일 하나)'); };
-    $('devSnd').onchange = async e => { for (const f of e.target.files) { if (f.size > 3e6) { this.log('error', f.name + ': 3MB 이하 파일만 넣을 수 있어요'); continue; } const d = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(f); }); AU.init(); const n = await MOD.addSound(f.name.replace(/\.[^.]+$/, ''), d); MOD.userSnd.add(n); this.log('ok', '효과음 추가: ' + n + ' → 코드에서 api.sound("' + n + '", p)'); } e.target.value = ''; this.sndList(); };
+    $('devSnd').onchange = async e => { for (const f of e.target.files) { if (f.size > 3e6) { this.log('error', f.name + ': 3MB 이하 파일만 넣을 수 있어요'); continue; } const d = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(f); }); AU.init(); const n = await MOD.addSound(f.name.replace(/\.[^.]+$/, ''), d); MOD.userSnd.add(n); MOD.builtinSnd.delete(n); this.log('ok', '효과음 추가: ' + n + ' → 코드에서 api.sound("' + n + '", p)'); } e.target.value = ''; this.sndList(); };
     $('devVer').textContent = '📌 프롬프트 · 결과물 버전 v' + DEV_VER + ' (최신) — 예전 버전 프롬프트로 만든 결과물은 불러올 때 알려 줘요';
     $('devFold').onclick = () => $('devPanel').classList.toggle('fold');
     $('devFile').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; const txt = await f.text(); this.log('info', '파일 불러옴: ' + f.name + ' (' + Math.round(f.size / 1024) + 'KB)'); $('devResp').value = txt; await this.apply(txt); };
@@ -360,7 +360,7 @@ const DEV = {
     this.log('info', '개발 도구 준비됨 · 게임 버전 ' + document.title + ' · API v' + APVP.version + ' · 효과 ' + Object.keys(EFF).length + '종 · 기본 직업 ' + JOB_ORDER.length + '개');
     this.sndList();
   },
-  sndList() { const el = $('devSnds'); el.innerHTML = Object.keys(MOD.sounds).map(n => '<span class="devsnd">🔊 ' + esc(n) + ' <button data-n="' + esc(n) + '" class="dplay">▶</button><button data-n="' + esc(n) + '" class="ddel">✕</button></span>').join('') || '<small>추가한 효과음 없음</small>'; for (const b of el.querySelectorAll('.dplay')) b.onclick = () => { AU.init(); MOD.decodeAll().then(() => AU.play(b.dataset.n, {})); }; for (const b of el.querySelectorAll('.ddel')) b.onclick = () => { delete MOD.sounds[b.dataset.n]; MOD.userSnd.delete(b.dataset.n); delete AU.buf[b.dataset.n]; this.sndList(); }; },
+  sndList() { const el = $('devSnds'); el.innerHTML = Object.keys(MOD.sounds).filter(n => !MOD.builtinSnd.has(n)).map(n => '<span class="devsnd">🔊 ' + esc(n) + ' <button data-n="' + esc(n) + '" class="dplay">▶</button><button data-n="' + esc(n) + '" class="ddel">✕</button></span>').join('') || '<small>추가한 효과음 없음</small>'; for (const b of el.querySelectorAll('.dplay')) b.onclick = () => { AU.init(); MOD.decodeAll().then(() => AU.play(b.dataset.n, {})); }; for (const b of el.querySelectorAll('.ddel')) b.onclick = () => { delete MOD.sounds[b.dataset.n]; MOD.userSnd.delete(b.dataset.n); delete AU.buf[b.dataset.n]; this.sndList(); }; },
 };
 // ---- in-game popup: download the dev tool (this same game + APVP_DEV flag) ----
 function devToolHTML() { const src = SELF_HTML || ''; const flag = '<script>window.APVP_DEV=1<\/script>'; return src.replace(/<head([^>]*)>/i, m => m + flag); }

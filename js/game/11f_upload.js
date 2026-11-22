@@ -2,12 +2,12 @@
 // the host loads a result txt -> it runs locally and its hash+name goes into the host's presence (uj).
 // everyone who doesn't have it asks for it; the host sends the file in 16KB chunks over the side channel (NET.blob).
 // every client keeps what it received, so a new host can hand it out too. jobs get a blue "업로드됨" tag.
-// jobs made with the dev tool and shipped with the game (tools/modjobs/<job>/ -> js/data/jobs/<job>.js, one file per job): loaded through the same mod API
+// jobs made with the dev tool and shipped with the game (tools/modjobs/<job>/ -> js/jobs/<job>.js, one file per job, next to the hand-written jobs): loaded through the same mod API
 const BUILTIN = {
   async load() {
     if (typeof BUILTIN_JOBS === 'undefined') return;
     for (const J of BUILTIN_JOBS) {
-      for (const k in J.snd) { try { await MOD.addSound(k, J.snd[k]); } catch (e) { } }
+      for (const k in J.snd) { try { MOD.builtinSnd.add(await MOD.addSound(k, J.snd[k])); } catch (e) { } } // shipped with the game: not part of a dev-tool result
       const ids = []; MOD.upIds = ids;
       MOD.curCode = J.code; try { new Function('APVP', 'api', J.code + '\n//# sourceURL=builtin_' + J.file + '.js')(APVP, APVP.api); } catch (e) { console.error('builtin job', J.file, e); }
       finally { MOD.upIds = null; MOD.curCode = ''; }

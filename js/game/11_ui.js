@@ -1,6 +1,6 @@
 // ===================== UI / HUD / input =====================
 const $ = id => document.getElementById(id);
-const DEV_JOBS = new Set(['seryong', 'ai', 'dude', 'jemwenti', 'yuntomman']); // shown under the 개발중 divider
+const DEV_JOBS = new Set(['seryong', 'ai', 'dude', 'jemwenti', 'yuntomman', 'susu']); // shown under the 개발중 divider
 const MCC = { '0': '#000', '1': '#00A', '2': '#0A0', '3': '#0AA', '4': '#A00', '5': '#A0A', '6': '#FA0', '7': '#AAA', '8': '#555', '9': '#55F', 'a': '#5F5', 'b': '#5FF', 'c': '#F55', 'd': '#F5F', 'e': '#FF5', 'f': '#FFF' };
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]); }
 function mcfmt(s, user) {

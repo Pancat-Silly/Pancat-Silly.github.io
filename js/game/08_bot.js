@@ -53,46 +53,8 @@ function botDecide(b, I, ai, L) {
   if (ai.t < ai.react) return;
   if (L.skill > 1 && Math.random() > 1 / L.skill) { if (b.job !== 'mefab3') I.sneak = false; return; } // slower bots think about skills less often
   const r = Math.random();
-  switch (b.job) {
-    case 'rusher': if (dist > 6 && dist < 25) botUse(b, 'rush'); if (dist < 10) botUse(b, 'rzone'); break;
-    case 'policer': if (dist < 10) botUse(b, 'baton'); break;
-    case 'spider': if (dist < 14) botUse(b, 'colony'); if (dist < 8) botUse(b, 'egg'); break;
-    case '360':
-      botUse(b, 'rod6'); if (r < .01) botUse(b, 'rod0');
-      if (dist > 4 && dist < 22) { const sp = b.pitch; b.pitch = clamp(-Math.atan2(t.y - (b.y + b.eye), dist) - dist * .012, -1.2, 1.2); botUse(b, 'xbow3'); b.pitch = sp; }
-      break;
-    case 'ice_wizard': if (dist < 14) botUse(b, 'icejail'); break;
-    case 'randomizer':
-      botUse(b, 'luckybox'); if (b.hp < 12) { botUse(b, 'pot_res'); botUse(b, 'baghak'); } if (dist < 8) botUse(b, 'pot_spd');
-      if (dist > 7 && dist < 30 && b.count('arrow') > 0) { const bi = b.inv.findIndex(s => s && s.id === 'bow'); if (bi >= 0) { b.sel = bi; I.use = true; b.pitch -= dist * .01; if (b.drawT >= 20) I.use = false; } }
-      else if (b.drawT > 0) I.use = false;
-      break;
-    case 'suno': if (dist < 10 && r < .3) botUse(b, 'wait'); if (b.hp < 8) botUse(b, 'study'); if (b.hp < b.maxHp() - 6) botUse(b, 'v4'); if (r < .005) botUse(b, 'runsuno'); break;
-    case 'mefab3':
-      if (b.cdLeft('grabex') === 0) botUse(b, 'grabex');
-      if (!ai.sneak && dist > 4 && dist < 19 && b.cdLeft('grab') === 0 && ai.t - (ai.lastGrab || -999) > 200 && Math.random() < .04 && SK.canSee(b, t)) { ai.sneak = true; ai.lastGrab = ai.t; }
-      if (ai.sneak) { I.sneak = true; I.sprint = false; if ((b.st.charge || 0) >= 23) { botUse(b, 'grab'); ai.sneak = false; I.sneak = false; } } else I.sneak = false;
-      break;
-    case 'slime': if (dist < 3.5 && r < .3) botUse(b, 'cutter'); if (b.hp < 30) botUse(b, 'slimeball'); break;
-    case 'viggle':
-      botUse(b, 'spinpot');
-      if (dist < 4 || (b.st.spinArmed && dist < 9)) botUse(b, 'drone');
-      if (dist < 13 && dist > 3 && Math.abs(wrapA(wantYaw - Math.round(wantYaw / (Math.PI / 2)) * Math.PI / 2)) < .25) botUse(b, 'destroy');
-      break;
-    case 'ai': {
-      if (dist < 30) botUse(b, 'ai_glasses');
-      const S = b.st.aiSteal;
-      if (S && S.ids.grab !== undefined && dist > 3 && dist < 19) { I.sneak = true; I.sprint = false; if ((b.st.charge || 0) >= 23) { botUse(b, 'grab'); I.sneak = false; } }
-      else if (S && dist < 15 && Math.random() < .05) for (const id of Object.keys(S.ids)) if (id !== 'grab' && botUse(b, id)) break;
-      if (!b.st.aiPiece && dist < 10) botUse(b, 'big_data'); else if (b.st.aiPiece && b.hp < 10) botUse(b, 'big_data');
-      break;
-    }
-    case 'seryong': if (dist < 25) { botUse(b, 'sr_laser'); botUse(b, 'sr_pig'); } if (b.st.srStun && G.tick <= b.st.srStun.until) botUse(b, 'sr_domain'); break;
-    case 'summoner': if (dist < 16) botUse(b, 'dogs'); if (dist < 3) botUse(b, 'fangc'); else if (dist < 12 && r < .3) botUse(b, 'fangl'); break;
-    case 'bilcorner': if (b.hp < b.maxHp() - 6) { botUse(b, 'squid'); botUse(b, 'harder'); } if (dist < 3.5) botUse(b, 'harder'); if (dist < 7) botUse(b, 'gather'); if (dist > 2.5 && dist < 7 && r < .3) botUse(b, 'bdash'); if (dist < 8 && r < .1) botUse(b, 'drug'); break;
-    default: if (MOD.defs[b.job] && MOD.defs[b.job].bot) MOD.fire(b, 'bot', t, dist); break;
-    case 'dude_new': { const d = b.st.dance; if (!d ? dist > 12 && r < .05 : dist < 6 || d.n >= 12) botUse(b, 'dance'); break; } // dance while nobody is near, stop when someone comes or 12 frogs
-    case 'dude': botUse(b, 'rodwood'); botUse(b, 'crate'); if (b.hp < 28) botUse(b, 'pot_heal'); botUse(b, 'boots'); if (r < .01) { botUse(b, 'pot_swift'); botUse(b, 'pot_turtle'); } break;
-  }
+  const jb = BOT_JOB[b.job]; // 직업별 봇 행동 (js/jobs/<직업>.js)
+  if (jb) jb(b, I, ai, t, dist, r, wantYaw);
+  else if (MOD.defs[b.job] && MOD.defs[b.job].bot) MOD.fire(b, 'bot', t, dist);
   if (b.job !== 'mefab3') I.sneak = false;
 }
