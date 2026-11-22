@@ -72,12 +72,8 @@ const DESK = {
       + '<div id="dkBar"><button id="dkStart">⊞ 시작</button><div id="dkStartMenu" class="hide"></div><div id="dkTasks"></div><div class="dkfill"></div><div id="dkClock"></div><button id="dkExit"></button></div>';
     document.body.insertBefore(d, document.body.firstChild);
     this.setWall(this.wall);
-    $('dkIcons').innerHTML = this.APPS.filter(a => !a.hidden).map(a => '<div class="dkIcon" data-app="' + a.id + '" title="' + (this.mobile ? '탭' : '더블클릭') + '해서 열기"><div class="dkimg" style="background:' + (a.bg || '#3c6a24') + '">' + (a.img ? '<img src="' + a.img + '">' : a.icon) + '</div><div class="dklbl">' + a.label + '</div></div>').join('');
-    for (const el of document.querySelectorAll('.dkIcon')) {
-      el.onclick = () => { if (this.mobile) { const A = this.APPS.find(a => a.id === el.dataset.app); this.open(el.dataset.app); if (A && A.game) { this.setMode(A.id, 'full'); this.goFs(false); } return; } for (const o of document.querySelectorAll('.dkIcon')) o.classList.remove('sel'); el.classList.add('sel'); };
-      el.ondblclick = () => { if (!this.mobile) this.open(el.dataset.app); };
-    }
-    $('dkWall').onmousedown = () => { for (const o of document.querySelectorAll('.dkIcon')) o.classList.remove('sel'); this.startMenu(false); };
+    this.icons();
+    $('dkWall').onmousedown = () => { for (const o of document.querySelectorAll('.dkIcon')) o.classList.remove('sel'); this.startMenu(false); this.folder(null); };
     $('dkExit').onclick = () => this.toggleFs();
     $('dkStart').onclick = e => { e.stopPropagation(); this.startMenu(); };
     document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) { try { navigator.keyboard && navigator.keyboard.unlock(); } catch (x) { } } this.sync(); });
@@ -93,6 +89,38 @@ const DESK = {
     this.sync();
     // the plain site address shows just the desktop; 바로 들어가기 pages (사이트주소/ability_pvp, /randomblock -> SITE_OPEN) open that game maximised
     const first = window.SITE_OPEN; if (first && this.APPS.some(a => a.id === first)) { this.open(first); this.setMode(first, 'max'); }
+  },
+  // ---------- desktop icons (apps with `in` live inside a folder app: { folder: true }) ----------
+  ico(a) { return a.img ? '<img src="' + a.img + '">' : a.icon; },
+  iconHTML(a) {
+    const inner = a.folder ? '<div class="dkfgrid">' + this.APPS.filter(b => b.in === a.id).slice(0, 4).map(b => '<span style="background:' + (b.bg || '#3c6a24') + '">' + this.ico(b) + '</span>').join('') + '</div>' : this.ico(a);
+    return '<div class="dkIcon' + (a.folder ? ' dkfold' : '') + '" data-app="' + a.id + '" title="' + (a.folder || this.mobile ? '' : '더블클릭해서 열기') + '"><div class="dkimg" style="background:' + (a.folder ? 'rgba(255,255,255,.28)' : a.bg || '#3c6a24') + '">' + inner + '</div><div class="dklbl">' + a.label + '</div></div>';
+  },
+  bindIcon(el, inFolder) {
+    const go = () => { const A = this.APPS.find(a => a.id === el.dataset.app); if (!A) return; if (A.folder) return this.folder(A.id, el); this.folder(null); this.open(A.id); if (this.mobile && A.game) { this.setMode(A.id, 'full'); this.goFs(false); } };
+    el.onclick = e => { e.stopPropagation(); const A = this.APPS.find(a => a.id === el.dataset.app); if (this.mobile || inFolder || (A && A.folder)) return go(); for (const o of document.querySelectorAll('.dkIcon')) o.classList.remove('sel'); el.classList.add('sel'); };
+    el.ondblclick = () => { if (!this.mobile && !inFolder) { const A = this.APPS.find(a => a.id === el.dataset.app); if (A && !A.folder) go(); } };
+  },
+  icons() {
+    $('dkIcons').innerHTML = this.APPS.filter(a => !a.hidden && !a.in).map(a => this.iconHTML(a)).join('');
+    for (const el of document.querySelectorAll('#dkIcons .dkIcon')) this.bindIcon(el, false);
+  },
+  // Android-style folder: a rounded panel grows out of the folder icon and shows the apps inside; tap outside closes it
+  folder(id, from) {
+    let P = $('dkFolder');
+    if (!id) { if (P && !P.classList.contains('closing')) { P.classList.add('closing'); P.classList.remove('open'); setTimeout(() => P.remove(), 220); } return; }
+    if (P) P.remove();
+    const F = this.APPS.find(a => a.id === id), apps = this.APPS.filter(a => a.in === id);
+    P = document.createElement('div'); P.id = 'dkFolder';
+    P.innerHTML = '<div class="dkfpan"><div class="dkfttl">' + F.title + '</div><div class="dkfapps">' + apps.map(a => this.iconHTML(a)).join('') + '</div></div>';
+    $('desk').appendChild(P);
+    const pan = P.querySelector('.dkfpan'), r = from.querySelector('.dkimg').getBoundingClientRect(), pr = pan.getBoundingClientRect();
+    pan.style.transformOrigin = (r.left + r.width / 2 - pr.left) + 'px ' + (r.top + r.height / 2 - pr.top) + 'px';
+    pan.style.setProperty('--s0', Math.min(r.width / pr.width, r.height / pr.height).toFixed(3));
+    for (const el of P.querySelectorAll('.dkIcon')) this.bindIcon(el, true);
+    P.addEventListener('mousedown', e => { if (e.target === P) this.folder(null); });
+    P.addEventListener('touchstart', e => { if (e.target === P) { e.preventDefault(); this.folder(null); } }, { passive: false });
+    requestAnimationFrame(() => requestAnimationFrame(() => P.classList.add('open')));
   },
   onMsg(e) {
     const m = e.data; if (!m || !m.site) return; const W = Object.values(this.wins).find(w => w.frame && w.frame.contentWindow === e.source); if (!W) return;
@@ -139,7 +167,7 @@ const DESK = {
     const L = this.APPS.find(a => a.id === id); if (L && L.url) { window.open(L.url, '_blank', 'noopener'); this.startMenu(false); return; } // link apps
     const W = this.wins[id] || this.mkWin(id); if (!W) return; const was = W.closed; const prev = this.top(); W.min = false; W.closed = false; if (W.mode === 'full' && !(this.mobile && W.A.game)) W.mode = this.mobile ? 'max' : 'normal'; if (this.mobile && W.A.game) W.mode = 'full'; W.z = ++this.z; if (prev && prev !== W) this.blurApp(prev);
     this.startMenu(false); this.sync(); this.save();
-    if (was) { if (W.A.game) this.gameStart(W); else if (W.A.build) W.A.build(W.body, W); }
+    if (was) { if (W.A.game) this.gameStart(W); else if (W.A.frame) this.loadFrame(W); else if (W.A.build) W.A.build(W.body, W); }
     else if (W.A.onOpen) W.A.onOpen(W.body, W);
   },
   minimize(id) { const W = this.wins[id]; W.min = true; this.blurApp(W); this.sync(); },
@@ -199,11 +227,13 @@ const DESK = {
     f.onload = () => { const l = W.body.querySelector('.dkload'); if (l) l.remove(); };
     W.body.appendChild(f); W.frame = f; setTimeout(() => { try { f.focus(); } catch (e) { } }, 300);
   },
+  // plain page apps (`frame`: a page of this site, e.g. lyrics/) in an iframe
+  loadFrame(W) { const f = document.createElement('iframe'); f.className = 'dkFrame'; f.setAttribute('allow', 'fullscreen; autoplay; clipboard-write'); f.src = new URL(W.A.frame, document.baseURI).href; W.body.appendChild(f); W.frame = f; },
   // ---------- start menu ----------
   startMenu(show) {
     const m = $('dkStartMenu'); if (show === false) { m.classList.add('hide'); return; } if (show === undefined && !m.classList.contains('hide')) { m.classList.add('hide'); return; }
     const fs = !!document.fullscreenElement;
-    m.innerHTML = '<div class="smh">앱</div>' + this.APPS.filter(a => !a.hidden).map(a => '<div data-a="open" data-app="' + a.id + '">' + (a.img ? '<img src="' + a.img + '">' : a.icon) + ' ' + a.title + '</div>').join('')
+    m.innerHTML = '<div class="smh">앱</div>' + this.APPS.filter(a => !a.hidden && !a.folder).map(a => '<div data-a="open" data-app="' + a.id + '">' + (a.img ? '<img src="' + a.img + '">' : a.icon) + ' ' + a.title + '</div>').join('')
       + '<div class="smh">화면</div><div data-a="fs">' + (fs ? '↩ 브라우저 전체화면 나가기' : '⛶ 브라우저 전체화면') + '</div>';
     m.onclick = e => { const t = e.target.closest('[data-a]'); if (!t) return; e.stopPropagation(); if (t.dataset.a === 'open') { this.open(t.dataset.app); const A = this.APPS.find(a => a.id === t.dataset.app); if (this.mobile && A && A.game) { this.setMode(A.id, 'full'); this.goFs(false); } } if (t.dataset.a === 'fs') { this.toggleFs(); this.startMenu(false); } };
     m.classList.remove('hide');
@@ -212,12 +242,16 @@ const DESK = {
   setWall(d) { this.wall = d || null; const w = $('dkWall'); if (w) w.style.backgroundImage = 'url(' + (this.wall || WALLPAPER) + ')'; },
 };
 // ---------- apps ----------
-DESK.addApp({ id: 'apvp', icon: '⚔️', label: '4중인격<br>PvP', title: '4중인격 PvP', game: true, w: 1280, h: 800, bg: 'linear-gradient(#5b8a3a,#3c6a24)' });
-DESK.addApp({ id: 'rbs', icon: '🧱', img: (typeof RB_ICON !== 'undefined' ? RB_ICON : ''), label: '랜덤블록<br>서바이벌 <b class="dkbeta">베타</b>', title: '랜덤블록 서바이벌 · 베타', game: true, w: 1280, h: 800, bg: 'linear-gradient(#3a7bd5,#22427a)' });
+// 게임 폴더 (안드로이드식): in: 'games' 앱들은 바탕화면 대신 이 폴더 안에 보인다 (시작 메뉴에는 그대로)
+DESK.addApp({ id: 'games', folder: true, icon: '📁', label: '게임', title: '게임' });
+DESK.addApp({ id: 'apvp', in: 'games', icon: '⚔️', label: '4중인격<br>PvP', title: '4중인격 PvP', game: true, w: 1280, h: 800, bg: 'linear-gradient(#5b8a3a,#3c6a24)' });
+DESK.addApp({ id: 'rbs', in: 'games', icon: '🧱', img: (typeof RB_ICON !== 'undefined' ? RB_ICON : ''), label: '랜덤블록<br>서바이벌 <b class="dkbeta">베타</b>', title: '랜덤블록 서바이벌 · 베타', game: true, w: 1280, h: 800, bg: 'linear-gradient(#3a7bd5,#22427a)' });
 // 개발 도구: the 4중인격 game with APVP_DEV, offline only. No icon; opened from the game's '개발 도구 창 열기' or 사이트주소/ability_pvp_dev
 DESK.addApp({ id: 'apvp_dev', app: 'apvp', dev: true, offline: true, hidden: true, icon: '🛠', title: '4중인격 개발 도구', game: true, w: 1280, h: 800 });
 // 내 정보: a link app — opens pancat-silly.carrd.co in a new browser tab (Carrd can't be shown inside a window: X-Frame-Options: deny)
 DESK.addApp({ id: 'me', icon: '🥞', label: '내 정보', title: '내 정보', url: 'https://pancat-silly.carrd.co/', bg: 'linear-gradient(#ffb347,#f0801c)' });
+// 가사 맞추기 (베타): 노래 가사를 문장·단어·글자 단위로 TAP해서 시간을 찍는 도구 (lyrics/index.html, 게임과 따로인 한 파일) -> 확장 LRC
+DESK.addApp({ id: 'lyrics', icon: '🎵', label: '가사 맞추기 <b class="dkbeta">베타</b>', title: '가사 맞추기 · 베타', frame: 'lyrics/index.html', w: 900, h: 760, bg: 'linear-gradient(#b05cff,#5a2a9a)' });
 DESK.addApp({ id: 'github', icon: '🐙', img: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTggMEMzLjU4IDAgMCAzLjU4IDAgOGMwIDMuNTQgMi4yOSA2LjUzIDUuNDcgNy41OS40LjA3LjU1LS4xNy41NS0uMzggMC0uMTktLjAxLS44Mi0uMDEtMS40OS0yLjAxLjM3LTIuNTMtLjQ5LTIuNjktLjk0LS4wOS0uMjMtLjQ4LS45NC0uODItMS4xMy0uMjgtLjE1LS42OC0uNTItLjAxLS41My42My0uMDEgMS4wOC41OCAxLjIzLjgyLjcyIDEuMjEgMS44Ny44NyAyLjMzLjY2LjA3LS41Mi4yOC0uODcuNTEtMS4wNy0xLjc4LS4yLTMuNjQtLjg5LTMuNjQtMy45NSAwLS44Ny4zMS0xLjU5LjgyLTIuMTUtLjA4LS4yLS4zNi0xLjAyLjA4LTIuMTIgMCAwIC42Ny0uMjEgMi4yLjgyLjY0LS4xOCAxLjMyLS4yNyAyLS4yNy42OCAwIDEuMzYuMDkgMiAuMjcgMS41My0xLjA0IDIuMi0uODIgMi4yLS44Mi40NCAxLjEuMTYgMS45Mi4wOCAyLjEyLjUxLjU2LjgyIDEuMjcuODIgMi4xNSAwIDMuMDctMS44NyAzLjc1LTMuNjUgMy45NS4yOS4yNS41NC43My41NCAxLjQ4IDAgMS4wNy0uMDEgMS45My0uMDEgMi4yIDAgLjIxLjE1LjQ2LjU1LjM4QTguMDEzIDguMDEzIDAgMDAxNiA4YzAtNC40Mi0zLjU4LTgtOC04eiIvPjwvc3ZnPg==', label: 'GitHub', title: 'GitHub', url: 'https://github.com/Pancat-Silly/Pancat-Silly.github.io', bg: 'linear-gradient(#3b4250,#161b22)' }); // link app: this site's repository in a new tab
 DESK.addApp({ id: 'settings', icon: '⚙️', label: '설정', title: '설정', w: 460, h: 520, bg: 'linear-gradient(#6a7480,#3f4650)',
   build(body) { body.classList.add('dkApp'); this.onOpen(body); },
