@@ -40,6 +40,10 @@ const RPACK = {
   },
   async apply() {
     const T = this.data && this.data.tex; if (!T) return; const g = RTEX.g; g.imageSmoothingEnabled = false;
+    // textures added to the game after this pack was saved (campfire_fire, campfire_log_lit …): fetch once, keep with the pack
+    if (!this._ens) { this._ens = true; const miss = [...RTEX.map.keys()].filter(n => !T[n] && !this.KEEP.has(n) && !/^destroy_stage_|_rp$/.test(n) && !(this.data.miss || []).includes(n)).concat(T.fire_0 ? [] : ['fire_0']);
+      if (miss.length) { let got = 0; await Promise.all(miss.map(async n => { try { const d = await PACK.get(this.path(n)); if (d) { T[n] = new Blob([d], { type: 'image/png' }); got++; } } catch (e) { } }));
+        this.data.miss = (this.data.miss || []).concat(miss.filter(n => !T[n])); IDB.set('rbs_pack', this.data).catch(() => { }); } }
     if (!T['item/potion_overlay']) try { const d = await PACK.get(this.path('item/potion_overlay')); if (d) { T['item/potion_overlay'] = new Blob([d], { type: 'image/png' }); IDB.set('rbs_pack', this.data).catch(() => { }); } } catch (e) { } // packs saved before the overlay was fetched
     const tmp = document.createElement('canvas'); tmp.width = tmp.height = 16; const tg = tmp.getContext('2d'); tg.imageSmoothingEnabled = false;
     for (const [name, t] of RTEX.map) {

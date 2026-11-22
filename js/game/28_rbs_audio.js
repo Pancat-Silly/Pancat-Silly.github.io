@@ -19,7 +19,9 @@ const RAU = {
   mv() { return .5 * RUI.mvol * RUI.master * (this.fadeK ?? 1); }, // music volume: 음악 볼륨 × 전체 볼륨 × fade-in
   src(buf, vol = 1, rate = 1) { if (!this.ctx || !buf) return; const s = this.ctx.createBufferSource(); s.buffer = buf; s.playbackRate.value = rate; const g = this.ctx.createGain(); g.gain.value = vol; s.connect(g); g.connect(this.master); s.start(); return s; },
   // custom pack sfx (sfx_hurry, sfx_rare, sfx_win_*...). gated = only when the player's 효과음 setting (sef) is on
-  sfx(k, gated) { if (gated && !RUI.sfxOn) return; this.init(); if (this.buf[k]) this.src(this.buf[k], 1); else this.synth('toast', 1); },
+  // no file for it (bell, sfx_error left out of the repo …): the vanilla pack sound (bell / anvil), else that sound's synth
+  SFX_VAN: { sfx_error: 'anvil_land', sfx_gameover: 'bell' },
+  sfx(k, gated) { if (gated && !RUI.sfxOn) return; this.init(); if (this.buf[k]) { this.src(this.buf[k], 1); return; } const v = this.SFX_VAN[k] || k; if ((this.pack[v] || []).length || !k.startsWith('sfx_')) this.play(v, 1); else this.synth('toast', 1); },
   // vanilla-style sound: pack sample if downloaded, else synth
   play(k, pitch = 1, gated, vol = 1) { if (gated && !RUI.sfxOn) return; if (!this.ctx) return;
     if (RUI.sndLim) { const n = performance.now(), q = this._rl || (this._rl = {}), r = q[k]; if (r && n - r.t < 80) { if (r.n >= 3) return; r.n++; } else q[k] = { t: n, n: 1 }; } /* setting 같은 소리 제한 (default off): at most 3 of the same sound per 80 ms */ const L = this.pack[k]; if (L && L.length) { this.src(L[Math.floor(Math.random() * L.length)], vol, pitch); return; } this.synth(k, pitch, vol); },

@@ -118,10 +118,14 @@ falls: [], // falling block entities (sand, gravel, anvil) — animated on every
   LOOT: Object.assign(Object.fromEntries(RB_ARENA.filter(e => e.loot).map(e => [e.r, e.loot])), Object.fromEntries(RB_MINI.filter(e => e.loot).map(e => ['m' + e.m, e.loot]))),
   ENCH_ID: { 0: 'protection', 9: 'sharpness', 15: 'efficiency', 17: 'unbreaking', 12: 'knockback', 13: 'fire_aspect', 18: 'fortune' },
   LOOTID: { 'minecraft:cobblestone': 'cobblestone', 'minecraft:splash_potion': 'splash_potion', 'minecraft:experience_bottle': 'experience_bottle', 'minecraft:diamond': 'diamond', 'minecraft:log': 'oak_log', 'minecraft:raw_iron': 'raw_iron', 'minecraft:coal': 'coal', 'minecraft:enchanting_table': 'enchanting_table', 'minecraft:lapis_lazuli': 'lapis_lazuli', 'minecraft:raw_gold': 'raw_gold', 'minecraft:iron_nugget': 'iron_nugget', 'minecraft:enchanted_book': 'enchanted_book' },
+  // mini palette row (지하 "나올수 있는 블록들 (호스트가 수정가능)"): x15 y89 z-1..7 = the 9 mini blocks; its chests' contents are the mini chests' loot
+  MINI_PAL: [15, 89, -1], miniPalIdx(x, y, z) { const [px, py, pz] = this.MINI_PAL; return x === px && y === py && z >= pz && z < pz + 9 ? z - pz : -1; },
   beGet(x, y, z) {
     const k = x + ',' + y + ',' + z; let d = this.be.get(k); if (d) return d;
     const B = BL[RW.getM(x, y, z)];
-    if (B.use === 'chest') { const inv = new Array(27).fill(null); const lt = this.chestType.get(k); if (lt && this.LOOT[lt]) this.LOOT[lt].forEach((it, i) => { const id = this.LOOTID[it.id]; if (!id) return; const st = { id, n: it.count }; if (it.ench) { st.en = {}; for (const e of it.ench) { const n = this.ENCH_ID[e.id]; if (n) st.en[n] = e.lvl; } } inv[(String(lt)[0] === 'm' ? [4, 11, 13, 15, 22] : [4, 10, 12, 13, 14, 16, 22])[i] ?? i] = st; }); d = { inv }; }
+    if (B.use === 'chest') { const pi = this.miniPalIdx(x, y, z); const lt = this.chestType.get(k) || (pi >= 0 && RB_MINI[pi] && RB_MINI[pi].loot ? 'm' + RB_MINI[pi].m : null);
+      if (lt && String(lt)[0] === 'p') { const [px, py, pz] = this.MINI_PAL, i = +String(lt).slice(1); const src = BL[RW.getM(px, py, pz + i)].use === 'chest' ? this.beGet(px, py, pz + i) : null; this.be.set(k, d = { inv: src ? src.inv.map(s => s ? JSON.parse(JSON.stringify(s)) : null) : new Array(27).fill(null) }); return d; }
+      const inv = new Array(27).fill(null); if (lt && this.LOOT[lt]) this.LOOT[lt].forEach((it, i) => { const id = this.LOOTID[it.id]; if (!id) return; const st = { id, n: it.count }; if (it.ench) { st.en = {}; for (const e of it.ench) { const n = this.ENCH_ID[e.id]; if (n) st.en[n] = e.lvl; } } inv[(String(lt)[0] === 'm' ? [4, 11, 13, 15, 22] : [4, 10, 12, 13, 14, 16, 22])[i] ?? i] = st; }); d = { inv }; }
     else if (B.use === 'furnace') d = { inv: [null, null, null], burn: 0, burnMax: 0, cook: 0 };
     else return null;
     this.be.set(k, d); return d;
@@ -363,7 +367,7 @@ falls: [], // falling block entities (sand, gravel, anvil) — animated on every
       case 'lobby':
         if (prev && prev !== 'lobby') { RAU.stopBgm(); if (!me.spectator) { this.tp(me, RV.ret); } else { me.mode = 'spectator'; } me.clearInv(); me.clearEff(); me.xp = me.lvl = 0; me.hp = 20; me.mode = me.mode === 'spectator' ? 'spectator' : 'adventure'; }
         RW.clearArena(); RW.restore(RW.dmSnap); RW.restore(RW.dmSnap25); this.itemsClear(); this.mods = []; RUI.spec(false, true); if (me.mode === 'spectator' && prev && prev !== 'lobby') { me.mode = 'adventure'; this.toSpawn(me); }
-        for (const b of this.bots) { b.clearInv(); b.clearEff(); b.mode = 'adventure'; b.hp = 20; this.tp(b, [rand(-3, 3), 31, rand(-3, 3)]); }
+        for (const b of this.bots.filter(b => !b.mini)) { b.clearInv(); b.clearEff(); b.mode = 'adventure'; b.hp = 20; this.tp(b, [rand(-3, 3), 31, rand(-3, 3)]); }
         break;
       case 'prep':
         RAU.stopBgm(); if (fresh) this.chat('§a게임시작 준비중입니다...');
@@ -374,23 +378,23 @@ falls: [], // falling block entities (sand, gravel, anvil) — animated on every
       case 'start': {
         RAU.gameBgm(1); const sl = gs.sp[me.id]; if (me.spectator) { this.tp(me, [.5, 213, .5]); RUI.specNext(1); }
         if (sl !== undefined && !me.spectator) { const [x, z] = RW.spawns(gs.big)[sl]; this.tp(me, [x + .5, 210, z + .5]); me.clearInv(); me.clearEff(); me.mode = 'adventure'; me.xp = me.lvl = 0; me.hp = 20; }
-        for (const b of this.bots) { b.ai = null; const s = gs.sp[b.id]; if (s !== undefined) { const [x, z] = RW.spawns(gs.big)[s]; this.tp(b, [x + .5, 210, z + .5]); b.clearInv(); b.mode = 'adventure'; } }
+        for (const b of this.bots.filter(b => !b.mini)) { b.ai = null; const s = gs.sp[b.id]; if (s !== undefined) { const [x, z] = RW.spawns(gs.big)[s]; this.tp(b, [x + .5, 210, z + .5]); b.clearInv(); b.mode = 'adventure'; } }
         break;
       }
       case 'game': {
         const inA = this.area(me) === 'arena' && !me.spectator;
         if (inA) { me.mode = 'survival'; if (O.kit) this.giveKit(me); }
         if (inA && O.brk && fresh) this.breakAround(me);
-        for (const b of this.bots) if (this.area(b) === 'arena') { b.mode = 'survival'; if (O.kit && fresh) this.giveKit(b); if (O.brk && fresh) this.breakAround(b); } // bots get the same kit // bots too: 시작시 주변블록 파괴
+        for (const b of this.bots.filter(b => !b.mini)) if (this.area(b) === 'arena') { b.mode = 'survival'; if (O.kit && fresh) this.giveKit(b); if (O.brk && fresh) this.breakAround(b); } // bots get the same kit // bots too: 시작시 주변블록 파괴
         if (fresh) { this.chat('§l§b>§5>§a> §r§e이번 라운드 정보 §l§a<§5<§b<'); this.chat('§e시작시 주변블록 파괴 : ' + (O.brk ? '§a활성화' : '§c비활성화')); this.chat('§e기본템 지급 : ' + (O.kit ? '§a활성화' : '§c비활성화')); this.chat('§e방패 제작 유무 : ' + (O.shield ? '§a활성화' : '§c비활성화')); this.chat('§e데스매치 패널티 : ' + (O.lava ? '§c용암' : '§a독가스')); this.chat('§e데스매치 건축 유무 : ' + (O.build ? '§a활성화' : '§c비활성화')); this.chat('§e경기장 pvp 유무 : ' + (O.pvp ? '§a활성화' : '§c비활성화')); }
         break;
       }
-      case 'tover': RAU.stopBgm(); if (fresh) { this.title('§cTime over!', ''); RAU.sfx('bell', true); } if (me.mode === 'survival') me.mode = 'adventure'; for (const b of this.bots) b.mode = 'adventure'; break;
+      case 'tover': RAU.stopBgm(); if (fresh) { this.title('§cTime over!', ''); RAU.sfx('bell', true); } if (me.mode === 'survival') me.mode = 'adventure'; for (const b of this.bots.filter(b => !b.mini)) b.mode = 'adventure'; break;
       case 'dm': {
         RAU.stopBgm(); RAU.dmBgm();
         if (me.spectator) { this.tp(me, gs.big ? [4.5, 68, 1.5] : [3.5, 80, .5]); RUI.specNext(1); }
         if (!me.spectator) { if (gs.dmp.includes(me.id) && me.alive) { this.tp(me, this.dmPt()); me.hp = 20; } else this.tp(me, this.dmPt(true)); me.mode = 'adventure'; }
-        for (const b of this.bots) { if (gs.dmp.includes(b.id)) { this.tp(b, this.dmPt()); b.hp = 20; } else this.tp(b, this.dmPt(true)); b.mode = 'adventure'; }
+        for (const b of this.bots.filter(b => !b.mini)) { if (gs.dmp.includes(b.id)) { this.tp(b, this.dmPt()); b.hp = 20; } else this.tp(b, this.dmPt(true)); b.mode = 'adventure'; }
         if (fresh) this.title('Starting in...', ''); break;
       }
       case 'win': {
@@ -398,7 +402,7 @@ falls: [], // falling block entities (sand, gravel, anvil) — animated on every
         if (RUI.gui) RUI.close(true); if (RUI.chatOpen) RUI.closeChat(); RUI.paused = false; $('rbPause').classList.add('hide'); // the cutscene takes the whole screen (RR.cutCam)
         if (me.spectator) { RUI.follow = null; this.tp(me, RV.aud, 90); }
         if (!me.spectator) { if (iWon) this.tp(me, RV.podium, -90); else this.tp(me, RV.aud, 90); me.pitch = 0; me.mode = 'adventure'; me.clearInv(); me.clearEff(); if (iWon) this.podiumHold(me); }
-        for (const b of this.bots) { if (w.ids.includes(b.id)) { this.tp(b, RV.podium, -90); this.podiumHold(b); } else this.tp(b, RV.aud, 90); b.clearInv(); }
+        for (const b of this.bots.filter(b => !b.mini)) { if (w.ids.includes(b.id)) { this.tp(b, RV.podium, -90); this.podiumHold(b); } else this.tp(b, RV.aud, 90); b.clearInv(); }
         this.title((w.names || '아무도 없음') + ' 님 승리!', '');
         if (fresh) RAU.sfx(w.snd || 'sfx_win_yay');
         if (iWon && fresh) { this.wins++; this.saveStats(); if (this.wins === 1) this.achieve('ac_firstwin', '§5[달콤한 첫 승]§r', 'sfx_rare'); if (this.wins === 5) this.achieve('ac_win5', '§5[5번째 승리]§r', 'sfx_rare'); }
@@ -412,7 +416,7 @@ falls: [], // falling block entities (sand, gravel, anvil) — animated on every
   achTick() { const pt = this.playtime; if (pt >= 3600) this.achieve('rb_pt1', '§a[1시간의 묘미]§r', 'levelup'); if (pt >= 7200) this.achieve('rb_pt2', '§a[2시간의 묘미]§r', 'levelup'); if (pt >= 21600) this.achieve('rb_pt6', '§5[6시간의 묘미]§r', 'sfx_rare'); if (pt >= 43200) this.achieve('rb_pt12', '§5[랜덤블록 중독자]§r', 'sfx_rare'); },
   // ---------- host: the round state machine ----------
   setPh(ph, extra) { Object.assign(this.gs, { ph, t: Date.now() }, extra || {}); },
-  readyCount() { let n = 0, h = 0; for (const p of this.players()) if (!p.spectator && (p === this.me ? this.rd : p.isBot ? (p.local ? 1 : p.rd) : p.rd)) { n++; if (!p.isBot) h++; } return h ? n : 0; }, // bots are always ready, but a round only starts once a person is ready
+  readyCount() { let n = 0, h = 0; for (const p of this.players()) if (!p.spectator && !p.mini && (p === this.me ? this.rd : p.isBot ? (p.local ? 1 : p.rd) : p.rd)) { n++; if (!p.isBot) h++; } return h ? n : 0; }, // bots are always ready, but a round only starts once a person is ready
   hostTick() {
     const gs = this.gs, now = Date.now(), el = now - gs.t, O = gs.opts;
     if (this.gs.ph === 'lobby' && this.gs.opts.bots && this.players().filter(p => !p.isBot).length > 1) { this.gs.opts.bots = 0; this.chat('§7다른 플레이어가 들어와서 봇이 빠졌어요 (봇은 싱글 플레이 전용)'); }
@@ -420,7 +424,7 @@ falls: [], // falling block entities (sand, gravel, anvil) — animated on every
     switch (gs.ph) {
       case 'lobby': if (O.time !== 24 && this.readyCount() >= 2) this.setPh('prep', { seed: (Math.random() * 2 ** 31) | 0, rnd: gs.rnd + 1, win: null, sp: {}, dmp: [], big: O.big ? 1 : 0 }); break;
       case 'prep': if (el >= RW.PREP_MS) this.setPh('count'); break;
-      case 'count': if (el >= 10500) { const L = this.players().filter(p => !p.spectator && p.alive !== false); for (let i = L.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [L[i], L[j]] = [L[j], L[i]]; } const sp = {}; const NS = RW.spawns(gs.big).length; const sl = [...Array(NS).keys()].sort(() => Math.random() - .5); L.slice(0, NS).forEach((p, i) => sp[p.id] = sl[i]); this.setPh('start', { sp }); } break;
+      case 'count': if (el >= 10500) { const L = this.players().filter(p => !p.spectator && p.alive !== false && !p.mini); for (let i = L.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [L[i], L[j]] = [L[j], L[i]]; } const sp = {}; const NS = RW.spawns(gs.big).length; const sl = [...Array(NS).keys()].sort(() => Math.random() - .5); L.slice(0, NS).forEach((p, i) => sp[p.id] = sl[i]); this.setPh('start', { sp }); } break;
       case 'start': if (el >= 4200) { let t = O.time; if (t === 22) t = randi(0, 20); const ms = t === 21 ? -1 : t === 0 ? 1000 : t === 20 ? 600000 : t === 23 ? 330000 : t * 30000; this.setPh('game', { end: ms === -1 ? -1 : Date.now() + ms }); } break;
       case 'game': { if (el < 1500) break; const a = this.alivePlayers('arena'); if (a.length < 2) this.win(a); else if (gs.end > 0 && now >= gs.end) this.setPh('tover', { dmp: a.map(p => p.id) }); break; }
       case 'tover': if (el >= 2500) this.setPh('dm'); break;
@@ -434,21 +438,36 @@ falls: [], // falling block entities (sand, gravel, anvil) — animated on every
     const M = this.gs.mini; const el = now - M.t; const set = (ph, x) => { this.gs.mini = Object.assign({}, M, { ph, t: now }, x || {}); };
     const pl = id => this.byId(id);
     switch (M.ph) {
-      case 'idle': if (this.tick % 5) break; { const on = this.players().filter(p => !p.isBot && p.alive !== false && !p.spectator && this.inBox(p, [10, 92, 6, 12, 94, 8])); if (on.length >= 2) { const pick = on.slice(0, 2).sort(() => Math.random() - .5); set('cage', { a: pick[0].id, b: pick[1].id, an: pick[0].name, bn: pick[1].name, seed: (Math.random() * 2 ** 31) | 0, n: (M.n | 0) + 1 }); } } break;
+      case 'idle': if (this.tick % 5) break; { const on = this.players().filter(p => !p.isBot && p.alive !== false && !p.spectator && this.inBox(p, [10, 92, 6, 12, 94, 8]));
+        // 봇전: alone on the pad and sneaking for 1 s -> a bot (host-simulated, 봇 난이도 = opts.botLv) joins as the other player
+        if (on.length === 1 && on[0].sneaking) { this.mbSneak = (this.mbSneak | 0) + 5; if (this.mbSneak >= 20) { this.mbSneak = 0; const p = on[0], b = new RPlayer('bot' + this.nid.slice(0, 4) + 'm' + uid(3), '미니봇', true); b.mini = true; this.tp(b, RV.miniCage); this.bots.push(b);
+          set('cage', { a: p.id, b: b.id, an: p.name, bn: b.name, seed: (Math.random() * 2 ** 31) | 0, n: (M.n | 0) + 1, bot: 1 }); } break; } else this.mbSneak = 0;
+        if (on.length >= 2) { const pick = on.slice(0, 2).sort(() => Math.random() - .5); set('cage', { a: pick[0].id, b: pick[1].id, an: pick[0].name, bn: pick[1].name, seed: (Math.random() * 2 ** 31) | 0, n: (M.n | 0) + 1 }); } } break;
       case 'cage': if (el >= 1500) set('gen'); break;
       case 'gen': if (el >= 1600) set('count'); break;
       case 'count': if (el >= 4000) set('fight', { end: now + 60000 }); break;
       case 'fight': { const A = pl(M.a), B = pl(M.b); const inA = A && A.alive !== false && this.inMini(A), inB = B && B.alive !== false && this.inMini(B);
         if (el > 1000 && (!inA || !inB)) { set('end', { win: inA ? M.a : inB ? M.b : null, wn: inA ? M.an : inB ? M.bn : '' }); break; }
         if (now >= M.end) set('end', { win: null, wn: '', tout: 1 }); break; }
-      case 'end': if (el >= 2500) set('idle', { a: null, b: null }); break;
+      case 'end': if (el >= 2500) set('idle', { a: null, b: null, bot: 0 }); break;
     }
+    this.miniBotTick();
+  },
+  miniBotTick() { // the 봇전 bot follows the same timeline as a player would (cage -> spawn -> fight -> back), then leaves
+    const M = this.gs.mini; for (const b of this.bots.filter(b => b.mini)) { if (b.id !== M.b || M.ph === 'idle') { this.bots.splice(this.bots.indexOf(b), 1); continue; }
+      const k = M.ph + ':' + M.t; if (b.mk !== k) { b.mk = k; b.ai = null;
+        if (M.ph === 'cage') { this.tp(b, RV.miniCage); b.clearInv(); b.clearEff(); b.mode = 'adventure'; }
+        if (M.ph === 'count') { this.tp(b, RV.mini2, 0); b.clearInv(); }
+        if (M.ph === 'fight') { b.mode = 'survival'; b.hp = 20; }
+        if (M.ph === 'end') { b.mode = 'adventure'; b.clearInv(); b.clearEff(); this.tp(b, RV.miniRet); } }
+      if (M.ph === 'fight' && b.alive && this.tick % 20 === 0) { b.addEff('strength', 0, 2); b.addEff('haste', 0, 2); } }
   },
   // ---------- mini — every client plays the same timeline ----------
   miniTick() {
     const M = this.gs.mini; if (!M) return; const me = this.me; const key = M.ph + ':' + M.t + ':' + (M.n | 0); const el = this.hostNow() - M.t; const mine = M.a === me.id || M.b === me.id; const near = this.area(me) === 'playground';
     if (this.lmk !== key) { this.lmk = key; this.lmd = new Set(); this.onMini(M, mine, near, el); }
     const once = (k, f) => { if (!this.lmd.has(k)) { this.lmd.add(k); f(); } };
+    if (M.ph === 'idle' && !me.spectator && this.inBox(me, [10, 92, 6, 12, 94, 8]) && this.tick % 10 === 0 && !this.players().some(p => p !== me && !p.isBot && this.inBox(p, [10, 92, 6, 12, 94, 8]))) RUI.actionbar('§e혼자예요 · §f웅크리고 있으면 §b봇과 대결§f해요');
     if (M.ph === 'gen') { const k = Math.min(5, Math.floor(el / 250) + 1); for (let i = 0; i < k; i++) once('L' + i, () => RW.miniLayer(92 + i, M.seed)); if (k >= 5) once('sp', () => RW.miniSpawns()); }
     if (M.ph === 'count') { once('all', () => { if (!this.lmd.has('L4')) { RW.miniClear(); for (let i = 0; i < 5; i++) RW.miniLayer(92 + i, M.seed); RW.miniSpawns(); } }); const k = Math.floor(el / 1000);
       for (let i = 0; i <= Math.min(k, 3); i++) once('c' + i, () => { if (!near || el - i * 1000 > 1500) return; this.title(['§c3', '§62', '§a1', '§bGO!'][i], '', { stay: 18 }); RAU.note(i < 3 ? .6 : 1); }); }

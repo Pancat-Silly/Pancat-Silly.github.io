@@ -7,9 +7,9 @@
 const RBOT = {
   NAMES: ['레모니봇', '블록봇', '랜덤봇', '광부봇', '다이아봇', '곡괭이봇', '모루봇', '용광로봇'],
   manage() {
-    const want = clamp(RG.gs.opts.bots | 0, 0, 24);
-    while (RG.bots.length < want) { const n = RG.bots.length; const b = new RPlayer('bot' + RG.nid.slice(0, 4) + n + uid(3), this.NAMES[n % 8] + (n >= 8 ? (n / 8 | 0) + 1 : ''), true); RG.tp(b, [rand(-3, 3), 31, rand(-3, 3)]); b.yaw = rand(-3, 3); RG.bots.push(b); }
-    while (RG.bots.length > want) RG.bots.pop();
+    const want = clamp(RG.gs.opts.bots | 0, 0, 24), reg = () => RG.bots.filter(b => !b.mini); // the 미니 봇전 bot isn't one of these
+    while (reg().length < want) { const n = reg().length; const b = new RPlayer('bot' + RG.nid.slice(0, 4) + n + uid(3), this.NAMES[n % 8] + (n >= 8 ? (n / 8 | 0) + 1 : ''), true); RG.tp(b, [rand(-3, 3), 31, rand(-3, 3)]); b.yaw = rand(-3, 3); RG.bots.push(b); }
+    while (reg().length > want) { const L = reg(); RG.bots.splice(RG.bots.indexOf(L[L.length - 1]), 1); }
   },
   // line of sight: eye -> target eye / chest, blocked by any solid block (same rule as a player's crosshair)
   los(b, t) {
@@ -28,6 +28,7 @@ const RBOT = {
       Object.assign(I, A0.last); if (A0.digG && b.dig && b.dig.k === this.key(...A0.digG)) this.dig(b, A0.digG); return; }
     this.L = L; I.f = 0; I.s = 0; I.jump = false; I.sneak = false; I.sprint = false; b.blocking = false;
     if (!b.alive) return; if (RUI.botAI === false) return;
+    if (b.mini) { this.miniBrain(b, I); if (b.ai) b.ai.last = { f: I.f, s: I.s, jump: false, sneak: I.sneak, sprint: I.sprint }; return; }
     const ph = RG.gs.ph, ar = RG.area(b);
     if (ar === 'lobby' || ar === 'winner' || ar === 'dmspec' || ar === 'other') { // idle wander
       b.ai = null;
@@ -324,6 +325,19 @@ const RBOT = {
     const R = RW.R(gs.big); if (!A.explore || A.explore.t < RG.tick) A.explore = { p: RW.P(randi(-R + 2, R - 2) + .5, randi(203, 210), randi(-R + 2, R - 2) + .5), t: RG.tick + 200 };
     this.navTo(b, A.explore.p.x, A.explore.p.y, A.explore.p.z, I);
   },
+  // 미니 랜덤블록 봇전 (5x5x11): open chests it can see, craft, fight the player (the box is tiny, so it always heads for them)
+  miniBrain(b, I) {
+    const M = RG.gs.mini; if (M.ph !== 'fight' || !b.alive) return;
+    const A = b.ai || (b.ai = { goal: null, bad: {}, looted: new Map(), badItem: new Set(), itemSince: new Map(), off: randi(0, 19), pos: [b.x, b.z], posT: RG.tick, mem: new Map() });
+    if ((RG.tick + A.off) % 10 === 0) this.equip(b); if ((RG.tick + A.off) % 8 === 0) this.craftStep(b, A);
+    if (b.hp < 9 && b.count('splash_potion') && !(A.potT > RG.tick)) { this.hold(b, b.inv.findIndex(s => s && s.id === 'splash_potion')); b.pitch = 1.5; RG.throwProj(b, 'heal'); b.take('splash_potion', 1); A.potT = RG.tick + 60; return; }
+    const foe = RG.byId(M.a); if (!foe || foe.alive === false) return; const d = Math.hypot(foe.x - b.x, foe.y - b.y, foe.z - b.z);
+    if ((d < 6 && this.los(b, foe)) || (b.lastBy === foe.id && RG.tick - b.lastByT < 60)) { this.fight(b, A, I, foe, d); return; }
+    if (!A.goal || !RW.getM(...A.goal) || BL[RW.getM(...A.goal)].use !== 'chest' || (A.looted.get(this.key(...A.goal)) || 0) > RG.tick) { A.goal = null;
+      for (let y = 92; y <= 96 && !A.goal; y++) for (let z = -2; z <= 8 && !A.goal; z++) for (let x = 14; x <= 18 && !A.goal; x++) { const id = RW.getM(x, y, z); if (id && BL[id].use === 'chest' && !((A.looted.get(this.key(x, y, z)) || 0) > RG.tick) && !RG.chestBlocked(x, y, z) && this.sees(b, x, y, z)) A.goal = [x, y, z]; } }
+    if (A.goal) { this.work(b, A, I, A.goal); return; }
+    this.fight(b, A, I, foe, d);
+  },
   fight(b, A, I, tg, bd) {
     const wi = this.bestWeapon(b).i; if (wi >= 0) this.hold(b, wi);
     const dx = tg.x - b.x, dz = tg.z - b.z, dy = tg.y - b.y, hd = Math.hypot(dx, dz);
@@ -339,4 +353,4 @@ const RBOT = {
     this.navTo(b, tg.x, tg.y, tg.z, I);
   },
 };
-RG.canEditBot = (x, y, z) => { const ph = RG.gs.ph, R = RW.R(RG.gs.big); if (ph === 'game' && x >= -R && x <= R && y >= 201 && y <= 215 && z >= -R && z <= R) return true; if (ph === 'dm' && RG.gs.opts.build && (RG.gs.big ? x >= -3 && x <= 12 && y >= 61 && y <= 65 && z >= -6 && z <= 9 : x >= -2 && x <= 9 && y >= 73 && y <= 78 && z >= -5 && z <= 6)) return true; return false; };
+RG.canEditBot = (x, y, z) => { const ph = RG.gs.ph, R = RW.R(RG.gs.big), M = RG.gs.mini; if (M && M.ph === 'fight' && x >= 14 && x <= 18 && y >= 92 && y <= 96 && z >= -2 && z <= 8) return true; if (ph === 'game' && x >= -R && x <= R && y >= 201 && y <= 215 && z >= -R && z <= R) return true; if (ph === 'dm' && RG.gs.opts.build && (RG.gs.big ? x >= -3 && x <= 12 && y >= 61 && y <= 65 && z >= -6 && z <= 9 : x >= -2 && x <= 9 && y >= 73 && y <= 78 && z >= -5 && z <= 6)) return true; return false; };

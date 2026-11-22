@@ -93,7 +93,8 @@ const RUI = {
     if (this.heldT && now - this.heldT > 2000) { $('rbHeld').style.opacity = 0; this.heldT = 0; }
     // bars
     const bs = Math.ceil(me.hp) + '|' + Math.ceil(me.absorb) + '|' + me.armorPts()[0] + '|' + me.food + '|' + me.lvl + '|' + Math.round(me.xp) + '|' + (me.hurtTime > 0) + '|' + me.mode + '|' + (me.eff('poison') ? 'p' : me.eff('wither') ? 'w' : '');
-    if (bs !== this._bs) { this._bs = bs; this.drawBars(); }
+    const bs2 = bs + (me.hurtTime > 0 ? '|h' : '') + (me.hp > 0 && me.hp <= 4 ? '|' + RG.tick : ''); // hurt flash / low-health jiggle redraw
+    this.fireOv(me); if (bs2 !== this._bs) { this._bs = bs2; this.drawBars(); }
     // sidebar (the original scoreboard)
     if ((RG.tick & 7) === 0) { const all = RG.players().filter(p => !p.isBot || true); const rows = [['준비한 플레이어', RG.readyCount()], ['서버 인원', all.length], ['게임중인 플레이어', all.filter(p => !p.spectator && p.alive !== false && RG.area(p) === 'arena').length]].sort((a, b) => b[1] - a[1]);
       const h = '<div class="rsh">랜덤블록 서바이벌</div>' + rows.map(r => '<div><span>' + r[0] + '</span><b>' + r[1] + '</b></div>').join(''); if (h !== this._sb) { this._sb = h; $('rbSide').innerHTML = h; }
@@ -104,18 +105,29 @@ const RUI = {
     }
   },
   EFN: { regeneration: '재생', absorption: '흡수', poison: '독', fatal_poison: '치명적 독', haste: '성급함', wither: '위더', resistance: '저항', strength: '힘', weakness: '나약함', speed: '신속', slowness: '구속', night_vision: '야간 투시', instant_health: '즉시 회복', fire_resistance: '화염 저항' },
+  // on fire: MC's first-person fire overlay (ScreenEffectRenderer.renderFire) - two flame sprites rising from the bottom
+  // corners, the right one mirrored, 90 % opaque. Pack on: the vanilla fire_0 strip, animated one frame per tick; off: our fire tile
+  fireOv(me) {
+    const on = me.fire > 0 && me.alive !== false && me.mode !== 'spectator' && !RR.third; let el = this._fov;
+    if (!el) { if (!on) return; el = this._fov = document.createElement('div'); el.id = 'rbFireOv'; el.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:5;overflow:hidden;display:none'; el.innerHTML = '<i></i><i></i>'; document.body.appendChild(el); }
+    el.style.display = on ? '' : 'none'; if (!on) return;
+    const src = RPACK.on && RPACK.data && RPACK.data.tex && RPACK.data.tex.fire_0;
+    if (this._fovSrc !== (src || 'x')) { this._fovSrc = src || 'x';
+      const set = (url, n) => { for (const [i, f] of [...el.children].entries()) f.style.cssText = 'position:absolute;bottom:-26vh;width:78vh;height:78vh;opacity:.9;image-rendering:pixelated;background:url(' + url + ') 0 0/100% ' + n * 100 + '% no-repeat;' + (i ? 'right:calc(50% - 74vh);transform:scaleX(-1) rotate(-8deg)' : 'left:calc(50% - 74vh);transform:rotate(-8deg)') + (n > 1 ? ';animation:rbFireA ' + n * .05 + 's steps(' + n + ') infinite' : '');
+        if (n > 1 && !document.getElementById('rbFireK')) { const s = document.createElement('style'); s.id = 'rbFireK'; s.textContent = '@keyframes rbFireA{to{background-position:0 100%}}'; document.head.appendChild(s); } };
+      if (src) createImageBitmap(src).then(b => set(URL.createObjectURL(src), Math.max(1, Math.round(b.height / b.width)))).catch(() => { });
+      else { const t = RTEX.T('fire_0'), [ox, oy] = RTEX.xy(t), c = document.createElement('canvas'); c.width = c.height = 16; c.getContext('2d').drawImage(RTEX.cv, ox, oy, 16, 16, 0, 0, 16, 16); set(c.toDataURL(), 1); } }
+  },
   drawBars() {
     const me = RG.me; const c = $('rbBars'); const W = 364, H = 46; if (c.width !== W) { c.width = W; c.height = H; } const g = c.getContext('2d'); g.clearRect(0, 0, W, H);
     if (me.mode === 'spectator') return;
-    // Minecraft-style pixel heart (9x8 sprite, 1.6 px per pixel): K outline, r fill, h highlight; half = left 4.5 columns filled
-    const HS = ['.KK...KK.', 'KhrK.KrrK', 'KhrrKrrrK', 'KrrrrrrrK', '.KrrrrrK.', '..KrrrK..', '...KrK...', '....K....'], PS = 1.6;
-    const heart = (x, y, fill, col) => { y -= 1;
-      for (let r = 0; r < HS.length; r++) for (let q = 0; q < 9; q++) { const ch = HS[r][q]; if (ch === '.') continue;
-        const on = fill === 1 || (fill === .5 && q < 4) || (fill === .5 && q === 4 && ch === 'K');
-        g.fillStyle = ch === 'K' ? '#000' : !on ? '#2b0b0b' : ch === 'h' ? 'rgba(255,255,255,.75)' : col; g.fillRect(Math.round(x + q * PS), Math.round(y + r * PS), Math.ceil(PS), Math.ceil(PS));
-        if (on && ch === 'h') { g.fillStyle = col; g.globalAlpha = .45; g.fillRect(Math.round(x + q * PS), Math.round(y + r * PS), Math.ceil(PS), Math.ceil(PS)); g.globalAlpha = 1; } } };
-    const hp = Math.max(0, me.hp); const hc = me.eff('poison') ? '#7a8f1e' : me.eff('wither') ? '#333' : '#e8231d';
-    for (let i = 0; i < 10; i++) { const v = clamp(hp - i * 2, 0, 2); heart(i * 16, 28, v >= 2 ? 1 : v >= 1 ? .5 : 0, hc); }
+    // same pixel heart as 4중인격 (UI.drawHearts: 7x7 sprite, 2 px per pixel, white outline while hurt, half = left 4 columns)
+    const HS = ['.XX.XX.', 'XrwXrrX', 'XwrrrrX', 'XrrrrrX', '.XrrrX.', '..XrX..', '...X...'], PS = 2;
+    const heart = (x, y, fill, col) => { for (let r = 0; r < 7; r++) for (let q = 0; q < 7; q++) { const ch = HS[r][q]; if (ch === '.') continue;
+      const on = fill >= 1 || (fill > 0 && q <= 3); g.fillStyle = ch === 'X' ? (me.hurtTime > 0 ? '#fff' : '#111') : !on ? '#3a1010' : ch === 'w' ? (col === '#E01818' ? '#FFB0B0' : 'rgba(255,255,255,.55)') : col;
+      g.fillRect(x + q * PS, y + r * PS, PS, PS); if (on && ch === 'w' && col !== '#E01818') { g.fillStyle = col; g.globalAlpha = .5; g.fillRect(x + q * PS, y + r * PS, PS, PS); g.globalAlpha = 1; } } };
+    const hp = me.hp > 0 ? Math.ceil(me.hp) : 0; /* MC rounds health up: 0.4 left = half a heart, never an empty bar while alive */ const hc = me.eff('poison') ? '#8A9A1E' : me.eff('wither') ? '#333' : '#E01818';
+    for (let i = 0; i < 10; i++) { const v = clamp(hp - i * 2, 0, 2); heart(i * 16, 28 + (hp <= 4 && (RG.tick + i) % 4 < 2 ? -2 : 0), v >= 2 ? 1 : v >= 1 ? .5 : 0, hc); } // low health: hearts jiggle like 4중인격
     for (let i = 0; i < Math.ceil(me.absorb / 2); i++) heart(i * 16, 12, me.absorb - i * 2 >= 2 ? 1 : .5, '#e8c51d');
     const ar = me.armorPts()[0]; if (ar) for (let i = 0; i < 10; i++) { const v = clamp(ar - i * 2, 0, 2); g.fillStyle = '#111'; g.fillRect(i * 16 + 1, me.absorb ? -1 : 12, 13, 13); g.fillStyle = v >= 2 ? '#d8d8d8' : v ? '#8a8a8a' : '#3a3a3a'; g.fillRect(i * 16 + 2, me.absorb ? 0 : 13, 11, 11); }
     for (let i = 0; i < 10; i++) { const v = clamp(me.food - i * 2, 0, 2); const x = W - 16 - i * 16, y = 28; g.fillStyle = '#000'; g.beginPath(); g.arc(x + 7, y + 6, 6, 0, 7); g.fill(); g.fillStyle = v >= 2 ? '#b8743a' : v ? '#7a4c26' : '#3a2a1a'; g.beginPath(); g.arc(x + 7, y + 6, 4.5, 0, 7); g.fill(); g.fillStyle = '#eee'; g.fillRect(x + 9, y, 3, 4); }
@@ -271,9 +283,17 @@ const RUI = {
     let h = ''; for (let i = 0; i < 9; i++) { const p = S.items[i]; if (S.more && i === 8) h += '<div class="rhs rspg" data-si="8" title="다음 페이지">▶<small>' + (this.specPage + 1) + '/' + S.pages + '</small></div>';
       else h += '<div class="rhs' + (p && p.id === this.follow ? ' sel' : '') + '" data-si="' + i + '"' + (p ? ' title="' + esc(p.name) + '"><img src="' + this.headURL(p) + '">' : '>') + '</div>'; }
     const f = this.follow ? RG.byId(this.follow) : null; $('rbSpecBar').innerHTML = '<div class="rsbn">' + (f ? esc(f.name) : '플레이어를 골라 관전하세요') + '</div><div class="rsbh">' + h + '</div>'; },
+  // host: change one of the 9 mini palette blocks (chests keep their contents as the mini chest loot; open them to edit, sneak to replace)
+  miniPalPick(x, y, z) {
+    const C = this.palCands().filter(c => !c[2]); let h = '<div class="rgw rlist rpal"><div class="rlhead"><b>미니 랜덤블록 · ' + (RG.miniPalIdx(x, y, z) + 1) + '번 블록</b><button class="rbtn" data-lb="x">✕ 닫기</button></div><div class="rgnote">이 칸에 놓을 블록을 고르세요 · 미니 경기장의 칸마다 9칸 중 하나가 같은 확률로 나와요 · 상자는 열어서 안의 아이템을 바꾸면 그대로 미니 상자에 들어가요 (상자를 바꾸려면 웅크리고 우클릭)</div><div class="rpick">';
+    C.forEach((c, i) => { h += '<img src="' + this.iconURL('blk:' + c[0]) + '" data-mp="' + i + '" title="' + esc(this.palName(c)) + '" data-tip="' + esc(this.palName(c)) + '">'; });
+    this.open('form', { html: h + '</div></div>', bind: el => { const xb = el.querySelector('[data-lb]'); if (xb) xb.onclick = () => this.close(); for (const b of el.querySelectorAll('[data-mp]')) b.onclick = () => { const k = C[+b.dataset.mp][0], id = k === 'air' ? 0 : RBLK.K(k);
+      const key = x + ',' + y + ',' + z; if (RG.be.has(key)) { RG.be.delete(key); RG.emit({ k: 'be', key, d: null }); } RG.setBlock(x, y, z, id); RAU.play('pop', 1, true); this.close(); this.actionbar('§a' + (RG.miniPalIdx(x, y, z) + 1) + '번 블록: ' + this.palName([k])); }; } });
+  },
   // ---------- interaction with blocks (right click) ----------
   interact(x, y, z) {
     const id = RW.getM(x, y, z), B = BL[id];
+    if (RG.miniPalIdx(x, y, z) >= 0) { if (!RG.isHost()) { this.actionbar('§c호스트만 바꿀 수 있어요'); return true; } if (B.use !== 'chest' || RG.me.sneaking) { this.miniPalPick(x, y, z); return true; } } // 미니 블록 팔레트 (호스트)
     if (B.use === 'chest') { if (RG.chestBlocked(x, y, z)) return true; this.open('chest', { x, y, z }); RAU.play('chest_open', 1, false, .6); return true; }
     if (B.use === 'furnace') { this.open('furnace', { x, y, z }); return true; }
     if (B.use === 'craft') { this.open('craft'); return true; }

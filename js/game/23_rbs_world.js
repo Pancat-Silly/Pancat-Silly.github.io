@@ -87,7 +87,8 @@ const RW = {
   pocket(diamond, big) { for (const [x, z] of this.spawns(big)) { this.fill(x, 210, z, x, 211, z, 0); if (diamond) this.setM(x, 209, z, RBLK.K('diamond_block')); } },
   // ---------- mini random block survival (V2.1 playground, 1v1): 5x5x11 arena x14..18, y92..96, z-2..8 ----------
   MINI: [14, 92, -2, 18, 96, 8],
-  miniLayer(y, seed) { const r = this.rng(seed * 17 + y * 389); for (let z = -2; z <= 8; z++) for (let x = 14; x <= 18; x++) { const e = RB_MINI[Math.floor(r() * RB_MINI.length)]; const id = RBLK.K(e.k); this.setM(x, y, z, id); if (e.loot) RG.chestType.set(x + ',' + y + ',' + z, 'm' + e.m); } },
+  miniLayer(y, seed) { // each cell = one of the 9 blocks in the palette row under the playground (the host can change them; air = nothing)
+    const r = this.rng(seed * 17 + y * 389), [px, py, pz] = RG.MINI_PAL; for (let z = -2; z <= 8; z++) for (let x = 14; x <= 18; x++) { const i = Math.floor(r() * 9), id = this.getM(px, py, pz + i); this.setM(x, y, z, id); const k = x + ',' + y + ',' + z; RG.be.delete(k); if (id && BL[id].use === 'chest') RG.chestType.set(k, 'p' + i); else RG.chestType.delete(k); } },
   miniClear() { this.fill(14, 92, -2, 18, 96, 8, 0); for (const k of [...RG.be.keys()]) { const [x, y, z] = k.split(',').map(Number); if (x >= 14 && x <= 18 && y >= 92 && y <= 96 && z >= -2 && z <= 8) RG.be.delete(k); } },
   miniSpawns() { for (const z of [0, 6]) { this.fill(16, 93, z, 16, 95, z, 0); } for (let z = 0; z <= 6; z++) if (!this.getM(16, 93, z)) this.setM(16, 93, z, RBLK.K('diamond_block')); },
   // the pad cage (original: red stained glass around the queue pad while the round is prepared)

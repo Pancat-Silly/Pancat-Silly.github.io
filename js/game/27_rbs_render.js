@@ -205,11 +205,16 @@ const RR = {
     return out;
   },
   drawSigns() {
-    if (!this.signTex.length) { for (const o of this.signs || (this.signs = this.signFix())) { // 256x128 text texture, regular weight, smoothed (LINEAR + mipmaps)
-      const c = document.createElement('canvas'); c.width = 256; c.height = 128; const x = c.getContext('2d'); x.fillStyle = '#1a1208'; x.textAlign = 'center'; x.textBaseline = 'middle';
+    // text textures per distance band (near / mid / far): farther = thinner strokes (glyph edges eaten with a destination-out stroke),
+    // so small far-away text doesn't blur into blobs through the mipmaps. Made lazily, 256x128, LINEAR + mipmaps
+    if (!this.signTex.length) { for (const o of this.signs || (this.signs = this.signFix())) if (o.s[4].trim()) this.signTex.push(Object.assign(o, { texL: [] })); if (!this.signTex.length) this.signTex.push({ none: true }); }
+    const signTex = (o, k) => { if (o.texL[k]) return o.texL[k];
+      const c = document.createElement('canvas'); c.width = 256; c.height = 128; const x = c.getContext('2d'); x.textAlign = 'center'; x.textBaseline = 'middle';
       const lines = o.s[4].replace(/랜덤블록 서바이벌 V2[^\n]*/g, '랜덤블록 서바이벌').split('\n').slice(0, 4); while (lines.length < 4) lines.push('');
-      lines.forEach((l, i) => { const t = l.replace(/§./g, ''); let fs = 24; do { x.font = '500 ' + fs + "px 'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif"; } while (fs-- > 12 && x.measureText(t).width > 244); x.fillText(t, 128, 18 + i * 30); }); // long lines shrink to fit the board
-      if (o.s[4].trim()) this.signTex.push(Object.assign(o, { tex: this.gfx.makeTex(c, true) })); } if (!this.signTex.length) this.signTex.push({ none: true }); }
+      lines.forEach((l, i) => { const t = l.replace(/§./g, ''); let fs = 24; do { x.font = '500 ' + fs + "px 'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif"; } while (fs-- > 12 && x.measureText(t).width > 244); // long lines shrink to fit the board
+        x.fillStyle = '#1a1208'; x.fillText(t, 128, 18 + i * 30);
+        if (k) { x.globalCompositeOperation = 'destination-out'; x.lineWidth = k === 1 ? 1.3 : 2.4; x.strokeStyle = '#000'; x.strokeText(t, 128, 18 + i * 30); x.globalCompositeOperation = 'source-over'; } });
+      return o.texL[k] = this.gfx.makeTex(c, true); };
     const g = this.gfx; const b = this.bs;
     // quad on the face of a board that faces f: wall board = back 2/16 of the cell (y .3-.85), standing board = middle (y .5-1)
     const quad = (P, f, d, y0, y1) => { const o = d + .004;
@@ -218,11 +223,11 @@ const RR = {
       if (f === 'w') return [[P.x + 1 - o, y0, P.z], [P.x + 1 - o, y0, P.z + 1], [P.x + 1 - o, y1, P.z + 1], [P.x + 1 - o, y1, P.z]];
       return [[P.x + o, y0, P.z + 1], [P.x + o, y0, P.z], [P.x + o, y1, P.z], [P.x + o, y1, P.z + 1]]; };
     const opp = { n: 's', s: 'n', w: 'e', e: 'w' };
-    for (const o of this.signTex) { if (o.none) continue; const [x, y, z] = o.s; const P = RW.P(x, y, z); if (Math.hypot(P.x - this.cam.eye.x, P.y - this.cam.eye.y, P.z - this.cam.eye.z) > 24) continue;
+    for (const o of this.signTex) { if (o.none) continue; const [x, y, z] = o.s; const P = RW.P(x, y, z), dist = Math.hypot(P.x - this.cam.eye.x, P.y - this.cam.eye.y, P.z - this.cam.eye.z); if (dist > 24) continue;
       b.reset();
       if (!o.stand) { const q = quad(P, o.f, 2 / 16, P.y + .3, P.y + .85); b.quadUV(q[0], q[1], q[2], q[3], 0, 0, 1, 1, [1, 1, 1]); }
       else for (const f of [o.f, opp[o.f]]) { const q = quad(P, f, 9 / 16, P.y + .52, P.y + .98); b.quadUV(q[0], q[1], q[2], q[3], 0, 0, 1, 1, [1, 1, 1]); } // board 7/16..9/16: text 1/16 off its faces
-      g.bind(o.tex); g.drawBatch(b); }
+      g.bind(signTex(o, dist < 5 ? 0 : dist < 11 ? 1 : 2)); g.drawBatch(b); }
     g.bind();
   },
   // screen projection for name tags / floating texts
