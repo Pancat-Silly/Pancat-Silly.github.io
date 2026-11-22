@@ -12,7 +12,7 @@ const RV = { // markers.json points (minecraft coords)
 const RG = {
   tick: 0, me: null, nid: null, remotes: new Map(), bots: [], items: new Map(), projs: [], parts: [], be: new Map(), chestType: new Map(),
   since: Date.now(), hostOff: 0, seq: 0, mods: [], rd: 0, wins: 0,
-  gs: { ph: 'lobby', t: 0, seed: 1, rnd: 0, end: 0, sp: {}, win: null, dmp: [], big: 0, mini: { ph: 'idle', t: 0 }, opts: { time: 11, kit: 1, brk: 1, build: 0, lava: 1, pvp: 1, shield: 0, typo: 0, bots: 0, botLv: 1, tags: 0 } },
+  gs: { ph: 'lobby', t: 0, seed: 1, rnd: 0, end: 0, sp: {}, win: null, dmp: [], big: 0, mini: { ph: 'idle', t: 0 }, opts: { time: 11, kit: 1, brk: 1, build: 1, lava: 1, pvp: 1, shield: 0, typo: 0, bots: 0, botLv: 1, tags: 0 } },
   lp: { ph: 'lobby', key: '' }, // local copy of the phase being played + fired steps
   init() {
     RW.init(); this.nid = uid(8);

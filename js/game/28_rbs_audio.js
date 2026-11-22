@@ -1,7 +1,7 @@
 // ===================== Random Block Survival: audio =====================
 // Music: free tracks from the YouTube Audio Library. Not bundled: the player opts in on the first-run 외부 다운로드 screen
 //   (RDL, 33_rbs_pack.js) and RBGM downloads them into IndexedDB ('rbs_bgm'). Without them the game runs silent (volume 0.5, loop).
-//   Game BGM by player setting RUI.bgm: Barge (default) / Burner / Detour / Getdown. At 1:30 left: stop -> sfx_hurry -> title ->
+//   Game BGM by player setting RUI.gbgm: Burner (default) / Barge / Detour. At 1:30 left: stop -> sfx_hurry -> title ->
 //   2 s later the same BGM again at pitch 1.5. Deathmatch: Bubble, always, starting at 0:32 with a fade-in (loops back to 0:32).
 //   Lobby: Sleeplessness (setting RUI.lobbyBgm, default on).
 // Effects: the pack's custom sfx (embedded). Minecraft's own sounds are NOT bundled: with the vanilla resource pack
@@ -11,11 +11,12 @@ const RAU = {
   init() {
     if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
     const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return; try { this.ctx = new AC(); } catch (e) { return; }
-    this.master = this.ctx.createGain(); this.master.gain.value = RUI.vol; this.master.connect(this.ctx.destination);
+    this.master = this.ctx.createGain(); this.master.gain.value = RUI.vol * RUI.master; this.master.connect(this.ctx.destination);
     for (const k in RB_SFX) sndBytes(RB_SFX[k]).then(a => this.ctx.decodeAudioData(a)).then(b => this.buf[k] = b).catch(() => { }); // sounds/rbs/*.mp3
     RPACK.decode();
   },
-  setVol() { if (this.master) this.master.gain.value = RUI.vol; if (this.bgm) this.bgm.volume = .5 * RUI.mvol * (this.fadeK ?? 1); },
+  setVol() { if (this.master) this.master.gain.value = RUI.vol * RUI.master; if (this.bgm) this.bgm.volume = this.mv(); },
+  mv() { return .5 * RUI.mvol * RUI.master * (this.fadeK ?? 1); }, // music volume: 음악 볼륨 × 전체 볼륨 × fade-in
   src(buf, vol = 1, rate = 1) { if (!this.ctx || !buf) return; const s = this.ctx.createBufferSource(); s.buffer = buf; s.playbackRate.value = rate; const g = this.ctx.createGain(); g.gain.value = vol; s.connect(g); g.connect(this.master); s.start(); return s; },
   // custom pack sfx (sfx_hurry, sfx_rare, sfx_win_*...). gated = only when the player's 효과음 setting (sef) is on
   sfx(k, gated) { if (gated && !RUI.sfxOn) return; this.init(); if (this.buf[k]) this.src(this.buf[k], 1); else this.synth('toast', 1); },
@@ -30,14 +31,14 @@ const RAU = {
   music(key, rate = 1, from = 0, fade = 0) {
     if (!RUI.musicOn || !key) return; this.stopBgm(); const url = RBGM.url(key); if (!url) return;
     const a = new Audio(); a.src = url; a.loop = !from; a.preservesPitch = false; a.mozPreservesPitch = false; a.webkitPreservesPitch = false; a.playbackRate = rate;
-    this.fadeK = fade ? 0 : 1; a.volume = .5 * RUI.mvol * this.fadeK;
+    this.fadeK = fade ? 0 : 1; a.volume = this.mv();
     const go = () => { try { if (from) a.currentTime = from; } catch (e) { } const p = a.play(); if (p && p.catch) p.catch(() => { }); };
     if (from) { a.addEventListener('loadedmetadata', go, { once: true }); a.onended = () => { if (this.bgm === a) go(); }; } else go(); // starts mid-song: also loops back to that point
-    if (fade) { const t0 = performance.now(); const f = () => { if (this.bgm !== a) return; this.fadeK = Math.min(1, (performance.now() - t0) / (fade * 1000)); a.volume = .5 * RUI.mvol * this.fadeK; if (this.fadeK < 1) setTimeout(f, 50); }; setTimeout(f, 50); }
+    if (fade) { const t0 = performance.now(); const f = () => { if (this.bgm !== a) return; this.fadeK = Math.min(1, (performance.now() - t0) / (fade * 1000)); a.volume = this.mv(); if (this.fadeK < 1) setTimeout(f, 50); }; setTimeout(f, 50); }
     this.bgm = a; this.bgmKey = key;
   },
-  gameBgm(rate) { const k = RBGM.GAME.includes(RUI.bgm) ? RUI.bgm : 'barge'; this.music(k, rate); },
-  dmBgm() { this.music('bubble', 1, 32, 4); }, // 데스매치: Bubble from 0:32, 4 s fade-in
+  gameBgm(rate) { const k = RBGM.GAME.includes(RUI.gbgm) ? RUI.gbgm : 'burner'; this.music(k, rate); },
+  dmBgm() { if (RUI.dmBgm) this.music('bubble', 1, 32, 4); }, // 데스매치: Bubble from 0:32, 4 s fade-in
   stopBgm() { if (this.bgm) { try { this.bgm.onended = null; this.bgm.pause(); this.bgm.removeAttribute('src'); this.bgm.load(); } catch (e) { } this.bgm = null; this.bgmKey = ''; } },
   lobbyMusic() { // 로비 (놀이터 포함): Sleeplessness - The Brothers Records, looped; stops when the round starts
     const lob = RG.gs.ph === 'lobby' && RUI.lobbyBgm && RUI.musicOn && RBGM.has;

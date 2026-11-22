@@ -1,14 +1,14 @@
 // ===================== Random Block Survival: UI (HUD, chat, containers, menu chest) =====================
 const RUI = {
-  name: '', skin: '', sens: 1, fov: 70, vol: .8, mvol: 1, res: 1, bob: true, musicOn: true, sfxOn: true, bgm: 'barge', splash: false, winSnd: 'sfx_win_yay', lobbyBgm: true, autoFs: true, room: 'main', rdist: 8, pmax: 3000, sndLim: false, // rdist: 경기장 렌더 거리(청크), pmax: 파티클 최대 개수, sndLim: 같은 소리 제한. BGM / win sound / lobby music choices removed for now (defaults only). room: 기본 멀티 방 이름
+  name: '', skin: '', sens: 1, fov: 70, master: 1, vol: .8, mvol: 1, dmBgm: true, res: 1, bob: true, musicOn: true, sfxOn: true, gbgm: 'burner', splash: false, winSnd: 'sfx_win_yay', lobbyBgm: true, autoFs: true, room: 'main', rdist: 8, pmax: 3000, sndLim: false, // rdist: 경기장 렌더 거리(청크), pmax: 파티클 최대 개수, sndLim: 같은 소리 제한. BGM / win sound / lobby music choices removed for now (defaults only). room: 기본 멀티 방 이름
   mobile: false, god: false, botAI: true, gui: null, paused: false, chatOpen: false, promptOpen: false, follow: null, followThird: false, hideHud: false, started: false, cursor: null, iconCache: {},
   load() {
     let s = {}; try { s = JSON.parse(localStorage.getItem('rbs_set') || '{}'); } catch (e) { }
     let ap = {}; try { ap = JSON.parse(localStorage.getItem('apvp') || '{}'); } catch (e) { }
     this.name = s.name || ap.name || ('플레이어' + randi(100, 999)); this.skin = s.skin !== undefined ? s.skin : (ap.skin || '');
-    for (const k of ['sens', 'fov', 'vol', 'mvol', 'res', 'bob', 'sfxOn', 'bgm', 'lobbyBgm', 'autoFs', 'room', 'rdist', 'pmax', 'sndLim']) if (s[k] !== undefined) this[k] = s[k]; if (!this.room) this.room = 'main';
+    for (const k of ['sens', 'fov', 'master', 'vol', 'mvol', 'dmBgm', 'gbgm', 'res', 'bob', 'sfxOn', 'lobbyBgm', 'autoFs', 'room', 'rdist', 'pmax', 'sndLim']) if (s[k] !== undefined) this[k] = s[k]; if (!this.room) this.room = 'main';
   },
-  save() { try { const o = {}; for (const k of ['name', 'skin', 'sens', 'fov', 'vol', 'mvol', 'res', 'bob', 'musicOn', 'sfxOn', 'bgm', 'winSnd', 'lobbyBgm', 'autoFs', 'room', 'rdist', 'pmax', 'sndLim']) o[k] = this[k]; localStorage.setItem('rbs_set', JSON.stringify(o)); } catch (e) { } },
+  save() { try { const o = {}; for (const k of ['name', 'skin', 'sens', 'fov', 'master', 'vol', 'mvol', 'dmBgm', 'gbgm', 'res', 'bob', 'musicOn', 'sfxOn', 'winSnd', 'lobbyBgm', 'autoFs', 'room', 'rdist', 'pmax', 'sndLim']) o[k] = this[k]; localStorage.setItem('rbs_set', JSON.stringify(o)); } catch (e) { } },
   // ---------- § colour codes ----------
   COL: { 0: '#000', 1: '#00a', 2: '#0a0', 3: '#0aa', 4: '#a00', 5: '#a0a', 6: '#fa0', 7: '#aaa', 8: '#555', 9: '#55f', a: '#5f5', b: '#5ff', c: '#f55', d: '#f5f', e: '#ff5', f: '#fff' },
   fmt(s) { let out = '', col = null, b = false, it = false; const parts = String(s).split('§'); const open = () => { const st = (col ? 'color:' + col + ';' : '') + (b ? 'font-weight:bold;' : '') + (it ? 'font-style:italic;' : ''); return st ? '<span style="' + st + '">' : '<span>'; };
@@ -125,10 +125,10 @@ const RUI = {
     if (h !== this._tg) { this._tg = h; box.innerHTML = h; }
   },
   tab(on) { const t = $('rbTab'); if (!on) { t.classList.add('hide'); return; } const L = RG.players(); t.innerHTML = '<div class="rth">플레이어 · 이긴횟수</div>' + L.map(p => '<div><span>' + esc(p.name) + (p.isBot ? ' <small>봇</small>' : '') + (p === RG.me ? ' <small>(나)</small>' : '') + '</span><b>' + (p === RG.me ? RG.wins : p.wins || 0) + '</b></div>').join(''); t.classList.remove('hide'); },
-  // ---------- the one menu (Esc · ☰ · M): 게임 메뉴 -> 설정 -> 화면 · 조작 / 조작법, 호스트 설정. Minecraft-style stone buttons
+  // ---------- the one menu (Esc · ☰ · M): 게임 메뉴 -> 설정 -> 소리 / 외부 다운로드 콘텐츠 / 화면 / 조작(-> 조작법), 호스트 설정. Minecraft-style stone buttons
   // like 4중인격's pause screen; replaces the old menu chest, the lobby hotbar items and the separate settings chests.
   pg: 'main',
-  MPAGE: { main: ['게임 메뉴', null], set: ['설정', 'main'], video: ['화면 · 조작 설정', 'set'], help: ['조작법', 'set'], music: ['배경음악 정보', 'set'], host: ['호스트 설정', 'main'], multi: ['멀티플레이 설정', null] },
+  MPAGE: { main: ['게임 메뉴', null], set: ['설정', 'main'], video: ['화면 설정', 'set'], ctrl: ['조작 설정', 'set'], help: ['조작법', 'ctrl'], sound: ['소리 설정', 'set'], ext: ['외부 다운로드 콘텐츠', 'set'], music: ['배경음악 정보', 'ext'], host: ['호스트 설정', 'main'], multi: ['멀티플레이 설정', null] },
   pause(on, pg) {
     if (on && (this.gui || this.chatOpen || RG.gs.ph === 'win')) return; this.paused = !!on; $('rbPause').classList.toggle('hide', !on);
     if (on) { if (document.pointerLockElement) document.exitPointerLock(); this.pg = pg || 'main'; this.menuDraw(); }
@@ -161,17 +161,28 @@ const RUI = {
       h += B('호스트 설정...', () => this.menuGo('host'), '', host ? '게임 시간 · 옵션 · 봇 난이도 · 블록 커스텀' : '호스트 외 설정 불가능 (보기만 가능)');
       if (SITE.inFrame) h += B('§c게임 끄고 바탕화면으로', () => { RAU.stopBgm(); SITE.toParent({ t: 'close' }); }, 'full');
     } else if (pg === 'set') {
-      h += R('효과음 볼륨', 0, 1, .05, this.vol, v => Math.round(v * 100) + '%', v => { this.vol = v; RAU.setVol(); });
-      h += R('음악 볼륨', 0, 1, .05, this.mvol, v => Math.round(v * 100) + '%', v => { this.mvol = v; RAU.setVol(); });
-      if (RBGM.has && !RBGM.busy) { h += B('인게임 배경음악: ' + RBGM.name(this.bgm), () => { const G = RBGM.GAME; this.bgm = G[(Math.max(0, G.indexOf(this.bgm)) + 1) % G.length]; this.save(); if (G.includes(RAU.bgmKey)) RAU.gameBgm(RAU.bgm.playbackRate); this.menuDraw(); }, '', 'Barge · Burner · Detour 중 하나 (데스매치는 Bubble, 로비는 Sleeplessness)'); h += T('로비 음악', this.lobbyBgm, () => { this.lobbyBgm = !this.lobbyBgm; this.save(); RAU.lobbyMusic(); this.menuDraw(); }, '', '로비 · 놀이터에서 Sleeplessness가 나와요'); h += B('배경음악 다시 받기', () => RBGM.download()); }
-      else h += B('배경음악: ' + RBGM.label(), () => RBGM.download(), '', 'YouTube 오디오 보관함의 무료 음악을 이 기기의 브라우저가 직접 받아요 (게임에 포함 안 됨)');
-      h += T('효과음', this.sfxOn, () => { this.sfxOn = !this.sfxOn; this.save(); this.menuDraw(); });
-      if (!this.mobile) h += T('자동 전체화면', SITE.autoFs(), () => { SITE.setAutoFs(!SITE.autoFs()); this.menuDraw(); }, '', '게임 화면을 클릭하면 브라우저를 전체화면으로 바꿔요 (게임 창 크기는 그대로) · 바탕화면 설정과 같은 값');
-      h += B('리소스팩: ' + RPACK.label(), () => RPACK.click(0), RPACK.on ? 'on' : '', '마인크래프트 1.21.4 바닐라 텍스처 · 사운드를 이 기기의 브라우저가 공식 미러에서 직접 받아요 (게임에 포함 안 됨)');
-      if (RPACK.has) h += B('리소스팩 다시 받기', () => RPACK.click(2));
-      h += B('배경음악 정보...', () => this.menuGo('music'), '', '곡 · 원작자 · 출처');
-      h += B('화면 · 조작 설정...', () => this.menuGo('video'));
-      h += B('조작법...', () => this.menuGo('help'), 'full');
+      h += B('소리 설정...', () => this.menuGo('sound'), '', '볼륨 · 배경음악 · 효과음');
+      h += B('외부 다운로드 콘텐츠...', () => this.menuGo('ext'), '', '리소스팩 · 배경음악');
+      h += B('화면 설정...', () => this.menuGo('video'), '', '시야각 · 해상도 · 렌더 거리 · 파티클 · 전체화면');
+      h += B('조작 설정...', () => this.menuGo('ctrl'), '', (this.mobile ? '터치 감도 · 조작 방식 · 버튼 배치' : '마우스 감도') + ' · 조작법');
+    } else if (pg === 'sound') {
+      const pct = v => Math.round(v * 100) + '%';
+      h += R('전체 볼륨', 0, 1, .05, this.master, pct, v => { this.master = v; RAU.setVol(); });
+      h += R('효과음 볼륨', 0, 1, .05, this.vol, pct, v => { this.vol = v; RAU.setVol(); });
+      h += R('음악 볼륨', 0, 1, .05, this.mvol, pct, v => { this.mvol = v; RAU.setVol(); });
+      h += T('효과음', this.sfxOn, () => { this.sfxOn = !this.sfxOn; this.save(); this.menuDraw(); }, '', '랜덤블록 전용 효과음 (서두르세요 · 희귀 블록 · 승리)');
+      h += T('같은 소리 제한', this.sndLim, () => { this.sndLim = !this.sndLim; this.save(); this.menuDraw(); }, '', '같은 효과음이 0.08초 안에 3개 넘게 겹치면 나머지는 안 내요 (경기 시작 때처럼 블록이 한꺼번에 부서질 때)');
+      const need = RBGM.has ? '' : ' · 배경음악을 받아야 나와요 (외부 다운로드 콘텐츠)';
+      h += B('인게임 배경음악: ' + RBGM.name(this.gbgm), () => { const G = RBGM.GAME; this.gbgm = G[(Math.max(0, G.indexOf(this.gbgm)) + 1) % G.length]; this.save(); if (G.includes(RAU.bgmKey)) RAU.gameBgm(RAU.bgm.playbackRate); this.menuDraw(); }, 'full', 'Barge · Burner · Detour 중 하나' + need);
+      h += T('로비 음악', this.lobbyBgm, () => { this.lobbyBgm = !this.lobbyBgm; this.save(); RAU.lobbyMusic(); this.menuDraw(); }, '', '로비 · 놀이터: Sleeplessness' + need);
+      h += T('데스매치 음악', this.dmBgm, () => { this.dmBgm = !this.dmBgm; this.save(); if (!this.dmBgm && RAU.bgmKey === 'bubble') RAU.stopBgm(); else if (this.dmBgm && RG.gs.ph === 'dm') RAU.dmBgm(); this.menuDraw(); }, '', '데스매치: Bubble' + need);
+    } else if (pg === 'ext') {
+      h += '<div class="rmnote">게임에 들어 있지 않은 파일을 이 기기의 브라우저가 외부에서 직접 받아 저장해요</div>';
+      h += B('리소스팩: ' + RPACK.label(), () => RPACK.click(0), RPACK.on ? 'on' : '', '마인크래프트 1.21.4 바닐라 텍스처 · 사운드 (공식 미러) · 받은 뒤에는 눌러서 켜기/끄기');
+      h += B(RPACK.has ? '리소스팩 다시 받기' : '리소스팩 받기', () => RPACK.click(2), RPACK.busy ? 'dis' : '');
+      h += B('배경음악: ' + RBGM.label(), () => { if (!RBGM.has) RBGM.download(); }, RBGM.has ? 'on' : '', Object.keys(RBGM.T).length + '곡 · 약 ' + RBGM.totalMb() + 'MB (YouTube 오디오 보관함 · NCS)');
+      h += B(RBGM.has ? '배경음악 다시 받기' : '배경음악 받기', () => RBGM.download(), RBGM.busy ? 'dis' : '');
+      h += B('배경음악 정보...', () => this.menuGo('music'), 'full', '곡 · 원작자 · 출처');
     } else if (pg === 'multi') { // hotbar slot 4 in the lobby
       h += '<div class="rmnote">' + esc(NET.status || '') + '</div>';
       h += B('P2P 멀티플레이: ' + (SITE.p2pNow() ? '허용' : '꺼짐'), () => { const v = !SITE.p2pNow(); SITE.setP2PNow(v); if (v) NET.connect(this.room); else this.goOffline(true); this.menuDraw(); }, SITE.p2pNow() ? 'on full' : 'full', '다른 플레이어와 직접 연결해서 함께 플레이 (PeerJS · WebRTC)');
@@ -179,23 +190,25 @@ const RUI = {
       h += X('스킨', this.skin, 16, v => { this.skin = v; RG.me.skin = v; SKIN.retry(v); this.save(); }, '마크 닉네임 (영문, 비우면 기본)');
       h += X('방 코드', this.room, 30, v => { const r = (v || 'main').toLowerCase(); if (r === this.room) return; this.room = r; this.save(); if (SITE.p2pNow()) { RG.remotes.clear(); NET.connect(this.room); } });
     } else if (pg === 'video') {
-      h += R(this.mobile ? '터치 감도' : '마우스 감도', .3, 3, .05, this.sens, v => (+v).toFixed(2), v => { this.sens = v; });
       h += R('시야각', 50, 110, 1, this.fov, v => String(Math.round(v)), v => { this.fov = v; });
       const RES = [[1, '기본'], [.75, '낮게 (빠름)'], [.5, '매우 낮게']]; const ri = Math.max(0, RES.findIndex(r => r[0] === this.res));
       h += B('해상도: ' + RES[ri][1], () => { this.res = RES[(ri + 1) % RES.length][0]; this.save(); this.menuDraw(); });
       h += R('경기장 렌더 거리', 2, 16, 1, this.rdist, v => Math.round(v) + '청크', v => { this.rdist = Math.round(v); }); // arena only: chunks farther than this (around the camera's chunk) are not drawn
       const PM = [[0, '끔'], [500, '적게'], [3000, '보통'], [10000, '많이']]; const pi = Math.max(0, PM.findIndex(r => r[0] === this.pmax));
       h += B('파티클: ' + PM[pi][1], () => { this.pmax = PM[(pi + 1) % PM.length][0]; this.save(); this.menuDraw(); }, '', '블록 부수기 · 타격 파티클 최대 개수 (끔 0 / 적게 500 / 보통 3000 / 많이 10000) · 보이는 곳에만 만들어요');
-      h += T('같은 소리 제한', this.sndLim, () => { this.sndLim = !this.sndLim; this.save(); this.menuDraw(); }, '', '같은 효과음이 0.08초 안에 3개 넘게 겹치면 나머지는 안 내요 (경기 시작 때처럼 블록이 한꺼번에 부서질 때)');
       h += T('화면 흔들림', this.bob, () => { this.bob = !this.bob; this.save(); this.menuDraw(); });
       h += T('HUD 숨기기 (F1)', this.hideHud, () => { this.hideHud = !this.hideHud; this.menuDraw(); });
+      if (this.mobile) h += T('가로 전체화면', this.land, () => { this.toggleLand(); this.menuDraw(); }, 'full');
+      else h += T('자동 전체화면', SITE.autoFs(), () => { SITE.setAutoFs(!SITE.autoFs()); this.menuDraw(); }, 'full', '게임 화면을 클릭하면 브라우저를 전체화면으로 바꿔요 (게임 창 크기는 그대로) · 바탕화면 설정과 같은 값');
+    } else if (pg === 'ctrl') {
+      h += R(this.mobile ? '터치 감도' : '마우스 감도', .3, 3, .05, this.sens, v => (+v).toFixed(2), v => { this.sens = v; });
       if (this.mobile) {
-        h += T('가로 전체화면', this.land, () => { this.toggleLand(); this.menuDraw(); });
         h += B('조작 방식: ' + (RTCTL.scheme === 'pe' ? '마크 PE' : '기존'), () => { RTCTL.setScheme(RTCTL.scheme === 'pe' ? 'classic' : 'pe'); this.menuDraw(); }, '', '기존: 조이스틱 + 버튼 / 마크 PE: 방향키 · 버튼 배치는 방식마다 따로 저장돼요');
         h += B('이동: ' + (RTCTL.moveStyle() === 'dpad' ? '방향키 버튼' : '조이스틱'), () => { RTCTL.setMove(RTCTL.moveStyle() === 'dpad' ? 'joy' : 'dpad'); this.menuDraw(); }, '', '조이스틱: 화면 왼쪽 아래를 끌기');
         h += B('웅크리기: ' + (RTCTL.sneakHold ? '누르는 동안만' : '눌러서 켜기/끄기'), () => { RTCTL.setSneakHold(!RTCTL.sneakHold); this.menuDraw(); });
-        h += B('버튼 배치 편집...', () => RTCTL.openEditor(), 'full', '버튼을 끌어서 옮기고, 크기를 바꾸고, 빼거나 더할 수 있어요 (같은 버튼 여러 개도 가능)');
+        h += B('버튼 배치 편집...', () => RTCTL.openEditor(), '', '버튼을 끌어서 옮기고, 크기를 바꾸고, 빼거나 더할 수 있어요 (같은 버튼 여러 개도 가능)');
       }
+      h += B('조작법...', () => this.menuGo('help'), 'full');
     } else if (pg === 'music') {
       h += '<div class="rmhelp rbgm">' + RBGM.listHTML(false) + '</div><div class="rmnote">' + esc(RBGM.has ? '받음 · 이 기기의 브라우저에 저장돼 있어요' : '아직 받지 않았어요 · 설정에서 받을 수 있어요') + '</div>';
     } else if (pg === 'help') {
@@ -345,7 +358,7 @@ body.rbmob #rbTt{font-size:36px}body.rbmob #rbTs{font-size:18px}body.rbmob #rbCh
 .rpbtn{flex-wrap:wrap;gap:6px;margin-top:6px}.rpbtn .rbtn{font-size:13px;padding:7px 10px}.rpsave{background:#3d8a3d!important}
 .rpick{display:grid;grid-template-columns:repeat(auto-fill,34px);gap:3px;max-height:150px;overflow-y:auto;margin-top:6px;padding:4px;background:#8b8b8b;border:2px solid;border-color:#373737 #fff #fff #373737}
 .rpick img{width:32px;height:32px;image-rendering:pixelated;cursor:pointer;background:#9d9d9d}.rpick img:hover{background:#c8e0a8}
-.rbotp{width:min(440px,94vw);text-align:center}.rbotp small{display:block;margin:6px 0;color:#333}.rbnrow{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:8px 0}.rbnrow .rbtn{width:44px;font-size:18px}
+.rbotp{width:min(440px,94vw);text-align:center}.rbotp small{display:block;margin:6px 0;color:#333}.rbnrow{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:8px 0}.rbnrow .rbtn{width:44px;font-size:18px}.rblv .rbtn{width:auto;min-width:84px;font-size:15px}.rbotp>b{display:block;margin-top:4px}
 body.rbmob .rrb{width:180px}body.rbmob .rrbg{grid-template-columns:repeat(4,38px)}
 .rli .rbtn{font-size:13px;padding:8px 10px;flex:none}
 body.rbmob #rbTip{font-size:13px;max-width:220px}

@@ -17,7 +17,7 @@ const RPACK = {
   label() { return this.busy ? (this.msg || '받는 중…') : !this.has ? '받지 않음' : this.on ? '§a켜짐 (1.21.4 바닐라)' : '§7꺼짐'; },
   async boot() { try { const d = await IDB.get('rbs_pack'); if (d && d.tex) { this.data = d; this.has = true; this.on = localStorage.getItem('rbs_pack_on') !== '0'; if (this.on) await this.apply(); } } catch (e) { } },
   click(b) { if (this.busy) return; if (!this.has || b === 2) { this.download(); return; } this.on = !this.on; try { localStorage.setItem('rbs_pack_on', this.on ? '1' : '0'); } catch (e) { } if (this.on) this.apply(); else this.off(); RUI.refresh(); },
-  status(m) { this.msg = m; if (RUI.paused && RUI.pg === 'set') RUI.menuDraw(); },
+  status(m) { this.msg = m; if (RUI.paused && RUI.pg === 'ext') RUI.menuDraw(); },
   path(name) { if (this.REN[name]) { const r = this.REN[name]; return 'textures/' + (r.includes('/') ? r : 'block/' + r) + '.png'; } if (name.startsWith('item/')) return 'textures/' + name + '.png'; return 'textures/block/' + name + '.png'; },
   async download() {
     this.busy = true; RAU.init(); this.status('연결하는 중…');
@@ -68,13 +68,13 @@ const YTAL = 'YouTube 오디오 보관함';
 const RBGM = {
   SRC: ['rbs/music/'], // base URLs, <SRC><key>.mp3
   T: { // key: n 곡, a 원작자, use 쓰는 곳, src 출처, mb 크기, cr 원작자 표기 줄
-    barge: { n: 'Barge', a: 'Gunnar Olsen', use: '인게임 (기본)', src: YTAL, mb: 2.1 },
-    burner: { n: 'Burner', a: 'Gunnar Olsen', use: '인게임', src: YTAL, mb: 2.4 },
+    barge: { n: 'Barge', a: 'Gunnar Olsen', use: '인게임', src: YTAL, mb: 2.1 },
+    burner: { n: 'Burner', a: 'Gunnar Olsen', use: '인게임 (기본)', src: YTAL, mb: 2.4 },
     detour: { n: 'Detour', a: 'Gunnar Olsen', use: '인게임', src: YTAL, mb: 2.1 },
     bubble: { n: 'Bubble', a: 'Raven & Kreyn', use: '데스매치', src: 'NCS (NoCopyrightSounds)', mb: 2.8, cr: ['Song: Raven & Kreyn - Bubble [NCS Release]', 'Music provided by NoCopyrightSounds', 'Free Download/Stream: https://ncs.io/bubble'] },
     sleeplessness: { n: 'Sleeplessness', a: 'The Brothers Records', use: '로비 · 놀이터', src: YTAL, mb: 2.4 },
   },
-  GAME: ['barge', 'burner', 'detour'], // in-game choices (RUI.bgm); bubble = deathmatch, sleeplessness = lobby
+  GAME: ['barge', 'burner', 'detour'], // in-game choices (RUI.gbgm); bubble = deathmatch, sleeplessness = lobby
   has: false, data: null, urls: {}, busy: false, msg: '', prog: {}, onProg: null,
   name(k) { return (this.T[k] || this.T.barge).n; },
   totalMb() { return Object.values(this.T).reduce((a, t) => a + t.mb, 0).toFixed(1); },
@@ -94,7 +94,7 @@ const RBGM = {
   label() { return this.busy ? (this.msg || '받는 중…') : this.has ? '§a받음' : '받지 않음 (누르면 받기, ' + this.totalMb() + 'MB)'; },
   async boot() { try { const d = await IDB.get('rbs_bgm'); if (d && d.files && Object.keys(d.files).length) { this.data = d; this.has = true; } } catch (e) { } },
   url(k) { if (this.urls[k]) return this.urls[k]; const b = this.data && this.data.files[k]; return b ? (this.urls[k] = URL.createObjectURL(b)) : null; },
-  status(m) { this.msg = m; if (RUI.paused && (RUI.pg === 'set' || RUI.pg === 'music')) RUI.menuDraw(); },
+  status(m) { this.msg = m; if (RUI.paused && (RUI.pg === 'ext' || RUI.pg === 'music')) RUI.menuDraw(); },
   setProg(k, f, st) { this.prog[k] = { f, st }; if (this.onProg) this.onProg(k); },
   async get(k) { // streamed so the 외부 다운로드 screen can show each track's progress
     for (const base of this.SRC) try {
