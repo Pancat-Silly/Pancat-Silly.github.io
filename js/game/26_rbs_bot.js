@@ -172,7 +172,7 @@ const RBOT = {
     const R = RW.R(RG.gs.big), [mx, my, mz] = RG.mcOf(b), fx = Math.floor(mx), fy = Math.floor(my), fz = Math.floor(mz), r = 7; let best = null, bs = 0;
     for (let y = Math.max(201, fy - 4); y <= Math.min(215, fy + 5); y++) for (let z = Math.max(-R, fz - r); z <= Math.min(R, fz + r); z++) for (let x = Math.max(-R, fx - r); x <= Math.min(R, fx + r); x++) {
       const id = RW.getM(x, y, z); if (!id) continue; const B = BL[id], k = this.key(x, y, z); if ((A.bad[k] || 0) > RG.tick) continue;
-      const s = B.use === 'chest' ? (A.looted.has(k) ? 0 : 9) : this.desire(b, id); if (!s) continue;
+      const s = B.use === 'chest' ? (A.looted.has(k) || RG.chestBlocked(x, y, z) ? 0 : 9) : this.desire(b, id); if (!s) continue;
       const sc = s / (1 + Math.hypot(x + .5 - mx, y + .5 - (my + 1), z + .5 - mz) * .35); if (sc > bs) { bs = sc; best = [x, y, z]; }
     }
     A.goal = best; A.scanT = RG.tick;
@@ -222,7 +222,7 @@ const RBOT = {
       const h = RW.w.ray(eye, { x: dx / L, y: dy / L, z: dz / L }, L + .6, B => B.solid);
       if (h) {
         const m = RW.mc(h.x, h.y, h.z);
-        if (m[0] === g[0] && m[1] === g[1] && m[2] === g[2]) { const B = BL[id]; if (B.use === 'chest') { this.loot(b, A, g); A.goal = null; return; } if (B.use === 'craft' || B.use === 'furnace') { A.use = null; return; } this.dig(b, g); return; }
+        if (m[0] === g[0] && m[1] === g[1] && m[2] === g[2]) { const B = BL[id]; if (B.use === 'chest') { if (!RG.chestBlocked(g[0], g[1], g[2])) this.loot(b, A, g); A.goal = null; return; } if (B.use === 'craft' || B.use === 'furnace') { A.use = null; return; } this.dig(b, g); return; }
         if (BL[h.id].unbreak || !RG.canEditBot(m[0], m[1], m[2])) { A.bad[this.key(...g)] = RG.tick + 600; A.goal = null; return; }
         this.dig(b, m); return;
       }

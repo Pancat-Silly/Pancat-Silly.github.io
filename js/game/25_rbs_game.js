@@ -113,6 +113,8 @@ falls: [], // falling block entities (sand, gravel, anvil) — animated on every
     return true;
   },
   // ---------- block entities (chests, furnaces) ----------
+  // like MC: a chest won't open with a full opaque block on top (glass, leaves, slabs, stairs, other chests ... are fine)
+  chestBlocked(x, y, z) { const a = RW.getM(x, y + 1, z); return !!a && !!BL[a] && BL[a].full && BL[a].opaque && !BL[a].invisible; },
   LOOT: Object.assign(Object.fromEntries(RB_ARENA.filter(e => e.loot).map(e => [e.r, e.loot])), Object.fromEntries(RB_MINI.filter(e => e.loot).map(e => ['m' + e.m, e.loot]))),
   ENCH_ID: { 0: 'protection', 9: 'sharpness', 15: 'efficiency', 17: 'unbreaking', 12: 'knockback', 13: 'fire_aspect', 18: 'fortune' },
   LOOTID: { 'minecraft:cobblestone': 'cobblestone', 'minecraft:splash_potion': 'splash_potion', 'minecraft:experience_bottle': 'experience_bottle', 'minecraft:diamond': 'diamond', 'minecraft:log': 'oak_log', 'minecraft:raw_iron': 'raw_iron', 'minecraft:coal': 'coal', 'minecraft:enchanting_table': 'enchanting_table', 'minecraft:lapis_lazuli': 'lapis_lazuli', 'minecraft:raw_gold': 'raw_gold', 'minecraft:iron_nugget': 'iron_nugget', 'minecraft:enchanted_book': 'enchanted_book' },

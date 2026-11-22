@@ -269,7 +269,7 @@ const RUI = {
   // ---------- interaction with blocks (right click) ----------
   interact(x, y, z) {
     const id = RW.getM(x, y, z), B = BL[id];
-    if (B.use === 'chest') { this.open('chest', { x, y, z }); RAU.play('chest_open', 1, false, .6); return true; }
+    if (B.use === 'chest') { if (RG.chestBlocked(x, y, z)) return true; this.open('chest', { x, y, z }); RAU.play('chest_open', 1, false, .6); return true; }
     if (B.use === 'furnace') { this.open('furnace', { x, y, z }); return true; }
     if (B.use === 'craft') { this.open('craft'); return true; }
     if (B.use === 'enchant') { this.open('enchant', { x, y, z }); return true; }
