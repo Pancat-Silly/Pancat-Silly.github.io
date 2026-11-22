@@ -339,7 +339,7 @@ const UI = {
     $('cross').style.display = me.spectator || !me.alive || (this.mobile && TCTL.scheme === 'pe' && !gun) ? 'none' : 'block'; // PE touch mode: no crosshair (Bedrock)
     if (G.tick !== this._ct) { this._ct = G.tick; const on = me.spectator ? false : gun ? !!SK.aimTarget(me, 80) : !!me.findTarget(this.atkOpt()).t; $('cross').classList.toggle('on', on); }
     // dude 댄스 가사 (mine, above the actionbar)
-    { const t = G.dancers.has(me.id) ? LYR.of(me.id) : null, h = t === null ? '' : LYR.html(t), el = $('lyrics'); if (el._h !== h) { el._h = h; el.innerHTML = h; } el.style.display = h ? 'block' : 'none'; }
+    { const h = LYR.mine(me), el = $('lyrics'); if (el._h !== h) { el._h = h; el.innerHTML = h; } el.style.display = h ? 'block' : 'none'; }
     // tags (hp above head)
     this.tags();
     if (this.tabOpen) this.drawTab();

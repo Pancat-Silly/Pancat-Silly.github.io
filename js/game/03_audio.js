@@ -24,8 +24,9 @@ const AU = {
     const s = this.ctx.createBufferSource(); s.buffer = b; if (opt.rate) s.playbackRate.value = opt.rate;
     const gn = this.ctx.createGain(); gn.gain.value = g * (opt.gain || 1); s.connect(gn); gn.connect(this.abBus); s.loop = !!opt.loop; s.start(); this.last[name] = s; return s;
   },
-  loop(name, on) { if (on) { if (!this.loops[name]) this.loops[name] = this.play(name, { loop: true }); } else if (this.loops[name]) { try { this.loops[name].stop(); } catch (e) { } this.loops[name] = null; } },
+  loop(name, on) { if (on) { if (!this.loops[name]) { this.loops[name] = this.play(name, { loop: true }); if (this.loops[name]) this.loops[name]._t0 = this.ctx.currentTime; } } else if (this.loops[name]) { try { this.loops[name].stop(); } catch (e) { } this.loops[name] = null; } },
   stopAll(name) { this.loop(name, false); },
+  loopTime(name) { const s = this.loops[name]; if (!s || !this.ctx || s._t0 == null) return null; const d = s.buffer.duration; return ((this.ctx.currentTime - s._t0) % d + d) % d; }, // seconds into an AU.loop (360 노래 가사)
   // positional seamless loops, refreshed every frame (distance gain + stereo pan); anything not refreshed fades out
   pl: {}, plF: 0,
   posLoop(key, name, pos, range = 20, vol = 1) {

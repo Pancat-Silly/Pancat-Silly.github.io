@@ -66,6 +66,17 @@ const DUDE_LRC = `
 [02:03.37]bg:<02:03.37>(좋<02:03.99>겠<02:04.21>어 <02:04.62>허이!) <02:04.40>
 [02:06.70]bg:<02:06.70>호이! <02:07.11>호이! <02:07.52>호이! <02:07.94>호이! <02:08.60>
 `;
+// 360 노래 (360song.mp3, 360 블록 위에서 돌 때 본인에게만 나옴) 가사, 0.25초 일찍
+const LRC_360 = `
+[ti:360 노래]
+[offset:250]
+[00:00.13]<00:00.13>360! <00:00.93>360!
+[00:01.83]<00:01.83>차<00:02.01>라<00:02.11>리 <00:02.19>0<00:02.40>을 <00:02.61>주<00:02.81>지
+[00:03.05]<00:03.05>교<00:03.24>수 <00:03.43>이 <00:03.63>쓰<00:03.83>벌<00:04.01>아 <00:04.23>어<00:04.41>떻<00:04.50>게 <00:04.59>나<00:04.78>한<00:04.90>테
+[00:05.20]<00:05.20>예<00:05.42>비 <00:05.54>3<00:05.75>6<00:05.84>0<00:05.96>을 <00:06.06>줄 <00:06.25>수<00:06.35>가 <00:06.44>있<00:06.64>어
+[00:06.91]<00:06.91>내 <00:07.12>노<00:07.30>력, <00:07.83>내 <00:08.02>열<00:08.22>정 <00:08.65>다 <00:08.85>무<00:09.04>시<00:09.23>하<00:09.41>는 <00:09.51>거<00:09.72>야 <00:09.82>뭐<00:10.01>야
+[00:10.07]<00:10.07>희<00:10.19>망 <00:10.26>고<00:10.46>문 <00:10.66>그<00:10.86>만<00:10.96>하<00:11.15>고 <00:11.29>제<00:11.49>발 <00:11.68>현<00:11.87>실<00:12.07>을 <00:12.27>직<00:12.47>시<00:12.57>하라<00:13.03>고
+`;
 function lrcParse(text) {
   const T = s => { const m = s.match(/(\d+):(\d+(?:\.\d+)?)/); return +m[1] * 60 + +m[2]; }, out = []; let off = 0;
   for (const raw of text.split(/\r?\n/)) {
@@ -96,11 +107,14 @@ function lrcParse(text) {
   return out;
 }
 const DUDE_LYRICS = lrcParse(DUDE_LRC);
+const SONG_LYRICS = { dude: DUDE_LYRICS, '360song': lrcParse(LRC_360) };
 const LYR = {
   // the lines showing at song time t: { main, back } (a line shows from 0.25s before its first word until its end)
-  at(t) { let main = null, back = null; for (const l of DUDE_LYRICS) { if (t < l[1][0][0] - .25 || t > l[0]) continue; if (l[2]) back = back || l; else main = main || l; } return { main, back }; },
+  at(t, song) { let main = null, back = null; for (const l of SONG_LYRICS[song || 'dude']) { if (t < l[1][0][0] - .25 || t > l[0]) continue; if (l[2]) back = back || l; else main = main || l; } return { main, back }; },
   line(l, t) { return l ? l[1].map(w => w[2].map(c => '<b' + (t >= c[0] ? ' class="on"' : '') + '>' + esc(c[1]) + '</b>').join('')).join(' ') : ''; },
-  html(t) { const { main, back } = this.at(t); if (!main && !back) return ''; return (main ? '<div>' + this.line(main, t) + '</div>' : '') + (back ? '<div class="bk">' + this.line(back, t) + '</div>' : ''); },
+  html(t, song) { const { main, back } = this.at(t, song); if (!main && !back) return ''; return (main ? '<div>' + this.line(main, t) + '</div>' : '') + (back ? '<div class="bk">' + this.line(back, t) + '</div>' : ''); },
   // song time of a dancer (the loop that is actually playing, so words match what you hear)
   of(id) { return AU.loopPos('dance:' + id); },
+  // my own lyrics: dude 댄스 song, else the 360 song (AU.loop) -> html ('' = nothing)
+  mine(me) { if (G.dancers.has(me.id)) { const t = this.of(me.id); return t === null ? '' : this.html(t, 'dude'); } const t = AU.loopTime('360song'); return t === null ? '' : this.html(t, '360song'); },
 };
