@@ -69,6 +69,26 @@ const RBOT = {
     return null;
   },
 
+  // ---------- building: a cheap full block from the bag (cobblestone / dirt / stone …, planks only when there's plenty of wood) ----------
+  blk(b) {
+    for (const id of this.PILLAR) if (b.count(id) && (!/_planks$/.test(id) || this.planks(b) > 12)) return id;
+    for (const s of b.inv) { if (!s) continue; const I = RIT[s.id]; if (!I || !I.block || /ore|_block$|_log$|_planks$|table|bookshelf|glass|leaves/.test(s.id)) continue; const B = BL[RBLK.K(I.block)]; if (B && B.solid && B.full && !B.use && !B.fall && !B.liquid) return s.id; }
+    return null;
+  },
+  // put a building block at (x,y,z) (minecraft coords) if it's empty, editable and touches something
+  putAt(b, x, y, z) {
+    const it = this.blk(b); if (!it || RW.getM(x, y, z) !== 0 || !RG.canEditBot(x, y, z)) return false;
+    if (![[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]].some(([dx, dy, dz]) => RW.getM(x + dx, y + dy, z + dz))) return false;
+    if (!RG.placeBlock(b, x, y, z, RIT[it].block)) return false; b.take(it, 1); b.swingAnim(); return true;
+  },
+  // wall off an enemy: block the 2 cells (feet + head) right next to the bot on the enemy's side
+  wallOff(b, A, tg) {
+    if (A.wallT > RG.tick) return; A.wallT = RG.tick + 6;
+    const dx = tg.x - b.x, dz = tg.z - b.z, [mx, my, mz] = RG.mcOf(b), bx = Math.floor(mx), by = Math.floor(my + .01), bz = Math.floor(mz);
+    const sx = Math.abs(dx) > Math.abs(dz) ? Math.sign(dx) : 0, sz = sx ? 0 : Math.sign(dz);
+    this.putAt(b, bx + sx, by, bz + sz); this.putAt(b, bx + sx, by + 1, bz + sz);
+  },
+
   // ---------- crafting (same recipes as the crafting grid; 3x3 ones need a crafting table within reach) ----------
   rec(out) { return RREC.find(r => r.out === out); },
   need(r) { const m = {}; for (const row of r.rows) for (const ch of row) if (ch !== '.') m[ch] = (m[ch] || 0) + 1; return Object.entries(m).map(([ch, n]) => [r.keys[ch], n]); },
@@ -133,25 +153,39 @@ const RBOT = {
     const rf = this.canMake(b, 'furnace'); if (rf) { if (this.table(b, A)) { this.make(b, rf); } return true; }
     return false;
   },
-  loot(b, A, g) { // take everything out of a chest
-    const d = RG.beGet(g[0], g[1], g[2]); A.looted.add(this.key(...g)); if (!d || !d.inv) return; let ch = false;
-    d.inv.forEach((s, i) => { if (!s) return; const left = b.give(s); if (left < s.n) { d.inv[i] = left ? Object.assign({}, s, { n: left }) : null; ch = true; } });
+  loot(b, A, g) { // take everything useful out of a chest (look again in 30 s: someone may have put things in); an emptied chest gets broken
+    const k = this.key(...g), d = RG.beGet(g[0], g[1], g[2]); A.looted.set(k, RG.tick + 600); if (!d || !d.inv) return; let ch = false;
+    RAU.at('chest_open', b);
+    d.inv.forEach((s, i) => { if (!s || this.JUNK.has(s.id)) return; const left = b.give(s); if (left < s.n) { d.inv[i] = left ? Object.assign({}, s, { n: left }) : null; ch = true; } });
     if (ch) { RG.beSave(g[0], g[1], g[2], d); RAU.at('pop', b); } b.swingAnim(); this.equip(b);
+    if (k !== A.stash && !d.inv.some(s => s && !this.JUNK.has(s.id))) A.brk = g.slice(); // nothing left: break it (the chest is fuel / a stash of its own)
+  },
+  // bag full: put junk into its own chest (placed from the bag, or crafted) instead of throwing it on the floor
+  stashJunk(b, A, junk) {
+    let g = A.stash && A.stash.split(',').map(Number);
+    if (!g || BL[RW.getM(...g)].use !== 'chest' || !this.reach(b, g)) {
+      g = null; if (!b.count('chest')) { const r = this.canMake(b, 'chest'); if (r && this.table(b, A)) this.make(b, r); }
+      if (b.count('chest')) { g = this.placeNear(b, 'chest'); if (g) { A.stash = this.key(...g); A.looted.set(A.stash, 1e12); } }
+    }
+    if (!g) return junk; const d = RG.beGet(g[0], g[1], g[2]); if (!d || !d.inv) return junk;
+    const rest = []; for (const i of junk) { const s = b.inv[i], j = d.inv.findIndex(x => !x); if (j < 0) { rest.push(i); continue; } d.inv[j] = s; b.inv[i] = null; }
+    RG.beSave(g[0], g[1], g[2], d); RAU.at('chest_open', b); b.swingAnim(); return rest;
   },
 
   JUNK: new Set(['dirt', 'gravel', 'sand', 'oak_leaves', 'flint', 'book', 'bookshelf', 'redstone', 'lapis_lazuli', 'experience_bottle', 'enchanting_table', 'anvil', 'chest', 'glass', 'iron_nugget', 'gold_nugget', 'raw_gold', 'blast_furnace']),
   tidy(b, A) { // over 27 slots used: drop junk and tools / weapons worse than the best one held
     if (b.inv.filter(Boolean).length <= 27) return;
-    const pick = this.bestTool(b, 'pickaxe'), wpn = this.bestWeapon(b); let tables = 0;
+    const pick = this.bestTool(b, 'pickaxe'), wpn = this.bestWeapon(b); let tables = 0; const J = [];
     for (let i = 0; i < 36; i++) {
       const s = b.inv[i]; if (!s) continue; const I = RIT[s.id] || {};
-      let junk = this.JUNK.has(s.id);
+      let junk = this.JUNK.has(s.id) && s.id !== 'chest';
       if (I.tool && I.tool.type === 'pickaxe' && i !== pick.i) junk = true;
       if (I.dmg && !I.tool && i !== wpn.i) junk = true;
-      if (s.id === 'crafting_table' && ++tables > 1) junk = true;
-      if (!junk) continue;
-      const e = RG.dropStack(s, b.x, b.y + 1.2, b.z, rand(-.15, .15), .2, rand(-.15, .15), true); A.badItem.add(e.id); b.inv[i] = null;
+      if (s.id === 'crafting_table' && (++tables > 1 || s.n > 1)) junk = true;
+      if (s.id === 'chest' && s.n > 2) junk = true;
+      if (junk) J.push(i);
     }
+    for (const i of this.stashJunk(b, A, J)) { const s = b.inv[i]; if (!s) continue; const e = RG.dropStack(s, b.x, b.y + 1.2, b.z, rand(-.15, .15), .2, rand(-.15, .15), true); A.badItem.add(e.id); b.inv[i] = null; }
   },
   // ---------- what's worth mining right now ----------
   desire(b, id) {
@@ -172,7 +206,7 @@ const RBOT = {
     const R = RW.R(RG.gs.big), [mx, my, mz] = RG.mcOf(b), fx = Math.floor(mx), fy = Math.floor(my), fz = Math.floor(mz), r = 7; let best = null, bs = 0;
     for (let y = Math.max(201, fy - 4); y <= Math.min(215, fy + 5); y++) for (let z = Math.max(-R, fz - r); z <= Math.min(R, fz + r); z++) for (let x = Math.max(-R, fx - r); x <= Math.min(R, fx + r); x++) {
       const id = RW.getM(x, y, z); if (!id) continue; const B = BL[id], k = this.key(x, y, z); if ((A.bad[k] || 0) > RG.tick) continue;
-      const s = B.use === 'chest' ? (A.looted.has(k) || RG.chestBlocked(x, y, z) ? 0 : 9) : this.desire(b, id); if (!s) continue;
+      const s = B.use === 'chest' ? ((A.looted.get(k) || 0) > RG.tick ? 0 : 9) : this.desire(b, id); if (!s) continue;
       const sc = s / (1 + Math.hypot(x + .5 - mx, y + .5 - (my + 1), z + .5 - mz) * .35); if (sc > bs) { bs = sc; best = [x, y, z]; }
     }
     A.goal = best; A.scanT = RG.tick;
@@ -180,11 +214,12 @@ const RBOT = {
   USELESS: new Set(['dirt', 'gravel', 'sand', 'oak_leaves', 'birch_leaves', 'flint', 'glass', 'book', 'bookshelf', 'redstone', 'lapis_lazuli', 'experience_bottle', 'enchanting_table', 'anvil', 'xp']),
   itemGoal(b, A) { // nearest useful dropped item in the same area (one it couldn't reach in 4 s is skipped)
     let best = null, bd = 10; const ar = RG.area(b);
-    for (const e of RG.items.values()) { if (e.pick > 15 || this.USELESS.has(e.st.id) || RG.area(e) !== ar || A.badItem.has(e.id)) continue; const d = Math.hypot(e.x - b.x, e.y - b.y, e.z - b.z); if (d < bd) { bd = d; best = e; } }
+    for (const e of RG.items.values()) { if (e.pick > 15 || this.USELESS.has(e.st.id) || (e.st.id === 'chest' && b.count('chest') >= 2) || (e.st.id === 'crafting_table' && b.count('crafting_table')) || RG.area(e) !== ar || A.badItem.has(e.id)) continue; const d = Math.hypot(e.x - b.x, e.y - b.y, e.z - b.z); if (d < bd) { bd = d; best = e; } }
     return best;
   },
 
   // ---------- moving / digging ----------
+  digWay(b, g) { const A = b.ai, k = this.key(...g); if (A && BL[RW.getM(...g)].use === 'chest' && !A.looted.has(k) && !RG.chestBlocked(...g)) { this.loot(b, A, g); return; } this.dig(b, g); },
   dig(b, g) {
     const id = RW.getM(g[0], g[1], g[2]); if (!id) { b.dig = null; return; } const B = BL[id];
     if (B.tool) { const t = this.bestTool(b, B.tool); if (t.i >= 0) this.hold(b, t.i); }
@@ -206,15 +241,18 @@ const RBOT = {
     if (dy < -1.5 && hd < 1.5) cand.push([bx, by - 1, bz]);
     else { if (hd > .5) cand.push([bx + ax, by, bz + az], [bx + ax, by + 1, bz + az]); if (dy > 1.5) cand.push([bx, by + 2, bz]); }
     let t = null; for (const c of cand) { const id = RW.getM(c[0], c[1], c[2]); if (id && BL[id].solid && !BL[id].unbreak && RG.canEditBot(c[0], c[1], c[2])) { t = c; break; } }
-    if (t) { this.dig(b, t); if (t[1] === by - 1 || b.hx) I.f = 0; } else if (b.hx) I.jump = true;
+    if (t) { this.digWay(b, t); if (t[1] === by - 1 || b.hx) I.f = 0; } else if (b.hx) I.jump = true;
+    // bridge: walking off an edge with a drop of 2+ (and not wanting to go down) -> sneak and fill the gap ahead
+    if (I.f && dy > -1 && b.onGround && hd > 1.2) { const gx = bx + ax, gz = bz + az; if (!RW.getM(gx, by - 1, gz) && !RW.getM(gx, by - 2, gz) && !RW.getM(gx, by, gz)) { I.sneak = true; I.sprint = false; if (!(b.ai && b.ai.bridgeT > RG.tick)) { if (this.putAt(b, gx, by - 1, gz) && b.ai) b.ai.bridgeT = RG.tick + 4; } } }
     // climb: target well above and nothing left to dig -> jump and put a block from the inventory under the feet
     if (dy > 2.5 && hd < 2 && !t && b.onGround && RG.tick % 12 === 0) {
-      const it = this.PILLAR.find(id => b.count(id)); if (it) { I.jump = true; setTimeout(() => { if (b.alive && RW.getM(bx, by, bz) === 0 && RG.canEditBot(bx, by, bz) && b.count(it) && RG.placeBlock(b, bx, by, bz, RIT[it].block)) b.take(it, 1); }, 250); }
+      const it = this.blk(b); if (it) { I.jump = true; setTimeout(() => { if (b.alive && RW.getM(bx, by, bz) === 0 && RG.canEditBot(bx, by, bz) && b.count(it) && RG.placeBlock(b, bx, by, bz, RIT[it].block)) b.take(it, 1); }, 250); }
     }
   },
   // mine / use a block (minecraft coords): when in reach, break whatever is first on the line of sight to it
-  work(b, A, I, g) {
+  work(b, A, I, g, brk) {
     const id = RW.getM(g[0], g[1], g[2]); if (!id) { A.goal = null; return; }
+    if (BL[id].use === 'chest' && !brk && RG.chestBlocked(g[0], g[1], g[2])) { const up = [g[0], g[1] + 1, g[2]]; if (BL[RW.getM(...up)].unbreak || !RG.canEditBot(...up)) { A.bad[this.key(...g)] = RG.tick + 600; A.goal = null; return; } g = up; } // blocked chest (full block on top): dig that off first
     const c = RW.P(g[0] + .5, g[1] + .5, g[2] + .5), eye = { x: b.x, y: b.y + b.eye, z: b.z };
     const dx = c.x - eye.x, dy = c.y - eye.y, dz = c.z - eye.z, L = Math.hypot(dx, dy, dz);
     if (L <= 4.5) {
@@ -222,9 +260,9 @@ const RBOT = {
       const h = RW.w.ray(eye, { x: dx / L, y: dy / L, z: dz / L }, L + .6, B => B.solid);
       if (h) {
         const m = RW.mc(h.x, h.y, h.z);
-        if (m[0] === g[0] && m[1] === g[1] && m[2] === g[2]) { const B = BL[id]; if (B.use === 'chest') { if (!RG.chestBlocked(g[0], g[1], g[2])) this.loot(b, A, g); A.goal = null; return; } if (B.use === 'craft' || B.use === 'furnace') { A.use = null; return; } this.dig(b, g); return; }
+        if (m[0] === g[0] && m[1] === g[1] && m[2] === g[2]) { const B = BL[RW.getM(...g)]; if (B.use === 'chest' && !brk) { if (!RG.chestBlocked(g[0], g[1], g[2])) this.loot(b, A, g); A.goal = null; return; } if (B.use === 'craft' || B.use === 'furnace') { A.use = null; return; } this.dig(b, g); return; }
         if (BL[h.id].unbreak || !RG.canEditBot(m[0], m[1], m[2])) { A.bad[this.key(...g)] = RG.tick + 600; A.goal = null; return; }
-        this.dig(b, m); return;
+        this.digWay(b, m); return;
       }
     }
     this.navTo(b, c.x, c.y - .5, c.z, I);
@@ -232,10 +270,10 @@ const RBOT = {
 
   // ---------- the brain ----------
   brain(b, I, ph, ar) {
-    const A = b.ai || (b.ai = { goal: null, bad: {}, looted: new Set(), badItem: new Set(), itemSince: new Map(), off: randi(0, 19), pos: [b.x, b.z], posT: RG.tick });
+    const A = b.ai || (b.ai = { goal: null, bad: {}, looted: new Map(), badItem: new Set(), itemSince: new Map(), off: randi(0, 19), pos: [b.x, b.z], posT: RG.tick });
     if ((RG.tick + A.off) % 10 === 0) this.equip(b);
     // heal with a splash potion when low
-    if (b.hp < 9 && b.count('splash_potion') && !(A.potT > RG.tick)) { const i = b.inv.findIndex(s => s && s.id === 'splash_potion'); this.hold(b, i); b.pitch = 1.5; RG.throwProj(b, 'heal'); b.take('splash_potion', 1); A.potT = RG.tick + 60; return; }
+    if (b.hp < 9 && b.count('splash_potion') && !(A.potT > RG.tick)) { const i = b.inv.findIndex(s => s && s.id === 'splash_potion'); this.hold(b, i); b.pitch = 1.5; RG.throwProj(b, 'heal'); b.take('splash_potion', 1); A.potT = RG.tick + 60; for (const p of RG.players()) if (p !== b && p.alive !== false && !p.spectator && RG.area(p) === RG.area(b) && Math.hypot(p.x - b.x, p.z - b.z) < 5) { A.wallT = 0; this.wallOff(b, A, p); break; } return; }
     // enemies in the same area
     let tg = null, bd = 1e9; for (const p of RG.players()) { if (p === b || p.id === b.id || p.spectator || p.alive === false || RG.area(p) !== ar) continue; const d = Math.hypot(p.x - b.x, p.y - b.y, p.z - b.z); if (d < bd) { bd = d; tg = p; } }
     const gs = RG.gs, el = RG.hostNow() - gs.t, total = gs.end > 0 ? gs.end - gs.t : 600000, left = gs.end > 0 ? gs.end - RG.hostNow() : total - el;
@@ -250,7 +288,7 @@ const RBOT = {
       // low and nothing to heal with: back off unless cornered at the end
       if (foe && b.hp < 6 && !late && bd < 8 && !b.count('splash_potion')) A.flee = RG.tick + 40;
     }
-    if (A.flee > RG.tick && tg) { const P = { x: b.x * 2 - tg.x, z: b.z * 2 - tg.z }; this.navTo(b, P.x, b.y, P.z, I); return; }
+    if (A.flee > RG.tick && tg) { if (bd < 6) this.wallOff(b, A, tg); const P = { x: b.x * 2 - tg.x, z: b.z * 2 - tg.z }; this.navTo(b, P.x, b.y, P.z, I); return; }
     if (foe) { A.goal = null; this.fight(b, A, I, foe, Math.hypot(foe.x - b.x, foe.y - b.y, foe.z - b.z)); return; }
     if (ph !== 'game' || ar !== 'arena' || b.mode !== 'survival') return;
     // stuck: barely moved for 2 s while going somewhere -> give up on that goal for a while
@@ -259,6 +297,7 @@ const RBOT = {
     if ((RG.tick + A.off) % 8 === 0) { if (!this.craftStep(b, A)) this.smelt(b, A); }
     if ((RG.tick + A.off) % 40 === 0) this.tidy(b, A);
     // where to go: a table / furnace to use > the furnace with ingots ready > a dropped item > a block worth mining > explore
+    if (A.brk) { const B = BL[RW.getM(...A.brk)]; if (B.use !== 'chest' || (A.bad[this.key(...A.brk)] || 0) > RG.tick) A.brk = null; else { this.work(b, A, I, A.brk, true); return; } }
     if (A.use) { if (!RW.getM(...A.use) || this.reach(b, A.use)) A.use = null; else { this.work(b, A, I, A.use); return; } }
     if (A.furn) { const d = RG.be.get(this.key(...A.furn)); if (!d || !RW.getM(...A.furn)) A.furn = null; else if (d.inv[2] && !this.reach(b, A.furn)) { this.work(b, A, I, A.furn); return; } }
     const it = this.itemGoal(b, A);
