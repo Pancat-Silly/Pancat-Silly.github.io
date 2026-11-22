@@ -2,15 +2,15 @@
 // the host loads a result txt -> it runs locally and its hash+name goes into the host's presence (uj).
 // everyone who doesn't have it asks for it; the host sends the file in 16KB chunks over the side channel (NET.blob).
 // every client keeps what it received, so a new host can hand it out too. jobs get a blue "업로드됨" tag.
-// jobs made with the dev tool and shipped with the game (modjobs/*.txt): loaded through the same mod API
+// jobs made with the dev tool and shipped with the game (tools/modjobs/<job>/ -> js/data/jobs/<job>.js, one file per job): loaded through the same mod API
 const BUILTIN = {
   async load() {
     if (typeof BUILTIN_JOBS === 'undefined') return;
     for (const J of BUILTIN_JOBS) {
       for (const k in J.snd) { try { await MOD.addSound(k, J.snd[k]); } catch (e) { } }
       const ids = []; MOD.upIds = ids;
-      try { new Function('APVP', 'api', J.code + '\n//# sourceURL=builtin_' + J.file + '.js')(APVP, APVP.api); } catch (e) { console.error('builtin job', J.file, e); }
-      finally { MOD.upIds = null; }
+      MOD.curCode = J.code; try { new Function('APVP', 'api', J.code + '\n//# sourceURL=builtin_' + J.file + '.js')(APVP, APVP.api); } catch (e) { console.error('builtin job', J.file, e); }
+      finally { MOD.upIds = null; MOD.curCode = ''; }
       for (const id of ids) if (JOBS[id]) { JOBS[id].builtin = true; JOBS[id].desc = String(JOBS[id].desc || '').replace(/^커스텀\s*·\s*/, '미완성 직업 · '); UI.addJobButton(id); }
     }
     UI.menuDirty = true;
@@ -26,9 +26,9 @@ const UPJ = {
     const P = DEV.parse(txt); if (!P.code) { UI.chat('§c업로드한 파일에서 JS 코드를 찾지 못했어요 (개발 도구 결과물 txt를 올려 주세요)'); return false; }
     if (P.snd) for (const line of P.snd.split('\n')) { const m = line.match(/^([^\s:]+)\s*:\s*(data:audio\/[^\s]+)/); if (m) { try { await MOD.addSound(m[1], m[2]); } catch (e) { } } }
     const ids = []; MOD.upIds = ids;
-    try { new Function('APVP', 'api', P.code + '\n//# sourceURL=uploaded_job.js')(APVP, APVP.api); }
+    MOD.curCode = P.code; try { new Function('APVP', 'api', P.code + '\n//# sourceURL=uploaded_job.js')(APVP, APVP.api); }
     catch (e) { UI.chat('§c업로드된 직업 코드 오류: ' + e.message); }
-    finally { MOD.upIds = null; }
+    finally { MOD.upIds = null; MOD.curCode = ''; }
     for (const id of ids) if (JOBS[id]) { JOBS[id].uploaded = true; UI.addJobButton(id); }
     const name = ids.map(i => JOBS[i] ? JOBS[i].icon + ' ' + JOBS[i].name : i).join(', ');
     this.files.set(h, { txt, name, ids, ok: ids.length > 0 }); UI.menuDirty = true; if (UI.upStatus) UI.upStatus();

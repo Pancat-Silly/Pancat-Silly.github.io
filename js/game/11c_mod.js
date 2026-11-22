@@ -3,7 +3,8 @@
 // online game. Everything a custom job may touch goes through APVP.api so generated code stays small and stable.
 // API_DOC is the single source for both the api object's documentation in the AI prompt and the dev log hints.
 const MOD = {
-  defs: {}, sounds: {}, proj: [], missing: {}, errCount: {}, codeLines: [],
+  // src: job id -> the code that registered it (✏️ 수정) · userSnd: sounds added in the dev tool (go into the result)
+  defs: {}, sounds: {}, src: {}, curCode: '', userSnd: new Set(), proj: [], missing: {}, errCount: {}, codeLines: [],
   // map a stack trace back to the pasted code (new Function adds 2 header lines)
   where(e) { const m = String(e && e.stack || '').match(/mod_job\.js:(\d+):(\d+)/); if (!m) return ''; const ln = +m[1] - 2, col = +m[2]; const src = (this.codeLines[ln - 1] || '').trim(); return ' (코드 ' + ln + '번째 줄 ' + col + '번째 칸' + (src ? ': ' + src.slice(0, 120) : '') + ')'; },
   err(where, e) {
@@ -67,7 +68,7 @@ const MOD = {
     if (kit.length > 9) throw new Error('kit은 최대 9칸이에요');
     JOBS[id] = { custom: true, wip: true, name: (def.name || id) + (id !== origId ? ' (모드)' : ''), icon: def.icon || '✨', desc: '커스텀 · ' + (def.desc || ''), kit, maxHp: def.maxHp ? clamp(+def.maxHp, 2, 100) : undefined, speedMul: def.speed ? clamp(+def.speed, .3, 3) : undefined, off: def.offhand || undefined };
     if (def.armor) JOBS[id].armor = def.armor; if (def.boots) JOBS[id].boots = def.boots;
-    this.defs[id] = def; if (!JOB_ORDER.includes(id)) JOB_ORDER.push(id); if (this.upIds) this.upIds.push(id);
+    this.defs[id] = def; this.src[id] = this.curCode || ''; if (!JOB_ORDER.includes(id)) JOB_ORDER.push(id); if (this.upIds) this.upIds.push(id);
     for (const s of def.sounds || []) if (s && s.name && s.data) this.addSound(s.name, s.data);
     const hooks = ['tick', 'hit', 'hurt', 'kill', 'death', 'respawn', 'bot'].filter(h => typeof def[h] === 'function');
     DEV.log('ok', '직업 등록: ' + JOBS[id].icon + ' ' + JOBS[id].name + ' (id ' + id + ') · 체력 ' + (JOBS[id].maxHp || 20) + ' · 이동속도 ×' + (JOBS[id].speedMul || 1) + ' · 이벤트 [' + (hooks.join(', ') || '없음') + ']');
@@ -210,23 +211,26 @@ const DEV = {
   render() { const el = $('devLog'); if (!el || this._r) return; this._r = requestAnimationFrame(() => { this._r = 0; const f = $('devFilter') ? $('devFilter').value : 'all'; el.textContent = this.logs.filter(e => f === 'all' || (f === 'err' ? e.level === 'error' || e.level === 'warn' : e.level === f)).slice(-300).map(e => '[' + e.stamp + '] ' + (this.ICON[e.level] || '') + ' ' + e.msg + (e.n > 1 ? ' ×' + e.n : '')).join('\n'); el.scrollTop = el.scrollHeight; }); },
   verOf(txt) { const m = String(txt).slice(0, 400).match(/개발 도구 v(\d+)/); return m ? +m[1] : 0; },
   parse(txt) {
-    const MK = ['=====새 직업 요청 원문=====', '=====JS 코드=====', '=====기존 직업·시스템 변경 요청 원문=====', '=====구현 메모=====', '=====효과음=====', '=====필요했던 API', '=====개발 도구 로그', '=====끝====='];
+    const MK = ['=====새 직업 요청 원문=====', '=====수정한 기존 직업=====', '=====JS 코드=====', '=====기존 직업·시스템 변경 요청 원문=====', '=====구현 메모=====', '=====효과음=====', '=====필요했던 API', '=====개발 도구 로그', '=====끝====='];
     const sec = a => { const i = txt.indexOf(a); if (i < 0) return null; let j = txt.length; for (const m of MK) { const k = txt.indexOf(m, i + a.length); if (k >= 0 && k < j) j = k; } return txt.slice(i + a.length, j).trim(); };
-    let code = sec(MK[1]);
+    let code = sec(MK[2]);
     if (code === null) { const m = txt.match(/```(?:js|javascript)?\s*([\s\S]*?)```/); code = m ? m[1] : (/APVP\.addJob/.test(txt) ? txt : ''); }
     code = (code || '').replace(/^```(?:js|javascript)?\s*/, '').replace(/```\s*$/, '').trim();
-    return { job: sec(MK[0]) || '', code, sys: sec(MK[2]) || '', memo: (sec(MK[3]) || '').split(/\n?\[개발 도구 자동/)[0].replace(/^\[AI 메모\]\n/, '').trim(), snd: sec(MK[4]) };
+    const ed = (sec(MK[1]) || '').match(/id\s*"?([a-z][a-z0-9_]*)/);
+    return { job: sec(MK[0]) || '', edit: ed ? ed[1] : '', code, sys: sec(MK[3]) || '', memo: (sec(MK[4]) || '').split(/\n?\[개발 도구 자동/)[0].replace(/^\[AI 메모\]\n/, '').trim(), snd: sec(MK[5]) };
   },
   async apply(txt) {
     const P = this.parse(txt); { const v = DEV.verOf(txt); if (v && v < DEV_VER) this.log('warn', '이 결과물은 예전 프롬프트(v' + v + ')로 만들어졌어요. 지금 최신은 v' + DEV_VER + ' — 새 기능(mc 아이템, 새 API)을 쓰려면 프롬프트를 다시 뽑아서 AI에게 고쳐 달라고 하세요'); else if (v) this.log('ok', '최신 프롬프트(v' + v + ')로 만든 결과물이에요'); }
     this.log('info', '붙여넣은 응답 분석: 새 직업 요청 ' + (P.job ? P.job.length + '자' : '없음') + ' · JS 코드 ' + (P.code ? P.code.split('\n').length + '줄' : '없음') + ' · 변경 요청 ' + (P.sys && P.sys !== '없음' ? P.sys.length + '자' : '없음') + ' · 구현 메모 ' + (P.memo && P.memo !== '없음' ? '있음' : '없음'));
     if (!P.code) { this.log('error', 'JS 코드를 찾지 못했어요. AI 응답 전체(=====새 직업 요청 원문===== 부터 =====끝===== 까지)를 붙여넣어 주세요.'); return false; }
     if (P.memo && P.memo !== '없음') { this.memo = P.memo; this.log('warn', 'AI 구현 메모: ' + P.memo.replace(/\n+/g, ' / ').slice(0, 400)); }
-    if (P.snd) for (const line of P.snd.split('\n')) { const m = line.match(/^([^\s:]+)\s*:\s*(data:audio\/[^\s]+)/); if (m) await MOD.addSound(m[1], m[2]); }
+    if (P.snd) for (const line of P.snd.split('\n')) { const m = line.match(/^([^\s:]+)\s*:\s*(data:audio\/[^\s]+)/); if (m) { MOD.userSnd.add(await MOD.addSound(m[1], m[2])); continue; }
+      const f = line.match(/^([^\s:]+)\s*:\s*\(파일 따로/); if (f && !MOD.sounds[f[1]]) this.log('warn', '효과음 "' + f[1] + '"은(는) 따로 보낸 파일이에요 → ②에서 그 파일을 넣어 주세요'); }
     try {
-      AU.init(); MOD.codeLines = P.code.split('\n'); const before = new Set(Object.keys(MOD.defs));
-      new Function('APVP', 'api', P.code + '\n//# sourceURL=mod_job.js')(APVP, APVP.api);
+      AU.init(); MOD.codeLines = P.code.split('\n'); const before = new Set(Object.keys(MOD.defs)); MOD.curCode = P.code;
+      try { new Function('APVP', 'api', P.code + '\n//# sourceURL=mod_job.js')(APVP, APVP.api); } finally { MOD.curCode = ''; }
       const ids = Object.keys(MOD.defs).filter(i => !before.has(i) || true); if (!ids.length) { this.log('error', '코드는 실행됐지만 APVP.addJob(...)이 한 번도 불리지 않았어요'); return false; }
+      if (P.edit && JOBS[P.edit] && P.edit !== this.editId) this.edit(P.edit, true);
       this.code = P.code; if (P.job) this.jobReq = P.job; if (P.sys) this.sysReq = P.sys; $('devJob').value = this.jobReq; $('devSys').value = this.sysReq;
       for (const m of this.analyze(P.code)) this.log('warn', '코드 분석 ' + m.replace(/^- /, '')); this.log('ok', '적용 완료 → 직업 목록 맨 끝에서 고르거나 "▶ 적용하고 연습 모드"를 누르세요'); UI.refreshMenu(); return true;
     } catch (e) { this.log('error', '코드 실행 오류: ' + e.message + MOD.where(e) + ' — "📋 오류 보고 복사"를 눌러 AI에게 보내면 고쳐 줘요'); return false; }
@@ -259,14 +263,77 @@ const DEV = {
   },
   prompt() {
     const jr = $('devJob').value.trim(), sr = $('devSys').value.trim(); const snds = Object.keys(MOD.sounds);
-    return DEV_PROMPT.replace('{{VER}}', DEV_VER).replace('{{JOB}}', jr || '(여기에 만들고 싶은 직업과 능력을 자유롭게 적어 주세요)').replace('{{SYS}}', sr || '없음').replace('{{SOUNDS}}', snds.length ? snds.join(', ') : '(아직 없음)').replace('{{BUILTIN}}', DEV_BUILTIN()).replace('{{EFFECTS}}', Object.keys(EFF).join(', ')).replace('{{PARTICLES}}', MOD_PARTICLES.join(' ')).replace('{{BSOUNDS}}', MOD_SOUNDS.join(' ')).replace('{{ITEMS}}', ['iron_sword', 'dia_sword', 'bow', 'arrow', 'shield', 'slimeball', 'pot_heal', 'pot_swift', 'pot_res', 'pot_fire'].map(i => i + '(' + ITEMS[i].name + ')').join(', '));
+    const ed = this.editId && JOBS[this.editId];
+    return DEV_PROMPT.replace('{{VER}}', DEV_VER).replace('{{EDIT}}', ed ? this.editInfo(this.editId) : '').replace('{{JOB}}', jr || (ed ? '(여기에 ' + ed.name + ' 직업을 어떻게 바꿀지 적어 주세요)' : '(여기에 만들고 싶은 직업과 능력을 자유롭게 적어 주세요)')).replace('{{SYS}}', sr || '없음').replace('{{SOUNDS}}', snds.length ? snds.join(', ') : '(아직 없음)').replace('{{BUILTIN}}', DEV_BUILTIN()).replace('{{EFFECTS}}', Object.keys(EFF).join(', ')).replace('{{PARTICLES}}', MOD_PARTICLES.join(' ')).replace('{{BSOUNDS}}', MOD_SOUNDS.join(' ')).replace('{{ITEMS}}', ['iron_sword', 'dia_sword', 'bow', 'arrow', 'shield', 'slimeball', 'pot_heal', 'pot_swift', 'pot_res', 'pot_fire'].map(i => i + '(' + ITEMS[i].name + ')').join(', '));
   },
   errorReport() {
     return '개발 도구에서 아래 오류/경고가 났어요. 같은 출력 형식(=====새 직업 요청 원문===== … =====끝=====)으로 고친 전체 답을 다시 주세요.\n\n[오류 · 경고 로그]\n' + (this.text(true) || '(없음)') + '\n\n[지금 코드]\n```js\n' + (this.code || $('devResp').value.trim()) + '\n```';
   },
-  result() {
-    const jr = $('devJob').value.trim() || this.jobReq, sr = $('devSys').value.trim() || this.sysReq;
-    return '4중인격 PvP · 커스텀 직업 결과물 (개발 도구 v' + DEV_VER + ' · 프롬프트 v' + DEV_VER + ' · 최신)\n만든 날짜: ' + new Date().toLocaleString() + '\n\n=====새 직업 요청 원문=====\n' + (jr || '(없음)') + '\n\n=====JS 코드=====\n```js\n' + (this.code || $('devResp').value.trim()) + '\n```\n\n=====기존 직업·시스템 변경 요청 원문=====\n' + (sr || '없음') + '\n\n=====구현 메모=====\n' + this.memoText() + '\n\n=====필요했던 API (개발자용 메모)=====\n' + this.neededApi() + '\n\n=====효과음=====\n' + (Object.entries(MOD.sounds).map(([n, d]) => n + ': ' + d).join('\n') || '(없음)') + '\n\n=====개발 도구 로그 (오류 · 경고)=====\n' + (this.text(true) || '(없음)') + '\n=====끝=====\n';
+  // ---------- ✏️ edit an existing job: its current definition / code goes into the prompt ----------
+  edit(id, quiet) {
+    if (id && !JOBS[id]) return;
+    this.editId = id || null; const el = $('devEdit'), J = id && JOBS[id];
+    for (const b of document.querySelectorAll('#jobs .job')) { const BJ = JOBS[b.dataset.id]; b.classList.toggle('editing', !!id && (b.dataset.id === id || !!(BJ && BJ.vars && BJ.vars.some(v => v[0] === id)))); }
+    if (!J) { el.classList.add('hide'); el.innerHTML = ''; $('devJob').placeholder = '새 직업: 이름, 무기, 능력, 쿨타임, 효과음 등을 자유롭게'; if (!quiet) this.log('info', '수정 취소 → 새 직업 만들기로 돌아왔어요'); return; }
+    const code = MOD.src[id];
+    el.innerHTML = '✏️ 수정 중: <b>' + J.icon + ' ' + esc(J.name) + '</b> (id ' + id + ') · ' + (code ? '지금 코드가 프롬프트에 들어가요' : '정식 직업 → 지금 아이템·능력 정보와 게임 코드가 프롬프트에 들어가요') + '<button class="mcbtn" id="devEditX">✕ 수정 취소</button>';
+    el.classList.remove('hide'); $('devEditX').onclick = () => this.edit(null);
+    $('devJob').placeholder = J.name + '을(를) 어떻게 바꿀지 적어 주세요 (예: 돌진 쿨타임 10초 → 6초, 맞히면 2초 기절 추가)';
+    if (!quiet) { $('devPanel').classList.remove('fold'); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); $('devJob').focus(); AU.init(); AU.sfx('click'); }
+    this.log('info', '✏️ ' + J.name + ' 수정 모드: ①에 바꿀 내용을 적고 ③ 프롬프트를 받으세요' + (code ? '' : ' (정식 직업은 고친 버전이 "' + id + '_mod"로 따로 불러와져서 원래 것과 비교할 수 있어요)'));
+  },
+  editInfo(id) {
+    const J = JOBS[id], L = [], plain = o => JSON.stringify(o, (k, v) => typeof v === 'function' ? undefined : v);
+    L.push('[수정할 기존 직업 — 이번 요청은 새 직업이 아니라 이 직업을 고친 버전이다]');
+    L.push('직업: ' + J.icon + ' ' + J.name + ' (id "' + id + '") · 체력 ' + (J.maxHp || 20) + (J.speedMul ? ' · 이동속도 ×' + J.speedMul : '') + ' · 설명: ' + String(J.desc || '').replace(/^(커스텀|미완성 직업)\s*·\s*/, ''));
+    J.kit.forEach((k, i) => { if (!k) return; const D = ITEMS[k[0]]; if (!D) return; L.push('  ' + (i + 1) + '번 칸 ' + k[0] + ': ' + plain(D)); });
+    if (J.off) L.push('  왼손: ' + plain(J.off));
+    const code = MOD.src[id];
+    if (code) L.push('지금 코드 (이 코드를 바탕으로 요청한 부분만 고쳐서 "전체"를 다시 줄 것):\n```js\n' + code + '\n```');
+    else {
+      L.push('직업 정의: ' + plain(J));
+      // the game's own code for this job: the kit's skill functions + SK functions that mention the job (and the SK.xxx they call)
+      const want = new Set(), fn = k => typeof SK[k] === 'function' ? SK[k] : null, BIG = new Set(['passive', 'envTick', 'onDeath']);
+      for (const k of J.kit) if (k) for (const x of k) { const D = ITEMS[x]; if (!D) continue; if (D.cast && fn(D.cast)) want.add(D.cast); if (typeof D.use === 'string' && !['skill', 'bow', 'shield'].includes(D.use)) for (const c of [D.use, D.use + 'Fire']) if (fn(c)) want.add(c); }
+      for (const k in SK) if (fn(k) && !BIG.has(k) && String(SK[k]).includes("'" + id + "'")) want.add(k);
+      // follow SK.xxx( calls, and p.st.<flag> set by these skills -> per-tick functions that check that flag (rzone -> st.trailUntil -> trailTick)
+      const stKeys = new Set(), stOf = k => { for (const m of String(SK[k]).matchAll(/\.st\.([a-zA-Z_$][\w$]*)\s*=[^=]/g)) stKeys.add(m[1]); };
+      for (let pass = 0; pass < 3; pass++) { for (const k of want) stOf(k);
+        for (const k in SK) if (fn(k) && !want.has(k) && !BIG.has(k)) { const t = String(SK[k]); if ([...stKeys].some(s => new RegExp('\\.st\\.' + s.replace(/\$/g, '\\$') + '\\b').test(t)) && /Tick$/.test(k)) want.add(k); }
+        for (const b of BIG) if (fn(b)) for (const l of String(SK[b]).split('\n')) if ([...stKeys].some(s => l.includes('.st.' + s))) for (const m of l.matchAll(/SK\.([a-zA-Z_$][\w$]*)\s*\(/g)) if (fn(m[1]) && !BIG.has(m[1])) want.add(m[1]);
+        for (const k of [...want]) for (const m of String(SK[k]).matchAll(/SK\.([a-zA-Z_$][\w$]*)\s*\(/g)) if (fn(m[1]) && !BIG.has(m[1])) want.add(m[1]); }
+      let src = '', cut = false; for (const k of want) { const t = '  ' + String(SK[k]) + ',\n'; if (src.length + t.length > 16000) { cut = true; break; } src += t; }
+      const pl = []; for (const k of BIG) if (fn(k)) for (const l of String(SK[k]).split('\n')) if (l.includes("'" + id + "'") || [...want].some(w => l.includes('SK.' + w + '('))) pl.push(l.trim());
+      L.push('게임 원본 코드 (참고용. 게임 내부 변수 G · p.addEff · AU 등을 써서 그대로는 못 쓴다 → 같은 동작을 APVP API로 옮겨서 만들 것):\n```js\nconst SK = {\n' + src + (cut ? '  // … (길어서 생략)\n' : '') + '};' + (pl.length ? '\n// 매 틱 / 사망 처리 중 이 직업 관련 줄:\n' + pl.join('\n') : '') + '\n```');
+      L.push('이 밖의 패시브(맞을 때·이동 등)는 게임 다른 곳에 있어서 위에 없을 수 있다. 설명을 보고 최대한 같게 만들고, 못 옮긴 부분은 구현 메모에 적는다.');
+    }
+    L.push('규칙: 원래 id "' + id + '"를 그대로 써서 APVP.addJob으로 직업 전체를 다시 만든다. 사용자가 바꾸라고 한 것 말고는 이름 · 아이콘 · 아이템 · 수치 · 동작을 지금과 똑같이 둔다.');
+    L.push('      출력 형식의 "=====새 직업 요청 원문=====" 칸에는 사용자가 쓴 수정 요청을 그대로 넣고, 그 바로 아래에 "=====수정한 기존 직업=====" 칸을 만들어 "' + J.name + ' (id ' + id + ')" 라고 적는다.');
+    return L.join('\n') + '\n';
+  },
+  sndMode() { const r = document.querySelector('input[name="devSndMode"]:checked'); return r ? r.value : 'embed'; },
+  // sounds that belong to this result: added by the user in the dev tool, or used by name in the code (not every built-in job's sound)
+  resultSounds() { const c = this.code || $('devResp').value; return Object.entries(MOD.sounds).filter(([n]) => MOD.userSnd.has(n) || c.includes("'" + n + "'") || c.includes('"' + n + '"') || c.includes('`' + n + '`')); },
+  sndExt(d) { const m = /^data:audio\/([a-z0-9.+-]+)/.exec(d); const t = m ? m[1] : 'mpeg'; return t === 'mpeg' || t === 'mp3' ? 'mp3' : t === 'x-wav' || t === 'wave' ? 'wav' : t === 'mp4' || t === 'x-m4a' ? 'm4a' : t.replace(/[^a-z0-9]/g, '') || 'mp3'; },
+  ask(msg) { return new Promise(res => { const box = $('devAsk'); $('devAskMsg').textContent = msg; box.classList.remove('hide'); const done = v => { box.classList.add('hide'); res(v); }; $('devAskYes').onclick = () => done(true); $('devAskNo').onclick = () => done(false); }); },
+  async saveResult() {
+    if (!this.code && !$('devResp').value.trim()) { this.log('error', '먼저 AI 응답을 붙여넣고 적용해 주세요'); return; }
+    const jr = ($('devJob').value.trim() || this.jobReq).trim();
+    if (!jr || jr === '(없음)' || /^\(여기에 .*적어 주세요\)$/.test(jr)) {
+      const ok = await this.ask('⚠️ 결과물에 원본 요청(프롬프트에 적은 "' + (this.editId ? '수정 요청' : '새 직업 요청') + '")이 비어 있어요.\n\n개발자가 원래 무엇을 원했는지 알 수 없어서 정식 직업으로 넣기 어려워요. ①칸에 요청을 적거나, AI 응답 전체(=====새 직업 요청 원문===== 부터)를 붙여넣은 뒤 저장하는 걸 추천해요.\n\n그래도 저장할까요?');
+      if (!ok) { this.log('info', '저장 취소: ①에 원본 요청을 적은 뒤 다시 저장해 주세요'); $('devJob').focus(); return; }
+      this.log('warn', '원본 요청 없이 결과물을 저장했어요');
+    }
+    const id = this.editId || Object.keys(MOD.defs).slice(-1)[0] || 'job', sep = this.sndMode() === 'file', snds = this.resultSounds();
+    this.save('apvp4_result_' + id + '.txt', this.result(sep));
+    if (sep && snds.length) { snds.forEach(([n, d], i) => setTimeout(() => { const a = document.createElement('a'); a.href = d; a.download = n + '.' + this.sndExt(d); document.body.appendChild(a); a.click(); setTimeout(() => a.remove(), 1000); }, 400 * (i + 1)));
+      this.log('ok', '최종 결과물 txt + 효과음 파일 ' + snds.length + '개 저장 (' + snds.map(s => s[0]).join(', ') + ') — 브라우저가 "여러 파일 다운로드"를 물으면 허용해 주세요. 모두 개발자(Claude)에게 보내 주세요'); }
+    else this.log('ok', '최종 결과물 txt 저장' + (snds.length ? ' (효과음 ' + snds.length + '개 포함)' : '') + ' — 이 파일을 개발자(Claude)에게 보내 주세요');
+  },
+  result(sepSnd) {
+    const jr = $('devJob').value.trim() || this.jobReq, sr = $('devSys').value.trim() || this.sysReq, ed = this.editId && JOBS[this.editId];
+    const snd = this.resultSounds().map(([n, d]) => sepSnd ? n + ': (파일 따로: ' + n + '.' + this.sndExt(d) + ')' : n + ': ' + d).join('\n');
+    return '4중인격 PvP · 커스텀 직업 결과물 (개발 도구 v' + DEV_VER + ' · 프롬프트 v' + DEV_VER + ' · 최신)\n만든 날짜: ' + new Date().toLocaleString() + '\n\n=====새 직업 요청 원문=====\n' + (jr || '(없음)') + (ed ? '\n\n=====수정한 기존 직업=====\n' + ed.name + ' (id ' + this.editId + ')' : '') + '\n\n=====JS 코드=====\n```js\n' + (this.code || $('devResp').value.trim()) + '\n```\n\n=====기존 직업·시스템 변경 요청 원문=====\n' + (sr || '없음') + '\n\n=====구현 메모=====\n' + this.memoText() + '\n\n=====필요했던 API (개발자용 메모)=====\n' + this.neededApi() + '\n\n=====효과음=====\n' + (snd || '(없음)') + '\n\n=====개발 도구 로그 (오류 · 경고)=====\n' + (this.text(true) || '(없음)') + '\n=====끝=====\n';
   },
   save(name, text) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' })); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); },
   async copy(text, what) {
@@ -280,8 +347,10 @@ const DEV = {
     $('devCopy').onclick = () => this.copy(this.prompt(), '프롬프트를');
     $('devApply').onclick = () => this.apply($('devResp').value);
     $('devPlay').onclick = async () => { const ok = $('devResp').value.trim() ? await this.apply($('devResp').value) : true; const ids = Object.keys(MOD.defs); if (!ok || !ids.length) return; UI.job = ids[ids.length - 1]; UI.jobT = Date.now(); UI.botCount = +$('devBots').value || 1; this.log('info', '연습 모드 시작: ' + JOBS[UI.job].name + ' · 봇 ' + UI.botCount + '명'); UI.enter(true); };
-    $('devResult').onclick = () => { if (!this.code && !$('devResp').value.trim()) { this.log('error', '먼저 AI 응답을 붙여넣고 적용해 주세요'); return; } this.save('apvp4_result_' + (Object.keys(MOD.defs).slice(-1)[0] || 'job') + '.txt', this.result()); this.log('ok', '최종 결과물 txt 저장 — 이 파일을 개발자(Claude)에게 보내 주세요'); };
-    $('devSnd').onchange = async e => { for (const f of e.target.files) { if (f.size > 3e6) { this.log('error', f.name + ': 3MB 이하 파일만 넣을 수 있어요'); continue; } const d = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(f); }); AU.init(); const n = await MOD.addSound(f.name.replace(/\.[^.]+$/, ''), d); this.log('ok', '효과음 추가: ' + n + ' → 코드에서 api.sound("' + n + '", p)'); } e.target.value = ''; this.sndList(); };
+    $('devResult').onclick = () => this.saveResult();
+    try { const m = localStorage.getItem('apvp_devsnd'); if (m) for (const r of document.querySelectorAll('input[name="devSndMode"]')) r.checked = r.value === m; } catch (e) { }
+    for (const r of document.querySelectorAll('input[name="devSndMode"]')) r.onchange = () => { try { localStorage.setItem('apvp_devsnd', this.sndMode()); } catch (e) { } this.log('info', this.sndMode() === 'file' ? '효과음은 결과물 txt와 따로 파일로 저장돼요 (txt에는 이름만)' : '효과음을 결과물 txt 안에 넣어요 (파일 하나)'); };
+    $('devSnd').onchange = async e => { for (const f of e.target.files) { if (f.size > 3e6) { this.log('error', f.name + ': 3MB 이하 파일만 넣을 수 있어요'); continue; } const d = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(f); }); AU.init(); const n = await MOD.addSound(f.name.replace(/\.[^.]+$/, ''), d); MOD.userSnd.add(n); this.log('ok', '효과음 추가: ' + n + ' → 코드에서 api.sound("' + n + '", p)'); } e.target.value = ''; this.sndList(); };
     $('devVer').textContent = '📌 프롬프트 · 결과물 버전 v' + DEV_VER + ' (최신) — 예전 버전 프롬프트로 만든 결과물은 불러올 때 알려 줘요';
     $('devFold').onclick = () => $('devPanel').classList.toggle('fold');
     $('devFile').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; const txt = await f.text(); this.log('info', '파일 불러옴: ' + f.name + ' (' + Math.round(f.size / 1024) + 'KB)'); $('devResp').value = txt; await this.apply(txt); };
@@ -291,7 +360,7 @@ const DEV = {
     this.log('info', '개발 도구 준비됨 · 게임 버전 ' + document.title + ' · API v' + APVP.version + ' · 효과 ' + Object.keys(EFF).length + '종 · 기본 직업 ' + JOB_ORDER.length + '개');
     this.sndList();
   },
-  sndList() { const el = $('devSnds'); el.innerHTML = Object.keys(MOD.sounds).map(n => '<span class="devsnd">🔊 ' + esc(n) + ' <button data-n="' + esc(n) + '" class="dplay">▶</button><button data-n="' + esc(n) + '" class="ddel">✕</button></span>').join('') || '<small>추가한 효과음 없음</small>'; for (const b of el.querySelectorAll('.dplay')) b.onclick = () => { AU.init(); MOD.decodeAll().then(() => AU.play(b.dataset.n, {})); }; for (const b of el.querySelectorAll('.ddel')) b.onclick = () => { delete MOD.sounds[b.dataset.n]; delete AU.buf[b.dataset.n]; this.sndList(); }; },
+  sndList() { const el = $('devSnds'); el.innerHTML = Object.keys(MOD.sounds).map(n => '<span class="devsnd">🔊 ' + esc(n) + ' <button data-n="' + esc(n) + '" class="dplay">▶</button><button data-n="' + esc(n) + '" class="ddel">✕</button></span>').join('') || '<small>추가한 효과음 없음</small>'; for (const b of el.querySelectorAll('.dplay')) b.onclick = () => { AU.init(); MOD.decodeAll().then(() => AU.play(b.dataset.n, {})); }; for (const b of el.querySelectorAll('.ddel')) b.onclick = () => { delete MOD.sounds[b.dataset.n]; MOD.userSnd.delete(b.dataset.n); delete AU.buf[b.dataset.n]; this.sndList(); }; },
 };
 // ---- in-game popup: download the dev tool (this same game + APVP_DEV flag) ----
 function devToolHTML() { const src = SELF_HTML || ''; const flag = '<script>window.APVP_DEV=1<\/script>'; return src.replace(/<head([^>]*)>/i, m => m + flag); }

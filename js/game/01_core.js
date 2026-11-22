@@ -5,7 +5,7 @@
 if (!window.APVP_DEV && /[?&]dev=1(&|$)/.test(location.search)) window.APVP_DEV = 1;
 const SELF_HTML = window.SITE_MULTI ? '' : (() => { try { return '<!DOCTYPE html>\n' + document.documentElement.outerHTML; } catch (e) { return ''; } })();
 // dev tool prompt / result / mod API version: bump whenever the prompt or API changes (shown on the prompt, dev panel, every result txt)
-const DEV_VER = 3;
+const DEV_VER = 4;
 'use strict';
 // ===================== util =====================
 const TPS = 20;

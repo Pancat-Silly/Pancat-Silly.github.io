@@ -12,7 +12,7 @@
 - **결과물 전달:** 바뀐 파일만 보낸다. 한 파일 배포가 필요하면 `tools/build_single.py`로 `dist/index.html`을 만든다.
 - **마인크래프트 에셋:** 원본 에셋을 **번들하지 않는다.** 바닐라 리소스팩(텍스처·사운드)은 플레이어 브라우저가 런타임에 공식 미러에서 받는다(`PACK.get` / `RPACK`, IndexedDB 캐시). 리소스팩이 없을 때는 절차적으로 만든 텍스처와 합성음을 쓴다.
 - **랜덤블록 BGM:** 외부 파일 `rbs/music/*.mp3`이다. 파일이 없으면 음악 없이 돈다. 사용자가 나중에 직접 넣는다.
-- **새 직업:** 사용자가 추가해 달라는 직업은 "미완성"(WIP)으로 넣는다. 개발 도구 결과 txt는 `tools/modjobs/`에 넣고 `tools/mkmodjobs.py`로 `js/data/jobs_builtin.js`에 반영한다. 직업 목록의 "🛠 개발중" 구분선 아래로 보낸다(`DEV_JOBS`, 11_ui.js).
+- **새 직업:** 사용자가 추가해 달라는 직업은 "미완성"(WIP)으로 넣는다. 개발 도구 결과물은 **직업 하나당 폴더 하나** `tools/modjobs/<직업>/`(결과 txt 하나 + 따로 보낸 효과음 파일)에 넣고 `tools/mkmodjobs.py`로 `js/data/jobs/<직업>.js`(직업당 한 파일)에 반영한다. 직업 목록의 "🛠 개발중" 구분선 아래로 보낸다(`DEV_JOBS`, 11_ui.js).
 - **원작 버그:** 고치라는 말이 없으면 원작 그대로 둔다. 예: 던전 열쇠 "3초" 단계 생략.
   - 예외: V2.1에서 새로 생긴 원작 버그는 사용자 요청으로 무시했다. 남쪽 절반 광석 누락, 25인 기본템 박스, 9인 판자 링 같은 것들이다.
 - **개발 도구 결과물:** 사용자가 개발 도구 결과물(txt)을 붙여 주면 그 안의 코드·효과음·메모를 반영한다.
@@ -28,14 +28,15 @@ js/data/              생성된 데이터 (손으로 고치지 말고 tools/ 스
   rbs_data.js         랜덤블록 월드: RB_KEYS, RB_DIM, RB_WORLD(16비트 RLE), RB_SIGNS, RB_BE, RB_ARENA, RB_MINI, RB_FURN, RB_MARK (rbsconv.py)
   rbs_assets.js       랜덤블록 원작 팩 효과음 RB_SFX(파일 경로), 아이콘 RB_IMG(base64 PNG) (rbsassets.py → split_sounds.py)
   rbs_icon.js         바탕화면 아이콘 RB_ICON (SVG)
-  jobs_builtin.js     개발 도구로 만든 내장 직업 BUILTIN_JOBS (mkmodjobs.py)
+  jobs_builtin.js     `const BUILTIN_JOBS = []` 선언만 (mkmodjobs.py)
+  jobs/<직업>.js      개발 도구로 만든 내장 직업, 직업당 한 파일 `BUILTIN_JOBS.push({file, code, snd})` (mkmodjobs.py가 index.html의 <script>도 맞춰 줌)
   frog.js             dude New 댄스 개구리 FROG (Frog Marauder FBX → mkfrog.py, 6부위에 정점마다 2부위 가중치 스키닝 + 텍스처 PNG)
   dances.js           공용 춤 DANCE_DATA (마카레나·강남스타일, Mixamo FBX → mkdance.py). 두 게임이 같이 쓴다
 js/game/              게임 코드. 파일 이름 순서로 로드하는 일반 <script>들 (전역 공유)
 rbs/music/            랜덤블록 BGM mp3 (선택)
 lyrics/index.html     가사 맞추기 (베타) 앱: 게임과 따로인 한 파일 페이지 (로컬 사본 tools/lyrics/lyrics_timing.html). 노래+가사를 넣고 문장·단어·글자 단위로 TAP해서 시간을 찍고 파형 위 세로선을 끌어 고친다. 확장 LRC(txt)·JSON으로 내보냄(게임은 LRC를 그대로 씀). ?audio=&lrc=로 바로 불러옴
 sounds/               효과음 파일 (apvp/, rbs/, jobs/<직업>/). 랜덤블록 sfx_gameover·sfx_error·sfx_win_sin*는 사용자 요청으로 저장소에 안 올림(.gitignore, RB_SFX에서도 뺌 → 합성음). 예전에 js/data 안에 base64로 있던 것 (tools/split_sounds.py)
-tools/                [로컬 전용 · .gitignore로 저장소에 안 올림] mkdance.py + fbxbin.py + dance/*.fbx, mkentry.py, split_sounds.py, bump_version.py, hooks/pre-commit, build_single.py, rbsconv.py, rbsassets.py, mkmodjobs.py, mkassets.py, modjobs/*.txt, normalize_sounds.py + sound_norm.json + sounds_orig/
+tools/                [로컬 전용 · .gitignore로 저장소에 안 올림] preview.py/.bat(같은 와이파이 폰 미리보기), hooks/post-commit(preview 브랜치), mkdance.py + fbxbin.py + dance/*.fbx, mkentry.py, split_sounds.py, bump_version.py, hooks/pre-commit, build_single.py, rbsconv.py, rbsassets.py, mkmodjobs.py, mkassets.py, modjobs/*.txt, normalize_sounds.py + sound_norm.json + sounds_orig/
 ```
 모듈을 새로 추가하면 **index.html에 `<script src>`도 추가**해야 한다. 순서는 파일 이름 순이다.
 
@@ -93,6 +94,8 @@ tools/                [로컬 전용 · .gitignore로 저장소에 안 올림] m
   - **dude New 권총(`use: 'gun'`, `SK.gunFire`):** 총알 1개, 활처럼 꾹 눌러 조준(느려짐), 떼면 일직선 히트스캔. 플레이어를 맞히면 쏜 사람·맞은 사람만 컷씬(`G.cut`, `R.cutCam`/`cutDraw`, `SK.CUT_T`): 카메라가 두 사람 사이 옆으로(그쪽에 블록이 가리면 반대쪽 → 돌려서 → 더 높이 → 더 가까이 순으로 두 사람이 다 보이는 자리를 찾음) easeOutCubic 0.977초 → 검은 화면 0.088초 → 빨간 배경에 두 사람·총알만 흰색 1.167초(맞은 사람이 천천히 뒤로 쓰러짐), 효과음 `dudeshot`. 맞은 사람이 안 죽으면(스폰 보호·같은 팀은 쏘는 쪽이 미리 판단, 창찬 각성 등은 `gcutx`로 취소) 컷씬 없음. 맞은 사람은 맞자마자 죽지만(`alive=false`, presence 플래그 512) 겉보기엔 안 죽음(계속 그리고 이름표도 유지, 사망 연기·소리는 컷씬 끝날 때) 컷씬이 끝나면 리스폰(`Player.die`의 `cutUntil` 대기). 쏜 사람은 컷씬 동안 제자리에서 못 움직이고 깜빡이며 무적(`prot`). 권총을 들면 모바일 마크 PE에서도 십자선이 뜸.
 - **360 노래 가사:** 360 블록 위에서 돌 때 본인에게만 나오는 `360song`(`AU.loop`)도 06b_lyrics.js `LRC_360`(확장 LRC, `[offset:250]`)을 액션바 위 `#lyrics`에 띄운다(`LYR.mine`, 재생 위치 `AU.loopTime`). 곡별 가사는 `SONG_LYRICS`.
 - **모드 API·개발 도구:** 직업 코드는 `new Function('APVP','api', code)`로 실행된다. 프롬프트 버전은 `DEV_VER`이고, 프롬프트를 바꾸면 하나 올린다.
+  - **기존 직업 수정(✏️):** 개발 도구에서는 직업 카드마다 ✏️(`.jedit`) → `DEV.edit(id)`. 프롬프트 `{{EDIT}}`에 `DEV.editInfo(id)`가 들어간다: 모드 직업은 등록한 코드 그대로(`MOD.src[id]`, `MOD.curCode`로 기록), 정식 직업은 JOBS·ITEMS 정의 + 관련 `SK` 함수 소스(kit의 cast, 직업 id를 쓰는 함수, 그 함수가 부르는 SK.xxx, 세운 `p.st` 플래그를 보는 *Tick). AI는 원래 id로 addJob → 정식 직업이면 `<id>_mod`로 불러와 비교. 결과물에 `=====수정한 기존 직업=====` 칸.
+  - **결과물 저장(`DEV.saveResult`):** 효과음 "txt 안에 넣기 / 따로 보내기"(라디오 `devSndMode`, 저장 `apvp_devsnd`). 따로면 txt에는 `이름: (파일 따로: 이름.mp3)`만, 파일은 따로 다운로드. 들어가는 효과음은 개발 도구에서 넣은 것(`MOD.userSnd`)과 코드에 이름이 나오는 것만. 원본 요청(①칸 / 붙여넣은 원문)이 비어 있으면 저장 전에 경고창(`DEV.ask`).
 - **ESC 메뉴:**
   - 단계: 게임 메뉴 → 경기 설정 / 설정(시야각 왼쪽 위) → 볼륨 설정(볼륨·게임 효과음·능력 효과음) / 화면 설정 / 조작 설정.
   - 완료 버튼은 하단에 고정되어 있고 한 단계 뒤로 간다.
@@ -167,7 +170,7 @@ tools/                [로컬 전용 · .gitignore로 저장소에 안 올림] m
 ```
 python3 tools/rbsconv.py <V2P2 맵 폴더(markers.json, voxels/)> js/data/rbs_data.js <V2.1 변경점 패키지 폴더>
 python3 tools/rbsassets.py <원작 리소스팩 폴더> <sfx 폴더> js/data/rbs_assets.js
-python3 tools/mkmodjobs.py          # tools/modjobs/*.txt -> js/data/jobs_builtin.js (ffmpeg 필요)
+python3 tools/mkmodjobs.py          # tools/modjobs/<직업>/ -> js/data/jobs/<직업>.js + index.html <script> (새·바뀐 효과음만 ffmpeg, .snd_cache.json)
 python3 tools/mkfrog.py            # tools/frog/FrogMarauder.fbx + png -> js/data/frog.js (dude New 댄스 개구리)
 python3 tools/mkdance.py           # tools/dance/*.fbx (Mixamo) -> js/data/dances.js (목록은 LIST)
 python3 tools/mkextrasnd.py         # tools/sounds/*.wav|mp3 -> js/data/apvp_extra_snd.js (ffmpeg 필요, G.sound('<파일 이름>'))
@@ -179,6 +182,7 @@ python3 tools/build_single.py       # 저장소 -> dist/index.html (한 파일 �
 사용자에게 원본 zip(맵 패키지, 리소스팩)을 받아야 다시 만들 수 있다.
 
 ## 테스트 방법
+- **폰 미리보기:** 같은 와이파이면 `tools/preview.bat`(캐시 없는 LAN 서버, 커밋 불필요). 밖에서는 커밋할 때마다 `tools/hooks/post-commit`이 그 커밋을 `preview` 브랜치로 강제 푸시하고(main은 안 건드림, 끄기 `git config apvp.preview false`) `https://raw.githack.com/Pancat-Silly/Pancat-Silly.github.io/preview/index.html`(또는 브랜치 대신 커밋 해시)로 연다. 마지막 결과는 `.git/preview_last`.
 - `python3 -m http.server 8765`로 서빙하고 `http://127.0.0.1:8765/`를 연다.
   - 직접 열기: `?app=rbs&p2p=0`, `?app=apvp&p2p=0`.
 - 헤드리스 테스트: Playwright + SwiftShader(`--use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader`)를 쓰고 `page.evaluate`로 상태를 조작한다.

@@ -49,6 +49,12 @@ body.devmode #btnPlay{display:none}
 .job .jvar.on{background:#7ec832;color:#fff;text-shadow:1px 1px 0 #333}
 .job.taken{opacity:.45;cursor:not-allowed}
 .wip{background:#a35b00;padding:0 4px;font-size:10px}
+.job{position:relative}.job .jedit{position:absolute;top:3px;right:3px;font-size:12px;padding:0 4px;background:#2c4a6e;border:1px solid #111;cursor:pointer;line-height:18px}.job .jedit:hover{background:#3d679a}
+.job.editing{outline:2px solid #6cf;outline-offset:-2px}
+.devedit{background:rgba(60,140,255,.18);border-left:3px solid #6cf;padding:5px 8px;margin-top:4px;font-size:12px;color:#d6ecff}.devedit.hide{display:none}.devedit button{margin-left:6px;font-size:11px;padding:1px 6px}
+.devsndmode{font-size:12px;align-items:center}.devsndmode label{cursor:pointer}
+.devask{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center}.devask.hide{display:none}
+.devaskbox{background:#2b2b2b;border:2px solid #000;box-shadow:inset 2px 2px 0 #555,inset -2px -2px 0 #111;padding:14px 16px;max-width:420px;color:#eee;font-size:13px;line-height:1.5;white-space:pre-line}.devaskbox .row{justify-content:flex-end;gap:8px;margin-top:10px}
 .upl{background:#1f6fe0;color:#fff;padding:0 4px;font-size:10px;border-radius:2px}
 .uplwarn{background:rgba(31,111,224,.25);border-left:3px solid #1f6fe0;padding:4px 6px;margin-bottom:4px;font-size:12px;color:#cfe3ff}
 #upBtn.dis{opacity:.45;pointer-events:none}

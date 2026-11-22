@@ -55,6 +55,8 @@ const UI = {
     if (J.vars) b.querySelector('.jvars').onclick = e => { e.stopPropagation(); if (b.classList.contains('taken')) return; const vs = J.vars.map(v => v[0]), cur = vs.indexOf(this.job);
       this.job = cur >= 0 ? vs[(cur + 1) % vs.length] : (this.jobVar[id] || id); this.jobVar[id] = this.job; this.jobT = Date.now(); AU.init(); AU.sfx('click'); this.refreshMenu(); };
     b.onclick = () => { if (b.classList.contains('taken')) return; const pick = J.vars ? (this.jobVar[id] || id) : id; const on = this.job === id || (J.vars && J.vars.some(v => v[0] === this.job)); this.job = on ? null : pick; this.jobT = Date.now(); AU.init(); AU.sfx('click'); if (this.job && JOBS[id].uploaded) this.chat('§b' + JOBS[id].name + '§f: 방장이 임의로 업로드한 직업이며, 원활하게 작동되지 않을 수도 있어요'); this.refreshMenu(); };
+    // dev tool: ✏️ on every card = edit this job (its current code/definition goes into the AI prompt)
+    if (typeof DEV !== 'undefined' && DEV.on) { const e = document.createElement('span'); e.className = 'jedit'; e.title = '이 직업 수정하기 (개발 도구)'; e.textContent = '✏️'; e.onclick = ev => { ev.stopPropagation(); DEV.edit(J.vars ? (this.jobVar[id] || id) : id); }; b.appendChild(e); if (DEV.editId === id || (J.vars && J.vars.some(v => v[0] === DEV.editId))) b.classList.add('editing'); }
     const dev = DEV_JOBS.has(id) || J.custom || J.uploaded || J.builtin; const ref = dev ? $('btnNewJob') : $('jobSep'); if (ref) jb.insertBefore(b, ref); else jb.appendChild(b);
   },
   // practice / dev tool test options: 무적 (I take no damage) and 봇 AI 끄기 (bots stand still as training dummies)
