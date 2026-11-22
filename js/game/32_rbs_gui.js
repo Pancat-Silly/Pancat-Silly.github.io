@@ -70,7 +70,7 @@ Object.assign(RUI, {
           + out(() => r ? r.out : null, () => this.anvilTake()) + '</div><div class="rgnote">' + (r ? '<b style="color:' + (me.lvl >= r.cost ? '#2a2' : '#c33') + '">마법 부여 비용: ' + r.cost + ' 레벨</b>' : '같은 아이템 두 개(수리) 또는 아이템 + 마법이 부여된 책') + '</div>' + this.invSlots() + '</div>'; break;
       }
       case 'palette': h = this.palHTML(); break;
-      case 'book': { const P = this.BOOK; const p = g.ctx.p || 0; h = '<div class="rbook"><div class="rbp">' + this.fmt(P[p]) + '</div><div class="rbn"><button class="rbtn" data-bk="-1"' + (p ? '' : ' disabled') + '>◀</button><span>' + (p + 1) + ' / ' + P.length + '</span><button class="rbtn" data-bk="1"' + (p < P.length - 1 ? '' : ' disabled') + '>▶</button><button class="rbtn" data-bk="x">닫기</button></div></div>'; break; }
+      case 'book': { const P = this.BOOK; const p = g.ctx.p || 0; h = '<div class="rbook"><div class="rbp">' + this.fmt(P[p]).replace('{{V21}}', '<a class="rblink" href="https://youtu.be/C_QVJYME30A" target="_blank" rel="noopener">랜덤블록 서바이벌 V2.1</a>') + '</div><div class="rbn"><button class="rbtn" data-bk="-1"' + (p ? '' : ' disabled') + '>◀</button><span>' + (p + 1) + ' / ' + P.length + '</span><button class="rbtn" data-bk="1"' + (p < P.length - 1 ? '' : ' disabled') + '>▶</button><button class="rbtn" data-bk="x">닫기</button></div></div>'; break; }
       case 'form': h = g.ctx.html; break;
     }
     $('rbGui').innerHTML = h; this.paint();
@@ -317,7 +317,7 @@ Object.assign(RUI, {
   },
   // the original book had 18 pages that weren't in the export; this one is written from the analysed game rules
   BOOK: [
-    '§l랜덤블록 서바이벌§r\n튜토리얼 & 정보\n\n무작위 블록으로 가득 찬 큐브 안에서 캐고, 만들고, 싸워서 §c최후의 1명§r이 이기는 게임이에요.\n\n· 경기장 인원은 호스트가 §a9명§r(33×33×15) / §c25명§r(53×53×15) 중에서 골라요.\n· 로비는 가문비나무 대기실이고, 로비에서는 나약함이 걸려요.\n\n원작: LemonyMEF (마인크래프트 베드락 맵)',
+    '§l랜덤블록 서바이벌§r\n튜토리얼 & 정보\n\n무작위 블록으로 가득 찬 큐브 안에서 캐고, 만들고, 싸워서 §c최후의 1명§r이 이기는 게임이에요.\n\n· 경기장 인원은 호스트가 §a9명§r(33×33×15) / §c25명§r(53×53×15) 중에서 골라요.\n· 로비는 가문비나무 대기실이고, 로비에서는 나약함이 걸려요.\n\n원작: {{V21}}',
     '§l시작하기§r\n\n핫바 5번 §fReady§r를 우클릭(모바일은 사용 버튼)하세요.\n준비한 플레이어가 §a2명 이상§r이면 경기장이 만들어지고 10초 뒤 시작해요.\n\n혼자라면 §6호스트 설정§r에서 봇을 추가할 수 있어요.',
     '§l경기장§r\n\n블록 33종이 무작위로 채워져요: 원목 · 돌 · 흙 · 자갈 · 각종 광석 · 책장 · 제작대 · 화로 · 용광로 · 유리 · 모루 · 상자.\n\n상자 3종류에는 조약돌, 투척용 치유의 물약 II, 경험치 병, 다이아몬드, 마법부여대 같은 아이템이 들어 있어요.',
     '§l생존 팁§r\n\n· 원목 → 판자 → 막대기 → 나무 곡괭이부터!\n· 철광석은 돌 곡괭이, 다이아몬드는 철 곡괭이가 필요해요.\n· 원석은 화로·용광로에서 녹여 주괴로.\n· 경험치 병 + 청금석 + 마법부여대 = 마법 부여.\n· 모든 플레이어는 항상 포만 상태라 체력이 빨리 차요.',

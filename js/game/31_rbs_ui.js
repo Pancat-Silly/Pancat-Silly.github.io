@@ -18,7 +18,7 @@ const RUI = {
     this.load(); this.mobile = SITE.isMobile();
     const st = document.createElement('style'); st.textContent = RUI_CSS; document.head.appendChild(st);
     const d = document.createElement('div'); d.id = 'rbs'; d.innerHTML = RUI_HTML; document.body.appendChild(d); document.body.classList.add('rbsapp'); document.body.classList.toggle('rbmob', this.mobile);
-    $('rbCredit').innerHTML = 'made by LemonyMEF <b class="rbbeta">BETA</b>' + (SITE.VER ? ' <span class="rbver">' + SITE.verLabel() + '</span>' : '');
+    $('rbCredit').innerHTML = '<b class="rbbeta">BETA</b>' + (SITE.VER ? ' <span class="rbver">' + SITE.verLabel() + '</span>' : '');
     $('rbHot').innerHTML = Array.from({ length: 9 }, (_, i) => '<div class="rhs" data-i="' + i + '"></div>').join('');
     { const sb = $('rbSpecBar'), f = e => { const t = e.target.closest('[data-si]'); if (!t) return; e.preventDefault(); e.stopPropagation(); this.specJump(+t.dataset.si); }; sb.addEventListener('mousedown', f); sb.addEventListener('touchstart', f, { passive: false }); } // spectator hotbar
     for (const el of document.querySelectorAll('.rhs')) { const f = () => { RG.me.sel = +el.dataset.i; }; el.addEventListener('mousedown', f); el.addEventListener('touchstart', e => { e.preventDefault(); f(); }, { passive: false }); }
@@ -305,7 +305,7 @@ button.rmb:hover,.rmpair button:hover{background:#7f86c0}.rmb.on{box-shadow:inse
 .rmpair{padding:0;justify-content:space-between;cursor:default}.rmpair button{background:#5a5a5a;border:0;border-right:2px solid #333;color:#fff;font-size:15px;width:56px;align-self:stretch;cursor:pointer}.rmpair button:last-child{border:0;border-left:2px solid #333}
 .rmhelp{font-size:14px;line-height:1.6;color:#ddd;background:rgba(0,0,0,.35);padding:10px}.rmnote{font-size:12px;color:#bbb;text-align:center;padding:4px}.rmdone{margin-top:10px;width:min(300px,100%);align-self:center}
 @media (max-width:560px){.rmgrid{grid-template-columns:1fr}}
-.rbook{width:min(420px,92vw);background:#f6efd8;color:#222;padding:18px 22px;font-size:14px;line-height:1.6;min-height:340px;display:flex;flex-direction:column;border-radius:4px;box-shadow:0 0 0 3px #6b4f2a}.rbook .rbp{flex:1;white-space:pre-wrap}.rbook .rbn{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+.rbook{width:min(420px,92vw);background:#f6efd8;color:#222;padding:18px 22px;font-size:14px;line-height:1.6;min-height:340px;display:flex;flex-direction:column;border-radius:4px;box-shadow:0 0 0 3px #6b4f2a}.rbook .rbp{flex:1;white-space:pre-wrap}.rbook .rblink{color:#1a4fd6;text-decoration:underline;cursor:pointer}.rbook .rbn{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
 .rform{display:flex;flex-direction:column;gap:8px;min-width:280px}.rform label{display:flex;justify-content:space-between;align-items:center;gap:10px}.rform input[type=text]{flex:1;padding:6px;font-size:15px}
 #rbTouch{position:absolute;inset:0;display:none;z-index:10}body.rbmob #rbTouch{display:block}body.rbguiopen #rbTouch{display:none}
 #rbJoy{position:absolute;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.3);display:none;pointer-events:none}#rbKnob{position:absolute;left:35px;top:35px;width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.4)}
