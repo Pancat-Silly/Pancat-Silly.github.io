@@ -94,7 +94,7 @@ const DESK = {
   ico(a) { return a.img ? '<img src="' + a.img + '">' : a.icon; },
   iconHTML(a) {
     const inner = a.folder ? '<div class="dkfgrid">' + this.APPS.filter(b => b.in === a.id).slice(0, 4).map(b => '<span style="background:' + (b.bg || '#3c6a24') + '">' + this.ico(b) + '</span>').join('') + '</div>' : this.ico(a);
-    return '<div class="dkIcon' + (a.folder ? ' dkfold' : '') + '" data-app="' + a.id + '" title="' + (a.folder || this.mobile ? '' : '더블클릭해서 열기') + '"><div class="dkimg" style="background:' + (a.folder ? 'rgba(255,255,255,.28)' : a.bg || '#3c6a24') + '">' + inner + '</div><div class="dklbl">' + a.label + '</div></div>';
+    return '<div class="dkIcon' + (a.folder ? ' dkfold' : '') + '" data-app="' + a.id + '" title="' + (a.folder || this.mobile ? '' : '더블클릭해서 열기') + '"><div class="dkimg" style="background:' + (a.folder ? '#000' : a.bg || '#3c6a24') + '">' + inner + '</div><div class="dklbl">' + a.label + '</div></div>';
   },
   bindIcon(el, inFolder) {
     const go = () => { const A = this.APPS.find(a => a.id === el.dataset.app); if (!A) return; if (A.folder) return this.folder(A.id, el); this.folder(null); this.open(A.id); if (this.mobile && A.game) { this.setMode(A.id, 'full'); this.goFs(false); } };
