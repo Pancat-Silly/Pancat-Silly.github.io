@@ -113,7 +113,7 @@ const RUI = {
     el.style.display = on ? '' : 'none'; if (!on) return;
     const src = RPACK.on && RPACK.data && RPACK.data.tex && RPACK.data.tex.fire_0;
     if (this._fovSrc !== (src || 'x')) { this._fovSrc = src || 'x';
-      const set = (url, n) => { for (const [i, f] of [...el.children].entries()) f.style.cssText = 'position:absolute;bottom:-26vh;width:78vh;height:78vh;opacity:.9;image-rendering:pixelated;background:url(' + url + ') 0 0/100% ' + n * 100 + '% no-repeat;' + (i ? 'right:calc(50% - 74vh);transform:scaleX(-1) rotate(-8deg)' : 'left:calc(50% - 74vh);transform:rotate(-8deg)') + (n > 1 ? ';animation:rbFireA ' + n * .05 + 's steps(' + n + ') infinite' : '');
+      const set = (url, n) => { for (const [i, f] of [...el.children].entries()) f.style.cssText = 'position:absolute;bottom:0;width:50vw;height:30vh;opacity:.9;image-rendering:pixelated;background:url(' + url + ') 0 0/100% ' + n * 100 + '% no-repeat;' + (i ? 'right:0;transform:scaleX(-1)' : 'left:0') /* from the very bottom, never above 30 % of the screen */ + (n > 1 ? ';animation:rbFireA ' + n * .05 + 's steps(' + n + ') infinite' : '');
         if (n > 1 && !document.getElementById('rbFireK')) { const s = document.createElement('style'); s.id = 'rbFireK'; s.textContent = '@keyframes rbFireA{to{background-position:0 100%}}'; document.head.appendChild(s); } };
       if (src) createImageBitmap(src).then(b => set(URL.createObjectURL(src), Math.max(1, Math.round(b.height / b.width)))).catch(() => { });
       else { const t = RTEX.T('fire_0'), [ox, oy] = RTEX.xy(t), c = document.createElement('canvas'); c.width = c.height = 16; c.getContext('2d').drawImage(RTEX.cv, ox, oy, 16, 16, 0, 0, 16, 16); set(c.toDataURL(), 1); } }
