@@ -1,14 +1,14 @@
 // ===================== Random Block Survival: UI (HUD, chat, containers, menu chest) =====================
 const RUI = {
-  name: '', skin: '', sens: 1, fov: 70, vol: .8, mvol: 1, res: 1, bob: true, musicOn: true, sfxOn: true, gmuc: 0, winSnd: 'sfx_win_yay', lobbyMusic: false, autoFs: true, room: 'main', rdist: 8, pmax: 3000, sndLim: false, // rdist: 경기장 렌더 거리(청크), pmax: 파티클 최대 개수, sndLim: 같은 소리 제한. BGM / win sound / lobby music choices removed for now (defaults only). room: 기본 멀티 방 이름
+  name: '', skin: '', sens: 1, fov: 70, vol: .8, mvol: 1, res: 1, bob: true, musicOn: true, sfxOn: true, bgm: 'barge', splash: false, winSnd: 'sfx_win_yay', lobbyMusic: false, autoFs: true, room: 'main', rdist: 8, pmax: 3000, sndLim: false, // rdist: 경기장 렌더 거리(청크), pmax: 파티클 최대 개수, sndLim: 같은 소리 제한. BGM / win sound / lobby music choices removed for now (defaults only). room: 기본 멀티 방 이름
   mobile: false, god: false, botAI: true, gui: null, paused: false, chatOpen: false, promptOpen: false, follow: null, followThird: false, hideHud: false, started: false, cursor: null, iconCache: {},
   load() {
     let s = {}; try { s = JSON.parse(localStorage.getItem('rbs_set') || '{}'); } catch (e) { }
     let ap = {}; try { ap = JSON.parse(localStorage.getItem('apvp') || '{}'); } catch (e) { }
     this.name = s.name || ap.name || ('플레이어' + randi(100, 999)); this.skin = s.skin !== undefined ? s.skin : (ap.skin || '');
-    for (const k of ['sens', 'fov', 'vol', 'mvol', 'res', 'bob', 'sfxOn', 'autoFs', 'room', 'rdist', 'pmax', 'sndLim']) if (s[k] !== undefined) this[k] = s[k]; if (!this.room) this.room = 'main';
+    for (const k of ['sens', 'fov', 'vol', 'mvol', 'res', 'bob', 'sfxOn', 'bgm', 'autoFs', 'room', 'rdist', 'pmax', 'sndLim']) if (s[k] !== undefined) this[k] = s[k]; if (!this.room) this.room = 'main';
   },
-  save() { try { const o = {}; for (const k of ['name', 'skin', 'sens', 'fov', 'vol', 'mvol', 'res', 'bob', 'musicOn', 'sfxOn', 'gmuc', 'winSnd', 'lobbyMusic', 'autoFs', 'room', 'rdist', 'pmax', 'sndLim']) o[k] = this[k]; localStorage.setItem('rbs_set', JSON.stringify(o)); } catch (e) { } },
+  save() { try { const o = {}; for (const k of ['name', 'skin', 'sens', 'fov', 'vol', 'mvol', 'res', 'bob', 'musicOn', 'sfxOn', 'bgm', 'winSnd', 'lobbyMusic', 'autoFs', 'room', 'rdist', 'pmax', 'sndLim']) o[k] = this[k]; localStorage.setItem('rbs_set', JSON.stringify(o)); } catch (e) { } },
   // ---------- § colour codes ----------
   COL: { 0: '#000', 1: '#00a', 2: '#0a0', 3: '#0aa', 4: '#a00', 5: '#a0a', 6: '#fa0', 7: '#aaa', 8: '#555', 9: '#55f', a: '#5f5', b: '#5ff', c: '#f55', d: '#f5f', e: '#ff5', f: '#fff' },
   fmt(s) { let out = '', col = null, b = false, it = false; const parts = String(s).split('§'); const open = () => { const st = (col ? 'color:' + col + ';' : '') + (b ? 'font-weight:bold;' : '') + (it ? 'font-style:italic;' : ''); return st ? '<span style="' + st + '">' : '<span>'; };
@@ -163,6 +163,8 @@ const RUI = {
     } else if (pg === 'set') {
       h += R('효과음 볼륨', 0, 1, .05, this.vol, v => Math.round(v * 100) + '%', v => { this.vol = v; RAU.setVol(); });
       h += R('음악 볼륨', 0, 1, .05, this.mvol, v => Math.round(v * 100) + '%', v => { this.mvol = v; RAU.setVol(); });
+      if (RBGM.has && !RBGM.busy) { h += B('인게임 배경음악: ' + RBGM.name(this.bgm), () => { const G = RBGM.GAME; this.bgm = G[(Math.max(0, G.indexOf(this.bgm)) + 1) % G.length]; this.save(); if (G.includes(RAU.bgmKey)) RAU.gameBgm(RAU.bgm.playbackRate); this.menuDraw(); }, '', 'Barge · Burner · Detour · Getdown 중 하나 (데스매치는 Bubble 고정)'); h += B('배경음악 다시 받기', () => RBGM.download()); }
+      else h += B('배경음악: ' + RBGM.label(), () => RBGM.download(), '', 'YouTube 오디오 보관함의 무료 음악을 이 기기의 브라우저가 직접 받아요 (게임에 포함 안 됨)');
       h += T('효과음', this.sfxOn, () => { this.sfxOn = !this.sfxOn; this.save(); this.menuDraw(); });
       if (!this.mobile) h += T('자동 전체화면', SITE.autoFs(), () => { SITE.setAutoFs(!SITE.autoFs()); this.menuDraw(); }, '', '게임 화면을 클릭하면 브라우저를 전체화면으로 바꿔요 (게임 창 크기는 그대로) · 바탕화면 설정과 같은 값');
       h += B('리소스팩: ' + RPACK.label(), () => RPACK.click(0), RPACK.on ? 'on' : '', '마인크래프트 1.21.4 바닐라 텍스처 · 사운드를 이 기기의 브라우저가 공식 미러에서 직접 받아요 (게임에 포함 안 됨)');
@@ -262,6 +264,10 @@ const RUI = {
   beChanged(key) { if (this.gui && this.gui.ctx && this.gui.ctx.key === key && !this.gui.dragging) this.render(); },
 };
 const RUI_CSS = `
+.rdl{position:fixed;inset:0;z-index:150000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);font:14px system-ui,'Malgun Gothic',sans-serif}
+.rdl .rgw{width:min(460px,94vw);display:flex;flex-direction:column;gap:8px}.rdl h3{margin:2px 0 0;font-size:18px;font-weight:normal;color:#222;text-align:center}.rdl p{margin:0;font-size:13px;color:#333;line-height:1.45;text-align:center}
+.rdlo{display:flex;gap:10px;align-items:flex-start;background:#8b8b8b;border:2px solid;border-color:#373737 #fff #fff #373737;padding:8px;cursor:pointer;color:#fff;text-shadow:1px 1px 0 #333}.rdlo input{width:20px;height:20px;margin:2px 0 0;flex:none;accent-color:#3d8a3d}
+.rdlo div{display:flex;flex-direction:column;gap:3px;min-width:0}.rdlo b{font-size:15px;font-weight:normal}.rdlo small{font-size:12px;line-height:1.4;color:#eee}.rdlb{display:flex;gap:6px}.rdlb .rbtn{flex:1;font-size:15px}.rdlb .rbtn.on{background:#3d8a3d}
 body.rbsapp #app,body.rbsapp #newJobPop{display:none!important}body.rbsapp{background:#000;overflow:hidden;font-family:system-ui,'Malgun Gothic',sans-serif;user-select:none;-webkit-user-select:none}
 #rbs{position:fixed;inset:0}#rcv{position:absolute;inset:0;width:100%;height:100%;display:block}
 #rbHud{position:absolute;inset:0;pointer-events:none;color:#fff;text-shadow:2px 2px 0 #3f3f3f}body.rbhide #rbHud{display:none}body.rbcut #rbHud>:not(#rbTitle),body.rbcut #rbBottom,body.rbcut #rbTouch,body.rbcut #rbRing,body.rbcut #rbHeld,body.rbcut #rbTab{display:none!important}

@@ -1,11 +1,12 @@
 // ===================== Random Block Survival: audio =====================
-// Music: the original pack's BGM files (rbs/music/*.mp3 next to index.html, streamed, 2D, volume 0.5, loop).
-//   Game BGM by player setting gmuc: 0 "Barge" (original bug: plays Burner), 1 Detour, 2 Point Green - Getdown, 3 none, 4 Barge (real file).
-//   At 1:30 left: stop -> sfx_hurry -> title -> 2 s later the same BGM again at pitch 1.5. Deathmatch: Bubble.
+// Music: free tracks from the YouTube Audio Library. Not bundled: the player opts in on the first-run 외부 다운로드 screen
+//   (RDL, 33_rbs_pack.js) and RBGM downloads them into IndexedDB ('rbs_bgm'). Without them the game runs silent (volume 0.5, loop).
+//   Game BGM by player setting RUI.bgm: Barge (default) / Burner / Detour / Getdown. At 1:30 left: stop -> sfx_hurry -> title ->
+//   2 s later the same BGM again at pitch 1.5. Deathmatch: Bubble, always, starting at 0:32 with a fade-in (loops back to 0:32).
 // Effects: the pack's custom sfx (embedded). Minecraft's own sounds are NOT bundled: with the vanilla resource pack
 //   downloaded by the player they come from there, otherwise short synthesized stand-ins are used.
 const RAU = {
-  ctx: null, master: null, buf: {}, pack: {}, bgm: null, bgmKey: '', warned: false,
+  ctx: null, master: null, buf: {}, pack: {}, bgm: null, bgmKey: '', fadeK: 1,
   init() {
     if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
     const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return; try { this.ctx = new AC(); } catch (e) { return; }
@@ -13,7 +14,7 @@ const RAU = {
     for (const k in RB_SFX) sndBytes(RB_SFX[k]).then(a => this.ctx.decodeAudioData(a)).then(b => this.buf[k] = b).catch(() => { }); // sounds/rbs/*.mp3
     RPACK.decode();
   },
-  setVol() { if (this.master) this.master.gain.value = RUI.vol; if (this.bgm) this.bgm.volume = .5 * RUI.mvol; },
+  setVol() { if (this.master) this.master.gain.value = RUI.vol; if (this.bgm) this.bgm.volume = .5 * RUI.mvol * (this.fadeK ?? 1); },
   src(buf, vol = 1, rate = 1) { if (!this.ctx || !buf) return; const s = this.ctx.createBufferSource(); s.buffer = buf; s.playbackRate.value = rate; const g = this.ctx.createGain(); g.gain.value = vol; s.connect(g); g.connect(this.master); s.start(); return s; },
   // custom pack sfx (sfx_hurry, sfx_rare, sfx_win_*...). gated = only when the player's 효과음 setting (sef) is on
   sfx(k, gated) { if (gated && !RUI.sfxOn) return; this.init(); if (this.buf[k]) this.src(this.buf[k], 1); else this.synth('toast', 1); },
@@ -25,14 +26,19 @@ const RAU = {
   blk(kind, mat, p) { const v = this.dist(p); if (v > 0) this.play(kind + '_' + (mat || 'stone'), kind === 'hit' ? .5 : .8 + Math.random() * .1, false, v * (kind === 'hit' ? .3 : .9)); },
   step(mat, p) { const v = p === RG.me ? .3 : this.dist(p) * .3; if (v > 0) this.play('step_' + (mat || 'stone'), 1, false, v); },
   note(pitch) { this.play('note', pitch, false, 1); },
-  // ---------- music ----------
-  music(key, rate = 1) {
-    if (!RUI.musicOn || !key) return; this.stopBgm(); const a = new Audio(); a.src = 'rbs/music/' + key + '.mp3'; a.loop = true; a.volume = .5 * RUI.mvol; a.preservesPitch = false; a.mozPreservesPitch = false; a.webkitPreservesPitch = false; a.playbackRate = rate;
-    a.onerror = () => { if (!this.warned) { this.warned = true; RUI.chat('§7배경음악 파일을 찾지 못했어요 (index.html 옆 rbs/music 폴더가 필요해요)'); } };
-    const p = a.play(); if (p && p.catch) p.catch(() => { }); this.bgm = a; this.bgmKey = key;
+  music(key, rate = 1, from = 0, fade = 0) {
+    if (!RUI.musicOn || !key) return; this.stopBgm(); const url = RBGM.url(key); if (!url) return;
+    const a = new Audio(); a.src = url; a.loop = !from; a.preservesPitch = false; a.mozPreservesPitch = false; a.webkitPreservesPitch = false; a.playbackRate = rate;
+    this.fadeK = fade ? 0 : 1; a.volume = .5 * RUI.mvol * this.fadeK;
+    const go = () => { try { if (from) a.currentTime = from; } catch (e) { } const p = a.play(); if (p && p.catch) p.catch(() => { }); };
+    if (from) { a.addEventListener('loadedmetadata', go, { once: true }); a.onended = () => { if (this.bgm === a) go(); }; } else go(); // starts mid-song: also loops back to that point
+    if (fade) { const t0 = performance.now(); const f = () => { if (this.bgm !== a) return; this.fadeK = Math.min(1, (performance.now() - t0) / (fade * 1000)); a.volume = .5 * RUI.mvol * this.fadeK; if (this.fadeK < 1) setTimeout(f, 50); }; setTimeout(f, 50); }
+    this.bgm = a; this.bgmKey = key;
   },
-  gameBgm(rate) { const k = ['bgm_game_barge', 'bgm_game_detour', 'bgm_game_getdown', null, 'bgm_unlinked_barge_file'][RUI.gmuc]; if (k) this.music(k, rate); else this.stopBgm(); },
-  stopBgm() { if (this.bgm) { try { this.bgm.onerror = null; this.bgm.pause(); this.bgm.removeAttribute('src'); this.bgm.load(); } catch (e) { } this.bgm = null; this.bgmKey = ''; } },
+  gameBgm(rate) { const k = RBGM.GAME.includes(RUI.bgm) ? RUI.bgm : 'barge'; this.music(k, rate); },
+  dmBgm() { this.music('bubble', 1, 32, 4); }, // 데스매치: Bubble from 0:32, 4 s fade-in
+  stopBgm() { if (this.bgm) { try { this.bgm.onended = null; this.bgm.pause(); this.bgm.removeAttribute('src'); this.bgm.load(); } catch (e) { } this.bgm = null; this.bgmKey = ''; } },
+  lobbyMusic() { return; }, // lobby music (Sleeplessness - The Brothers Records) stays off like the original
   lobbyMusic() { return; if (RUI.lobbyMusic && RUI.musicOn && !this.bgm && RG.gs.ph === 'lobby') this.music('bgm_sleeplessness'); if ((!RUI.lobbyMusic || RG.gs.ph !== 'lobby') && this.bgmKey === 'bgm_sleeplessness') this.stopBgm(); },
   // ---------- synthesized stand-ins (used without the vanilla pack) ----------
   noise(dur) { const n = Math.floor(this.ctx.sampleRate * dur), b = this.ctx.createBuffer(1, n, this.ctx.sampleRate), d = b.getChannelData(0); for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1; return b; },

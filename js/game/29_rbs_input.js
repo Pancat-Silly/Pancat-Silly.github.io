@@ -18,6 +18,7 @@ const RIN = {
   lock() { const cv = $('rcv'); try { const p = cv.requestPointerLock && cv.requestPointerLock(); if (p && p.catch) p.catch(() => { }); } catch (e) { } if (!RUI.mobile && SITE.autoFs()) SITE.toParent({ t: 'fs', lock: true, auto: 1 }); }, // browser fullscreen only (the window keeps its size)
   key(e, down) {
     if (e.ctrlKey && ['Equal', 'Minus', 'Digit0', 'NumpadAdd', 'NumpadSubtract', 'KeyW', 'KeyS', 'KeyD', 'KeyF'].includes(e.code)) e.preventDefault();
+    if (RUI.splash && down) return; // first-run 외부 다운로드 screen is up
     if (!down) this.keys[e.code] = false; // a release is always recorded, even over a menu / chat / gui (or the key stays "held" after closing it)
     if (RUI.chatOpen || RUI.promptOpen) { if (down && e.code === 'Escape') RUI.closeChat(); return; }
     const c = e.code; if (down && (c === 'Tab' || c === 'Space' || c === 'F5' || c === 'F1' || c.startsWith('Arrow'))) e.preventDefault();
@@ -42,7 +43,7 @@ const RIN = {
   apply(me) {
     if (RUI.mobile) RTCTL.tick();
     const K = this.keys, T = this.touch; const inp = me.inp;
-    if (RUI.gui || RUI.paused || RUI.chatOpen || RUI.netWait) { inp.f = inp.s = 0; inp.jump = false; inp.sprint = false; if (!RUI.mobile) inp.sneak = false; this.lmb = this.rmb = false; }
+    if (RUI.gui || RUI.paused || RUI.chatOpen || RUI.netWait || RUI.splash) { inp.f = inp.s = 0; inp.jump = false; inp.sprint = false; if (!RUI.mobile) inp.sneak = false; this.lmb = this.rmb = false; }
     else {
       inp.f = (K.KeyW ? 1 : 0) - (K.KeyS ? 1 : 0) + T.f; inp.s = (K.KeyD ? 1 : 0) - (K.KeyA ? 1 : 0) + T.s; inp.jump = !!K.Space || T.jump; inp.sneak = !!(K.ShiftLeft || K.ShiftRight) || T.sneak;
       inp.sprint = !!(K.ControlLeft || K.ControlRight) || this.sprintT || T.sprint; if (inp.f <= 0) this.sprintT = false;

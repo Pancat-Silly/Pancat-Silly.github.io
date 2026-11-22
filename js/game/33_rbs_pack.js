@@ -60,3 +60,46 @@ const RPACK = {
   off() { for (const [name, t] of RTEX.map) { const [ox, oy] = RTEX.xy(t); RTEX.g.clearRect(ox, oy, 16, 16); RTEX.paint(name, t); } RR.gfx && RR.gfx.refreshAtlas(); RUI.iconCache = {}; RUI._hs = ''; RAU.pack = {}; },
   decode() { if (!this.on || !this.data || !this.data.snd || !RAU.ctx) return; for (const k in this.data.snd) { RAU.pack[k] = []; for (const ab of this.data.snd[k]) RAU.ctx.decodeAudioData(ab.slice(0)).then(b => RAU.pack[k].push(b)).catch(() => { }); } },
 };
+// ===================== Random Block Survival: background music (optional, downloaded by the player) =====================
+// Free tracks from the YouTube Audio Library. Not bundled with the game: fetched from SRC (tried in order, needs CORS) into IndexedDB 'rbs_bgm'.
+const RBGM = {
+  SRC: ['rbs/music/'], // base URLs, <SRC><key>.mp3
+  T: { barge: ['Barge', 'Gunnar Olsen'], burner: ['Burner', 'Gunnar Olsen'], detour: ['Detour', 'Gunnar Olsen'], getdown: ['Getdown', 'Point Green'], bubble: ['Bubble', 'Raven & Kreyn'] },
+  GAME: ['barge', 'burner', 'detour', 'getdown'], // in-game choices (RUI.bgm); bubble = deathmatch
+  has: false, data: null, urls: {}, busy: false, msg: '',
+  name(k) { return (this.T[k] || this.T.barge)[0]; },
+  credits(sep = ' / ') { const by = {}; for (const k in this.T) { const [n, a] = this.T[k]; (by[a] || (by[a] = [])).push(n); } return Object.entries(by).map(([a, n]) => n.join(' · ') + ' – ' + a).join(sep); },
+  label() { return this.busy ? (this.msg || '받는 중…') : this.has ? '§a받음' : '받지 않음 (누르면 받기)'; },
+  async boot() { try { const d = await IDB.get('rbs_bgm'); if (d && d.files && Object.keys(d.files).length) { this.data = d; this.has = true; } } catch (e) { } },
+  url(k) { if (this.urls[k]) return this.urls[k]; const b = this.data && this.data.files[k]; return b ? (this.urls[k] = URL.createObjectURL(b)) : null; },
+  status(m) { this.msg = m; if (RUI.paused && RUI.pg === 'set') RUI.menuDraw(); },
+  async get(k) { for (const base of this.SRC) try { const r = await fetch(base + k + '.mp3', { mode: 'cors' }); if (r.ok) { const b = await r.blob(); if (b.size > 10000) return new Blob([b], { type: 'audio/mpeg' }); } } catch (e) { } return null; },
+  async download() {
+    if (this.busy) return; this.busy = true; this.status('연결하는 중…'); const files = {}; const keys = Object.keys(this.T); let n = 0, done = 0;
+    await Promise.all(keys.map(async k => { const b = await this.get(k); if (b) { files[k] = b; n++; } this.status('받는 중… ' + (++done) + '/' + keys.length); }));
+    if (n) { const playing = RAU.bgmKey, rate = RAU.bgm ? RAU.bgm.playbackRate : 1; RAU.stopBgm(); for (const k in this.urls) URL.revokeObjectURL(this.urls[k]); this.urls = {}; this.data = { files, at: Date.now() }; this.has = true; try { await IDB.set('rbs_bgm', this.data); } catch (e) { }
+      RUI.chat('§a배경음악을 받았어요 (' + n + '/' + keys.length + '곡) §7' + this.credits()); if (playing === 'bubble') RAU.dmBgm(); else if (playing) RAU.gameBgm(rate); }
+    else RUI.chat('§c배경음악 받기 실패: 음악 서버에 연결하지 못했어요');
+    this.busy = false; this.status('');
+  },
+};
+// ===================== first-run 외부 다운로드 screen =====================
+// Asked once (localStorage rbs_dl_asked): background music + Minecraft resource pack, each opt-in. Both can be changed later in 설정.
+const RDL = {
+  need() { try { if (localStorage.getItem('rbs_dl_asked')) return false; } catch (e) { } return !(RBGM.has && RPACK.has); },
+  show() {
+    if (!this.need()) return; RUI.splash = true; RIN.lmb = RIN.rmb = false; if (document.pointerLockElement) document.exitPointerLock();
+    const opt = (id, on, title, sub) => '<label class="rdlo"><input type="checkbox" id="' + id + '"' + (on ? ' checked' : '') + '><div><b>' + title + '</b><small>' + sub + '</small></div></label>';
+    const el = document.createElement('div'); el.className = 'rdl'; el.id = 'rbDl';
+    el.innerHTML = '<div class="rgw"><h3>📦 외부 다운로드</h3><p>게임에 들어 있지 않은 파일을 이 기기의 브라우저가 외부에서 직접 받아 저장해요.<br>받을 것을 골라 주세요 · 나중에 설정에서도 바꿀 수 있어요.</p>'
+      + (RBGM.has ? '' : opt('rdlBgm', true, '🎵 배경음악', 'YouTube 오디오 보관함 무료 음악 · 인게임 곡은 설정에서 골라요 (데스매치는 Bubble)<br>' + RBGM.credits('|').split('|').map(esc).join('<br>')))
+      + (RPACK.has ? '' : opt('rdlPack', true, '🧱 마인크래프트 리소스팩', '1.21.4 바닐라 텍스처 · 사운드 (공식 미러) · 없으면 직접 만든 텍스처와 합성음을 써요'))
+      + '<div class="rdlb"><button class="rbtn" data-dl="0">받지 않기</button><button class="rbtn on" data-dl="1">선택한 것 받기</button></div></div>';
+    document.body.appendChild(el);
+    for (const b of el.querySelectorAll('[data-dl]')) b.onclick = () => { const go = b.dataset.dl === '1', m = $('rdlBgm'), p = $('rdlPack'); this.close(go && m && m.checked, go && p && p.checked); };
+  },
+  close(bgm, pack) {
+    try { localStorage.setItem('rbs_dl_asked', '1'); } catch (e) { } const el = $('rbDl'); if (el) el.remove(); RUI.splash = false; RAU.init();
+    if (bgm) RBGM.download(); if (pack) RPACK.download(); if (!bgm && !pack) RUI.chat('§7외부 파일 없이 시작해요 · 설정에서 배경음악 · 리소스팩을 받을 수 있어요');
+  },
+};

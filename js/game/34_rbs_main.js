@@ -9,7 +9,7 @@ async function RBS_BOOT() {
     RR.signs = RR.signFix(); // turn the standing signs before the first mesh
     await BOOT(55, '3D 화면 준비 중…'); RR.init($('rcv')); RR.rebuild(99999);
     RIN.bind($('rcv'));
-    await BOOT(80, '리소스팩 확인 중…'); await RPACK.boot();
+    await BOOT(80, '리소스팩 확인 중…'); await RPACK.boot(); await RBGM.boot();
     await BOOT(90, '서버에 연결하는 중…');
   } catch (e) { console.error(e); const bo = $('boot'); if (bo) bo.remove(); document.body.innerHTML = '<div style="color:#fff;padding:20px;font:16px sans-serif">이 기기에서 3D(WebGL)를 시작할 수 없어요: ' + esc(e.message) + '</div>'; return; }
   NET.onChange = () => { const a = document.activeElement; if (RUI.paused && !(a && a.tagName === 'INPUT')) RUI.menuDraw(); };
@@ -29,4 +29,5 @@ async function RBS_BOOT() {
   setInterval(() => { if (performance.now() - last > 400) { try { RG.step(); } catch (e) { } try { NET.tickTimeouts(); } catch (e) { } } else { try { NET.tickTimeouts(); } catch (e) { } } }, 500);
   window.__RG = RG;
   await BOOT(100, '준비 완료!'); const bo = $('boot'); if (bo) { bo.classList.add('done'); setTimeout(() => bo.remove(), 450); }
+  RDL.show(); // first run: ask about the optional external downloads (music, resource pack)
 }

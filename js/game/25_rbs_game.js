@@ -385,7 +385,7 @@ falls: [], // falling block entities (sand, gravel, anvil) — animated on every
       }
       case 'tover': RAU.stopBgm(); if (fresh) { this.title('§cTime over!', ''); RAU.sfx('bell', true); } if (me.mode === 'survival') me.mode = 'adventure'; for (const b of this.bots) b.mode = 'adventure'; break;
       case 'dm': {
-        RAU.stopBgm(); RAU.music('bgm_deathmatch_bubble');
+        RAU.stopBgm(); RAU.dmBgm();
         if (me.spectator) { this.tp(me, gs.big ? [4.5, 68, 1.5] : [3.5, 80, .5]); RUI.specNext(1); }
         if (!me.spectator) { if (gs.dmp.includes(me.id) && me.alive) { this.tp(me, this.dmPt()); me.hp = 20; } else this.tp(me, this.dmPt(true)); me.mode = 'adventure'; }
         for (const b of this.bots) { if (gs.dmp.includes(b.id)) { this.tp(b, this.dmPt()); b.hp = 20; } else this.tp(b, this.dmPt(true)); b.mode = 'adventure'; }
