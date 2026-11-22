@@ -202,12 +202,17 @@ const RBOT = {
     }
     return 0;
   },
+  // can the bot see this block (minecraft coords)? the first solid thing on the line from its eye must be that block - no x-ray for ores / chests
+  sees(b, x, y, z) {
+    const c = RW.P(x + .5, y + .5, z + .5), e = { x: b.x, y: b.y + b.eye, z: b.z }, dx = c.x - e.x, dy = c.y - e.y, dz = c.z - e.z, L = Math.hypot(dx, dy, dz); if (L < 1.8) return true;
+    const h = RW.w.ray(e, { x: dx / L, y: dy / L, z: dz / L }, L + .6, B => B.solid); if (!h) return false; const m = RW.mc(h.x, h.y, h.z); return m[0] === x && m[1] === y && m[2] === z;
+  },
   scan(b, A) {
     const R = RW.R(RG.gs.big), [mx, my, mz] = RG.mcOf(b), fx = Math.floor(mx), fy = Math.floor(my), fz = Math.floor(mz), r = 7; let best = null, bs = 0;
     for (let y = Math.max(201, fy - 4); y <= Math.min(215, fy + 5); y++) for (let z = Math.max(-R, fz - r); z <= Math.min(R, fz + r); z++) for (let x = Math.max(-R, fx - r); x <= Math.min(R, fx + r); x++) {
       const id = RW.getM(x, y, z); if (!id) continue; const B = BL[id], k = this.key(x, y, z); if ((A.bad[k] || 0) > RG.tick) continue;
       const s = B.use === 'chest' ? ((A.looted.get(k) || 0) > RG.tick ? 0 : 9) : this.desire(b, id); if (!s) continue;
-      const sc = s / (1 + Math.hypot(x + .5 - mx, y + .5 - (my + 1), z + .5 - mz) * .35); if (sc > bs) { bs = sc; best = [x, y, z]; }
+      const sc = s / (1 + Math.hypot(x + .5 - mx, y + .5 - (my + 1), z + .5 - mz) * .35); if (sc > bs && this.sees(b, x, y, z)) { bs = sc; best = [x, y, z]; }
     }
     A.goal = best; A.scanT = RG.tick;
   },
@@ -274,22 +279,33 @@ const RBOT = {
     if ((RG.tick + A.off) % 10 === 0) this.equip(b);
     // heal with a splash potion when low
     if (b.hp < 9 && b.count('splash_potion') && !(A.potT > RG.tick)) { const i = b.inv.findIndex(s => s && s.id === 'splash_potion'); this.hold(b, i); b.pitch = 1.5; RG.throwProj(b, 'heal'); b.take('splash_potion', 1); A.potT = RG.tick + 60; for (const p of RG.players()) if (p !== b && p.alive !== false && !p.spectator && RG.area(p) === RG.area(b) && Math.hypot(p.x - b.x, p.z - b.z) < 5) { A.wallT = 0; this.wallOff(b, A, p); break; } return; }
-    // enemies in the same area
-    let tg = null, bd = 1e9; for (const p of RG.players()) { if (p === b || p.id === b.id || p.spectator || p.alive === false || RG.area(p) !== ar) continue; const d = Math.hypot(p.x - b.x, p.y - b.y, p.z - b.z); if (d < bd) { bd = d; tg = p; } }
+    // enemies it knows about: only ones it has SEEN (clear line of sight within 32 blocks, checked every 5 ticks) or that just hit it.
+    // An unseen player is remembered where it was last seen for 5 s (the bot goes there and looks), then forgotten - no wallhack.
+    const mem = A.mem || (A.mem = new Map());
+    if ((RG.tick + A.off) % 5 === 0) for (const p of RG.players()) { if (p === b || p.id === b.id || p.spectator || p.alive === false || RG.area(p) !== ar) continue; if (Math.hypot(p.x - b.x, p.y - b.y, p.z - b.z) <= 32 && this.los(b, p)) mem.set(p.id, { t: RG.tick, x: p.x, y: p.y, z: p.z }); }
+    const rt = RG.tick - b.lastByT, atk = b.lastBy && rt < 100 && rt >= (this.L || this.LV[2]).react ? RG.byId(b.lastBy) : null; // 보통/쉬움: notice the hit a little later
+    if (atk && atk.alive !== false && RG.area(atk) === ar) mem.set(atk.id, { t: RG.tick, x: atk.x, y: atk.y, z: atk.z }); // it hit me: I know where it is
+    let tg = null, bd = 1e9, tm = null;
+    for (const [id, m] of mem) { const p = RG.byId(id); if (!p || p.alive === false || p.spectator || RG.area(p) !== ar || RG.tick - m.t > 100) { mem.delete(id); continue; }
+      const d = Math.hypot(p.x - b.x, p.y - b.y, p.z - b.z); if (d < bd) { bd = d; tg = p; tm = m; } }
     const gs = RG.gs, el = RG.hostNow() - gs.t, total = gs.end > 0 ? gs.end - gs.t : 600000, left = gs.end > 0 ? gs.end - RG.hostNow() : total - el;
     const late = ph === 'dm' || left < 70000, w = this.bestWeapon(b).d, ap = b.armorPts()[0];
     const ready = w >= 6.5 && (ap >= 6 || w >= 7.5 || el > total * .5), geared = w >= 7.5 && ap >= 10;
     let foe = null;
     if (tg && RG.pvpAt(b)) {
-      const see = this.los(b, tg), rt = RG.tick - b.lastByT, atk = b.lastBy && rt < 100 && rt >= (this.L || this.LV[2]).react ? RG.byId(b.lastBy) : null; // 보통/쉬움: notice the hit a little later
+      const see = tm.t === RG.tick || this.los(b, tg);
       if (atk && atk.alive !== false && RG.area(atk) === ar) foe = atk; // hit back
-      else if (late || geared) foe = tg; // hunt, digging through walls if needed
+      else if (late || geared) foe = tg; // hunt the one it knows about
       else if (see && ((bd < 5 && w >= 7.5) || (ready && bd < 16))) foe = tg; // early on only with a good weapon (iron+); the stone-sword kit alone doesn't start fights
       // low and nothing to heal with: back off unless cornered at the end
       if (foe && b.hp < 6 && !late && bd < 8 && !b.count('splash_potion')) A.flee = RG.tick + 40;
     }
     if (A.flee > RG.tick && tg) { if (bd < 6) this.wallOff(b, A, tg); const P = { x: b.x * 2 - tg.x, z: b.z * 2 - tg.z }; this.navTo(b, P.x, b.y, P.z, I); return; }
-    if (foe) { A.goal = null; this.fight(b, A, I, foe, Math.hypot(foe.x - b.x, foe.y - b.y, foe.z - b.z)); return; }
+    if (foe) { A.goal = null;
+      if (foe !== atk && !this.los(b, foe)) { const m = mem.get(foe.id); // lost sight: go to where it was last seen; got there and still nothing -> forget it
+        if (Math.hypot(m.x - b.x, m.z - b.z) < 1.5 && Math.abs(m.y - b.y) < 2) { mem.delete(foe.id); } else { this.navTo(b, m.x, m.y, m.z, I); return; } }
+      else { this.fight(b, A, I, foe, Math.hypot(foe.x - b.x, foe.y - b.y, foe.z - b.z)); return; } }
+    if (ph === 'dm' && ar === 'dm') { const c = RG.gs.big ? RW.P(4.5, 62, 1.5) : RW.P(3.5, 74, .5); if (Math.hypot(c.x - b.x, c.z - b.z) > 2) this.navTo(b, c.x, c.y, c.z, I); return; } // nobody in sight: walk to the middle and look around
     if (ph !== 'game' || ar !== 'arena' || b.mode !== 'survival') return;
     // stuck: barely moved for 2 s while going somewhere -> give up on that goal for a while
     if (RG.tick - A.posT >= 40) { const mv = Math.hypot(b.x - A.pos[0], b.z - A.pos[1]); if (mv < .4 && !b.dig && A.goal) { A.bad[this.key(...A.goal)] = RG.tick + 600; A.goal = null; A.explore = null; } A.pos = [b.x, b.z]; A.posT = RG.tick; }

@@ -62,7 +62,8 @@ const RW = {
   rng(seed) { let s = seed >>> 0 || 1; return () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; },
   clearArena() { this.fill(-27, 216, -28, 27, 220, 27, 0); this.fill(-26, 201, -26, 26, 215, 26, 0); for (const k of [...RG.be.keys()]) { const y = +k.split(',')[1]; if (y >= 200 && y <= 216) RG.be.delete(k); } RG.chestType.clear(); },
   // 9-player walls (the original fills bedrock at ±17 when a 9-player round starts; 25 players use the whole box)
-  walls(big) { const id = big ? 0 : RBLK.K('bedrock'); for (const v of [-17, 17]) { this.fill(v, 200, -17, v, 216, 17, id); this.fill(-17, 200, v, 17, 216, v, id); } },
+  // (25 players: only the inside layers y201..215 are cleared - y200 is the bedrock floor and y216 the ceiling, clearing those left holes)
+  walls(big) { const id = big ? 0 : RBLK.K('bedrock'), y0 = big ? 201 : 200, y1 = big ? 215 : 216; for (const v of [-17, 17]) { this.fill(v, y0, -17, v, y1, 17, id); this.fill(-17, y0, v, 17, y1, v, id); } },
   // pal: null = the 33-entry V2.1 palette (each 1/33), or the host's custom list [[blockKey, weight, lootR?], ...] (any count, any weights)
   bag(seed, pal, R) { // count mode: exact numbers of each block, the rest air, shuffled with the round seed
     const W = 2 * R + 1; const key = seed + ':' + R + JSON.stringify(pal); if (this._bag && this._bag.key === key) return this._bag; const N = W * W * 15; const a = new Uint16Array(N), lr = new Uint8Array(N); let i = 0;
