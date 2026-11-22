@@ -109,7 +109,7 @@ const RUI = {
   // corners, the right one mirrored, 90 % opaque. Pack on: the vanilla fire_0 strip, animated one frame per tick; off: our fire tile
   fireOv(me) {
     const on = me.fire > 0 && me.alive !== false && me.mode !== 'spectator' && !RR.third; let el = this._fov;
-    if (!el) { if (!on) return; el = this._fov = document.createElement('div'); el.id = 'rbFireOv'; el.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:5;overflow:hidden;display:none'; el.innerHTML = '<i></i><i></i>'; document.body.appendChild(el); }
+    if (!el) { if (!on) return; el = this._fov = document.createElement('div'); el.id = 'rbFireOv'; el.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:0;overflow:hidden;display:none'; el.innerHTML = '<i></i><i></i>'; const H = $('rbHud'); H.insertBefore(el, H.firstChild); } // first thing in the HUD: hotbar · hearts · chat stay on top
     el.style.display = on ? '' : 'none'; if (!on) return;
     const src = RPACK.on && RPACK.data && RPACK.data.tex && RPACK.data.tex.fire_0;
     if (this._fovSrc !== (src || 'x')) { this._fovSrc = src || 'x';
