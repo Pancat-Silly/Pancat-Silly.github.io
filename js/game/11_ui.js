@@ -338,8 +338,9 @@ const UI = {
     $('tSpawn') && ($('tSpawn').style.display = me.onPad && PAD_ORDER.indexOf(me.onPad) !== me.pad ? 'flex' : 'none');
     // crosshair
     const gun = me.inv[me.sel] && ITEMS[me.inv[me.sel].id] && ITEMS[me.inv[me.sel].id].use === 'gun'; // 권총 in hand: crosshair even in PE (it fires straight where you look)
-    $('cross').style.display = me.spectator || !me.alive || (this.mobile && TCTL.scheme === 'pe' && !gun) ? 'none' : 'block'; // PE touch mode: no crosshair (Bedrock)
-    if (G.tick !== this._ct) { this._ct = G.tick; const on = me.spectator ? false : gun ? !!SK.aimTarget(me, 80) : !!me.findTarget(this.atkOpt()).t; $('cross').classList.toggle('on', on); }
+    const bowAim = me.drawT > 0 && !me.drawGun; // drawing a bow (랜더마이저 활 …): crosshair in PE too while aiming
+    $('cross').style.display = me.spectator || !me.alive || (this.mobile && TCTL.scheme === 'pe' && !gun && !bowAim) ? 'none' : 'block'; // PE touch mode: no crosshair (Bedrock)
+    if (G.tick !== this._ct) { this._ct = G.tick; const on = me.spectator ? false : gun || bowAim ?!!SK.aimTarget(me, 80) : !!me.findTarget(this.atkOpt()).t; $('cross').classList.toggle('on', on); }
     // dude 댄스 가사 (mine, above the actionbar)
     { const h = LYR.mine(me), el = $('lyrics'); if (el._h !== h) { el._h = h; el.innerHTML = h; } el.style.display = h ? 'block' : 'none'; }
     // tags (hp above head)

@@ -156,7 +156,7 @@ const PACK = {
 const POT = (c, b = 'item/potion') => ({ l: [['item/potion_overlay', c], [b]] });
 const ITEM_ART = {
   breeze_rod: { l: [['item/breeze_rod']], h: 1 }, rush: { l: [['item/light_blue_dye']] }, baton: { l: [['item/chain']] }, colony: { l: [['block/frogspawn']] }, egg: { l: [['item/turtle_egg']] },
-  frost: { l: [['item/diamond_sword']], h: 1 }, icejail: { cube: ['block/blue_ice', 'block/blue_ice'] }, iron_sword: { l: [['item/iron_sword']], h: 1 }, bow: { l: [['item/bow']], h: 1 }, arrow: { l: [['item/arrow']] },
+  frost: { l: [['item/diamond_sword']], h: 1 }, stone_sword: { l: [['item/stone_sword']], h: 1 }, icejail: { cube: ['block/blue_ice', 'block/blue_ice'] }, iron_sword: { l: [['item/iron_sword']], h: 1 }, bow: { l: [['item/bow']], h: 1 }, arrow: { l: [['item/arrow']] },
   luckybox: { l: [['item/honeycomb']] }, baghak: { l: [['item/filled_map']] }, pot_res: POT(0x9146F0), pot_spd: POT(0x33EBFF), dia_sword: { l: [['item/diamond_sword']], h: 1 },
   create: { cube: ['block/jukebox_side', 'block/jukebox_top'] }, wait: { l: [['item/music_disc_wait']] }, study: { l: [['item/music_disc_chirp']] }, v4: { l: [['item/cooked_cod']] }, runsuno: { l: [['item/music_disc_pigstep']] },
   stick_mace: { l: [['item/mace']], h: 1 }, grab: { l: [['item/tripwire_hook']] }, grabex: { cube: ['block/tnt_side', 'block/tnt_top'] },
@@ -194,6 +194,20 @@ const ART = {
     for (let y = 0; y < 40; y++) for (let x = 0; x < 20; x++) { const c = P[y][x]; g.fillStyle = 'rgb(' + c + ')'; g.fillRect(10 + x, y, 1, 1); }
     return this.cache[id] = { icon: cv.toDataURL(), runs: this.runsOf((x, y) => P[y][x], 20, 40), banner: 1 };
   },
-  get(id) { if (BANNER_PAT[id]) return this.banner(id); return PACK.on ? PACK.art[id] || null : null; },
+  // hand-drawn 16x16 sprites for items vanilla MC has no texture for (권총) - used only while the pack is on, like other item art
+  PIX: {
+    pistol: { P: { K: [38, 38, 44], D: [66, 66, 74], M: [104, 104, 114], L: [150, 150, 162], B: [112, 74, 42], b: [72, 46, 26] }, S: [
+      '................', '................', '................', '................',
+      '..KKKKKKKKKKKKK.', '.KLLLLLLLLLLLLMK', '.KMMMMMMMMMMMMDK', '.KDDDDDDDDKKKKK.',
+      '..KDDBBKDDK.....', '..KBBbKK.KK.....', '..KBBbK.........', '.KBBbK..........',
+      '.KBBbK..........', '.KbbbK..........', '..KKK...........', '................'] },
+  },
+  pix(id) {
+    if (this.cache[id]) return this.cache[id]; const { P, S } = this.PIX[id], at = (x, y) => P[S[y][x]] || null;
+    const cv = document.createElement('canvas'); cv.width = cv.height = 16; const g = cv.getContext('2d');
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const c = at(x, y); if (c) { g.fillStyle = 'rgb(' + c + ')'; g.fillRect(x, y, 1, 1); } }
+    return this.cache[id] = { icon: cv.toDataURL(), runs: this.runsOf(at, 16, 16) };
+  },
+  get(id) { if (BANNER_PAT[id]) return this.banner(id); if (!PACK.on) return null; return PACK.art[id] || (this.PIX[id] ? this.pix(id) : null); },
   iconHTML(id) { const D = ITEMS[id]; if (!D) return ''; const a = this.get(id); return a ? '<img src="' + a.icon + '" style="width:1.6em;height:1.6em;image-rendering:pixelated;vertical-align:middle" alt="">' : esc(D.icon); },
 };
