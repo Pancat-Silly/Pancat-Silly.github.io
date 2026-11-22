@@ -1,12 +1,14 @@
 'use strict';
 // ===================== dude New 댄스 노래 가사 (dude_dance.mp3, 129.8초 반복) =====================
 // DUDE_LRC = 확장 LRC 원문 그대로 (사용자가 가사 타이밍 도구로 찍음, 로컬 tools/lyrics). 고칠 때는 도구에서 내보낸 LRC를 통째로 붙여 넣으면 된다.
-//   [mm:ss.xx] 줄 시작, <mm:ss.xx> 그 글자부터의 시간 (단어 첫 글자 시간 = 단어 시간), 줄 맨 끝 <mm:ss.xx> = 줄 끝, bg: = 뒷소리(아래 작은 줄)
+//   [mm:ss.xx] 줄 시작, <mm:ss.xx> 그 글자부터의 시간 (단어 첫 글자 시간 = 단어 시간), 줄 맨 끝 <mm:ss.xx> = 줄 끝, bg: = 뒷소리(아래 작은 줄),
+//   [offset:ms] = 표준 LRC 오프셋 (양수면 가사를 그만큼 일찍 보여 줌; 실제로 들어 보니 0.25초 늦어서 250)
 // 읽을 때 정리: 시간 없는 단어(첫 글자에 시간이 없는 단어)는 잘못 들어간 가사로 보고 뺀다. 줄 끝이 없거나, 마지막 글자보다 앞이거나, 3초 넘게 뒤면
 //   마지막 글자 + 0.5초 (다음 같은 종류 줄의 시작보다 늦지 않게).
 // DUDE_LYRICS 한 줄 = [끝 시각, [[단어 시작 시각, '단어', [[글자 시각, '글자'], ...]], ...], 뒷소리 0/1]. 글자는 시각이 지나면 노란색 (노래방처럼, 글자 단위).
 const DUDE_LRC = `
 [ti:dude 댄스]
+[offset:250]
 [re:가사 타이밍 도구 · 확장 LRC (<시간>글자, 줄 끝 <시간> = 줄 끝, bg: = 뒷소리)]
 [00:02.20]<00:02.20>호이! <00:02.73>호이! <00:03.16>호이! <00:03.61>호이! <00:04.40>
 [00:05.76]<00:05.76>호이! <00:06.24>호이! <00:06.68>호이! <00:07.08>호이! <00:07.30>
@@ -65,11 +67,11 @@ const DUDE_LRC = `
 [02:06.70]bg:<02:06.70>호이! <02:07.11>호이! <02:07.52>호이! <02:07.94>호이! <02:08.60>
 `;
 function lrcParse(text) {
-  const T = s => { const m = s.match(/(\d+):(\d+(?:\.\d+)?)/); return +m[1] * 60 + +m[2]; }, out = [];
+  const T = s => { const m = s.match(/(\d+):(\d+(?:\.\d+)?)/); return +m[1] * 60 + +m[2]; }, out = []; let off = 0;
   for (const raw of text.split(/\r?\n/)) {
     let s = raw.trim(); const tags = []; let m;
     while ((m = s.match(/^\[(\d+:\d+(?:\.\d+)?)\]/))) { tags.push(T(m[1])); s = s.slice(m[0].length); }
-    if (!tags.length) continue; // [ti:…] 같은 메타 줄
+    if (!tags.length) { const om = s.match(/^\[offset:\s*([+-]?\d+(?:\.\d+)?)\s*\]$/i); if (om) off = +om[1] / 1000; continue; } // [ti:…] 같은 메타 줄
     let bg = 0; if (/^bg:/i.test(s)) { bg = 1; s = s.replace(/^bg:\s*/i, ''); }
     const words = []; let pend = tags[0], end = null, w = null, any = false;
     for (const part of s.split(/(<\d+:\d+(?:\.\d+)?>)/)) {
@@ -84,6 +86,7 @@ function lrcParse(text) {
     if (pend != null && any) end = pend;
     if (words.length) out.push([end, words, bg]);
   }
+  if (off) for (const l of out) { if (l[0] != null) l[0] -= off; for (const w of l[1]) { w[0] -= off; for (const c of w[2]) c[0] -= off; } }
   out.forEach((l, i) => {
     let last = 0; for (const w of l[1]) for (const c of w[2]) last = Math.max(last, c[0]);
     let e = l[0]; if (e == null || e <= last || e > last + 3) e = last + .5;
