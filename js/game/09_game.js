@@ -5,11 +5,11 @@ const PAD_POS = { red: [21, 21, 13], lime: [66, 21, 24], purple: [9, 21, 46], bl
 const PAD_ORDER = ['red', 'lime', 'purple', 'blue'];
 const PAD_KO = { red: '빨강', lime: '연두', purple: '보라', blue: '파랑' };
 const G = {
-  tick: 0, phase: 'menu', world: null, me: null, bots: [], remotes: new Map(), mobs: [], rmobs: new Map(), arrows: [], drops: [], chains: [], parts: [], timers: [], ices: [], vigs: [], pigs: [], dancers: new Map(), cut: null, domains: [], ghosts: [], dashFx: new Map(), fangs: [], fangLines: [], zones: [], fangHit: new Map(),
+  tick: 0, phase: 'menu', world: null, me: null, bots: [], remotes: new Map(), mobs: [], rmobs: new Map(), arrows: [], drops: [], chains: [], parts: [], timers: [], ices: [], vigs: [], pigs: [], dancers: new Map(), jvis: new Map(), vbolts: [], cut: null, domains: [], ghosts: [], dashFx: new Map(), fangs: [], fangLines: [], zones: [], fangHit: new Map(),
   match: false, winShown: false, kills: {}, mobN: 0, fangN: 0, arrowN: 0, dropN: 0, practice: false, nid: uid(6),
   pads: PAD_ORDER.map(k => ({ x: PAD_POS[k][0], y: PAD_POS[k][1], z: PAD_POS[k][2], k })),
   initWorld() { const [sx, sy, sz] = MAPDATA.size; this.world = new World(sx, sy, sz); this.world.loadRLE(MAPDATA.rle); this.orig = this.world.b.slice(); },
-  resetWorld() { this.world.b.set(this.orig); for (let i = 0; i < this.world.cx * this.world.cy * this.world.cz; i++) this.world.dirty.add(i); this.ices = []; this.vigs = []; this.fangs = []; this.fangLines = []; this.zones = []; this.fangHit.clear(); MOD.proj = []; this.pigs = []; this.dancers.clear(); this.cut = null; this.domains = []; this.ghosts = []; this.dashFx.clear(); },
+  resetWorld() { this.world.b.set(this.orig); for (let i = 0; i < this.world.cx * this.world.cy * this.world.cz; i++) this.world.dirty.add(i); this.ices = []; this.vigs = []; this.fangs = []; this.fangLines = []; this.zones = []; this.fangHit.clear(); MOD.proj = []; SK.bolts = []; this.vbolts = []; this.jvis.clear(); this.pigs = []; this.dancers.clear(); this.cut = null; this.domains = []; this.ghosts = []; this.dashFx.clear(); },
   // ---------- entity queries ----------
   players() {
     const a = []; if (this.phase === 'game' && this.me) a.push(this.me); for (const b of this.bots) a.push(b);
@@ -139,6 +139,13 @@ const G = {
       }
       case 'gcutx': SK.onGunCancel(ev); break;
       case 'dfrog': { const d = this.dancers.get(ev.by); if (d && d.frogs.length < 40) { d.frogs.push({ x: ev.x, y: ev.y, z: ev.z, yaw: ev.yaw || 0, s0: performance.now() }); this.particles('poof', ev.x, ev.y + .4, ev.z, 5); } break; }
+      // effects everyone sees (jobs in js/jobs/ that were ported from dev-tool results): SK.vfx / SK.jv / SK.vbolt / SK.nsyn
+      case 'jfx': SK.vfxRun(ev.o); break;
+      case 'jv': if (ev.s) this.jvis.set(ev.id, { j: ev.j, s: ev.s, t0: this.tick }); else this.jvis.delete(ev.id); break;
+      case 'vb': this.vbolts = this.vbolts.filter(b => b.id !== ev.id); this.vbolts.push({ id: ev.id, x: ev.p[0], y: ev.p[1], z: ev.p[2], vx: ev.v[0], vy: ev.v[1], vz: ev.v[2], g: ev.g || 0, col: ev.c, n: ev.n || 2, life: ev.l || 60, age: 0 }); break;
+      case 'vbu': { const b = this.vbolts.find(b => b.id === ev.id); if (b) { b.x = ev.p[0]; b.y = ev.p[1]; b.z = ev.p[2]; b.vx = ev.v[0]; b.vy = ev.v[1]; b.vz = ev.v[2]; } break; }
+      case 'vbx': this.vbolts = this.vbolts.filter(b => b.id !== ev.id); break;
+      case 'syn': AU.synth(ev.d || {}, ev.p ? { x: ev.p[0], y: ev.p[1], z: ev.p[2] } : null); break;
       case 'srpig': this.pigs.push({ x: ev.x, y: ev.y, z: ev.z, by: ev.by, yaw: ev.yaw || 0, t0: this.tick }); break;
       case 'srbeam': SK.srLine({ x: ev.a[0], y: ev.a[1], z: ev.a[2] }, { x: ev.b[0], y: ev.b[1], z: ev.b[2] }, ev.c || [1, .15, .15], .3); this.particles('glow', ev.b[0], ev.b[1], ev.b[2]); break;
       case 'srdomain': this.domains = this.domains.filter(d => d.by !== ev.by); this.domains.push({ x: ev.x, y: ev.y, z: ev.z, r: 5, by: ev.by, tid: ev.tid, t0: this.tick }); break;
@@ -157,7 +164,7 @@ const G = {
         for (const m of this.mobs) if (m.alive && dist3(m, c) <= 3) m.hurt(6, { type: 'explosion', by: ev.by, nokb: true });
         break;
       }
-      case 'death': this.deathMsg(ev.v, ev.by, ev.c, ev.p ? { x: ev.p[0], y: ev.p[1], z: ev.p[2] } : null); break;
+      case 'death': this.jvis.delete(ev.v); this.deathMsg(ev.v, ev.by, ev.c, ev.p ? { x: ev.p[0], y: ev.p[1], z: ev.p[2] } : null); break;
       case 'start': if (ev.fm) this.setMode(ev.fm[0], ev.fm[1], ev.fm[2]); this.startMatch(false); break;
       case 'mode': if (!this.isHost()) this.setMode(ev.ffa, ev.t, ev.uniq); break;
       case 'chat': UI.chat('<' + this.nameOf(from) + '§f> ' + String(ev.m).slice(0, 120), true); break;
@@ -216,7 +223,7 @@ const G = {
     UI.chat(m);
   },
   onDeath(p, killer, type) {
-    const pos = { x: r1(p.x), y: r1(p.y), z: r1(p.z) }; this.deathMsg(p.id, killer, type, pos); NET.emit({ k: 'death', v: p.id, by: killer, c: type, p: [pos.x, pos.y, pos.z] });
+    const pos = { x: r1(p.x), y: r1(p.y), z: r1(p.z) }; this.jvis.delete(p.id); this.deathMsg(p.id, killer, type, pos); NET.emit({ k: 'death', v: p.id, by: killer, c: type, p: [pos.x, pos.y, pos.z] });
     const hold = (p.st.cutUntil || 0) - this.tick; // 권총 컷씬 victim: still looks alive until the 컷씬 ends -> poof then
     if (hold > 0) this.after(hold, () => { this.particles('poof', p.x, p.y + 1, p.z, 12); AU.sfx('death', p); });
     else { this.particles('poof', p.x, p.y + 1, p.z, 12); AU.sfx('death', p); }
@@ -376,7 +383,7 @@ const G = {
         if (rattle) AU.sfx('chain', null, .55, .85 + Math.random() * .3); if (done) AU.sfx('chainplace', null, .7); }
       this.chains = this.chains.filter(c => c.t <= 20);
       for (const r of this.remotes.values()) { if (r.hurtTime > 0) r.hurtTime--; if (r.swingT > 0) r.swingT--; if (r.spectator || r.ph !== 'game') r.hurtTime = 0; } // remotes: hurt flash/swing count down here (they have no own tick) -> no permanent red skin
-      SK.fangTick(); if (MOD.proj.length) MOD.projTick(); if (SK.bolts.length) SK.boltTick(); if (this.pigs.length) SK.srPigTick(); if (this.domains.length) SK.srDomainTick(); if (this.zones.length) SK.zoneTick();
+      SK.fangTick(); if (MOD.proj.length) MOD.projTick(); if (SK.bolts.length) SK.boltTick(); if (this.vbolts.length) SK.vboltTick(); if (this.jvis.size) SK.jvisTick(); if (this.pigs.length) SK.srPigTick(); if (this.domains.length) SK.srDomainTick(); if (this.zones.length) SK.zoneTick();
       if (PACK.on) this.footsteps();
       // 창찬 dash afterimages: a fading copy every tick while dashing (works for remote players too)
       for (const [id, until] of this.dashFx) { if (this.tick >= until) { this.dashFx.delete(id); continue; } const e = this.players().find(q => q.id === id); if (!e) continue; const lg = this.ghosts[this.ghosts.length - 1]; if (lg && lg.id === id && Math.hypot(lg.x - e.x, lg.z - e.z) < .4) continue; this.ghosts.push({ id, e, x: e.x, y: e.y, z: e.z, yaw: e.yaw, pitch: e.pitch, walkP: e.walkP || 0, walkA: e.walkA || 0, life: 10 }); }

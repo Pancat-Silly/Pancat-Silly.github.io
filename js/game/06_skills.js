@@ -63,12 +63,37 @@ const SK = {
     const d = lookVec(p.yaw, 0); let k = 0; for (let s = .5; s <= dist; s += .5) { const x = p.x + d.x * s, z = p.z + d.z * s; if (G.world.solidAt(x, p.y + .1, z) || G.world.solidAt(x, p.y + 1.5, z)) break; k = s; }
     p.x = p.px = p.x + d.x * k; p.py = p.y; p.z = p.pz = p.z + d.z * k; p.vx = p.vy = p.vz = 0; p.fallDist = 0; return k;
   },
-  // simple magic projectile (particle trail), simulated by the owner's client: o = { speed, gravity, size, life (ticks), damage, type, kb, color, trail, pierce, onHit(t, pos) }
+  // ---------- effects everyone sees (G.emitAndApply → every client draws the same thing) ----------
+  // one-shot: ops ['p', type, x, y, z, n, col] particles · ['l', ax, ay, az, bx, by, bz, col, step] line · ['r', x, y, z, r, col, n] ring
+  vfx(...ops) { G.emitAndApply({ k: 'jfx', o: ops.map(o => o.map(v => typeof v === 'number' ? r1(v) : v)) }); },
+  vfxRun(ops) { for (const o of ops || []) { if (o[0] === 'p') G.particles(o[1], o[2], o[3], o[4], o[5], o[6]); else if (o[0] === 'l') SK.srLine({ x: o[1], y: o[2], z: o[3] }, { x: o[4], y: o[5], z: o[6] }, o[7], o[8] || .4); else if (o[0] === 'r') SK.srRing(o[1], o[2], o[3], o[4], o[5], o[6] || 24); } },
+  np(type, x, y, z, n, col) { SK.vfx(['p', type, x, y, z, n, col]); },
+  nl(a, b, col, step) { SK.vfx(['l', a.x, a.y, a.z, b.x, b.y, b.z, col, step]); },
+  nr(x, y, z, r, col, n) { SK.vfx(['r', x, y, z, r, col, n]); },
+  nsyn(d, at) { G.emitAndApply({ k: 'syn', d, p: at ? [r1(at.x), r1(at.y), r1(at.z)] : 0 }); }, // AU.synth heard by everyone nearby
+  // lasting visuals of one player (vex circling, gauge orbs …): s = small state, null = off. Every client calls JOB_HOOK[job].vis(e, s, age, tick) each tick
+  // (s holds durations in ticks from now: age = ticks since it was sent). Cleared on death.
+  jv(p, s) { G.emitAndApply({ k: 'jv', id: p.id, j: p.job, s: s || null }); },
+  jvisTick() {
+    for (const [id, v] of G.jvis) { const e = G.entity(id); if (!e || e.job !== v.j) { G.jvis.delete(id); continue; } /* gone / switched job */ if (!e.alive || e.spectator) continue; const H = JOB_HOOK[v.j]; if (H && H.vis) H.vis(e, v.s, G.tick - v.t0, G.tick); }
+  },
+  // visual copy of a projectile on every client (the owner simulates the real one and ends the copy): v = per-tick velocity
+  _vbN: 0,
+  vbolt(p, pos, v, col, n, life, g) { const id = p.id + ':v' + (++SK._vbN); G.emitAndApply({ k: 'vb', id, p: [r1(pos.x), r1(pos.y), r1(pos.z)], v: [r1(v.x), r1(v.y), r1(v.z)], c: col, n, l: life, g: g || 0 }); return id; },
+  vboltSet(id, pos, v) { G.emitAndApply({ k: 'vbu', id, p: [r1(pos.x), r1(pos.y), r1(pos.z)], v: [r1(v.x), r1(v.y), r1(v.z)] }); },
+  vboltEnd(id) { if (id) G.emitAndApply({ k: 'vbx', id }); },
+  vboltTick() {
+    const W = G.world;
+    for (const b of G.vbolts) { b.age++; for (let s = 0; s < 4 && !b.dead; s++) { b.vy -= b.g / 4; b.x += b.vx / 4; b.y += b.vy / 4; b.z += b.vz / 4; if (W.solidAt(b.x, b.y, b.z)) b.dead = true; } if (b.age > b.life) b.dead = true; if (!b.dead) G.particles('dust', b.x, b.y, b.z, b.n, b.col); }
+    G.vbolts = G.vbolts.filter(b => !b.dead);
+  },
+  // simple magic projectile, simulated by the owner's client (everyone sees its trail: SK.vbolt): o = { speed, gravity, size, life (ticks), damage, type, kb, color, trail, pierce, onHit(t, pos) }
   bolts: [],
   bolt(p, o) {
     const d = o.dir || lookVec(p.yaw, p.pitch), sp = o.speed || 1.2, e = { x: p.x, y: p.y + p.eye, z: p.z };
     SK.bolts.push({ owner: p, x: e.x + d.x * .6, y: e.y + d.y * .6 - .1, z: e.z + d.z * .6, vx: d.x * sp, vy: d.y * sp, vz: d.z * sp, gravity: o.gravity || 0, size: o.size || .3, damage: o.damage || 0, type: o.type || 'magic', kb: o.kb || 0,
       life: o.life || 60, color: o.color || [1, .6, .2], trail: o.trail || 2, pierce: !!o.pierce, onHit: o.onHit, hitIds: new Set(), age: 0 });
+    const q = SK.bolts[SK.bolts.length - 1]; q.vid = SK.vbolt(p, q, { x: q.vx, y: q.vy, z: q.vz }, q.color, q.trail, q.life + 1, q.gravity); // everyone sees the trail
   },
   boltTick() {
     const W = G.world;
@@ -83,7 +108,7 @@ const SK = {
           if (!q.pierce) { q.dead = true; break; } } }
       }
       if (!q.dead && q.age >= q.life) q.dead = true;
-      if (!q.dead || q.age < 2) G.particles('dust', q.x, q.y, q.z, q.trail, q.color);
+      if (q.dead) SK.vboltEnd(q.vid);
     }
     SK.bolts = SK.bolts.filter(q => !q.dead);
   },
