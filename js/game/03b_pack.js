@@ -171,7 +171,7 @@ const ITEM_ART = {
   sr_sword: { l: [['item/iron_sword']], h: 1 }, sr_pig: { l: [['item/porkchop']] }, sr_laser: { l: [['item/amethyst_shard']] }, sr_domain: { l: [['item/nether_star']] },
   sstaff: { l: [['item/blaze_rod']], h: 1 }, dogs: { l: [['item/bone']] }, fangl: { l: [['item/totem_of_undying']] }, rzone: { l: [['item/glowstone_dust']] }, fangc: { l: [['item/echo_shard']] }, drug: POT(0x8932B8),
 };
-const ITEM_TEX_PATHS = () => [...new Set(Object.values(ITEM_ART).flatMap(a => a.cube ? a.cube : a.l.map(l => l[0])))];
+const ITEM_TEX_PATHS = () => [...new Set(Object.values(ITEM_ART).flatMap(a => a.cube ? a.cube : a.l.map(l => l[0])).concat(['block/fire_0']))]; // + the burning-screen fire strip (UI.fireOv)
 // 360's 3 / 6 / 0 are white banners with blue banner patterns (applied in order) - drawn here, no texture needed
 const BANNER_PAT = {
   rod0: ['stripe_right', 'stripe_left', 'stripe_bottom', 'stripe_top', '!border'],

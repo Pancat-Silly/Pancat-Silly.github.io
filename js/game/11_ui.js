@@ -302,8 +302,26 @@ const UI = {
       }
     }
   },
+  // on fire: MC first-person fire (same as 랜덤블록 RUI.fireOv): two flame sprites in the bottom 30 %, tilted -5 / +5 deg, under the HUD.
+  // Pack on: the vanilla block/fire_0 strip (fetched with the item textures), one frame per tick; off: a drawn fire sprite
+  fireOv(me) {
+    const on = me.fire > 0 && me.alive && !me.spectator && !R.third; let el = this._fov;
+    if (!el) { if (!on) return; el = this._fov = document.createElement('div'); el.style.cssText = 'position:absolute;inset:0;pointer-events:none;overflow:hidden;display:none'; el.innerHTML = '<i></i><i></i>'; const H = $('hud'); H.insertBefore(el, H.firstChild); }
+    el.style.display = on ? '' : 'none'; if (!on) return;
+    const src = PACK.on && PACK.data && PACK.data.itex && PACK.data.itex['block/fire_0'];
+    if (this._fovSrc !== (src || 'x')) { this._fovSrc = src || 'x';
+      const set = (url, n) => { for (const [i, f] of [...el.children].entries()) f.style.cssText = 'position:absolute;bottom:-2.5vw;width:50vw;height:30vh;transform-origin:50% 100%;opacity:.9;image-rendering:pixelated;background:url(' + url + ') 0 0/100% ' + n * 100 + '% no-repeat;' + (i ? 'right:0;transform:rotate(5deg) scaleX(-1)' : 'left:0;transform:rotate(-5deg)') + (n > 1 ? ';animation:apFireA ' + (n - 1) * .05 + 's steps(' + (n - 1) + ') infinite' : '');
+        if (n > 1 && !document.getElementById('apFireK')) { const s = document.createElement('style'); s.id = 'apFireK'; s.textContent = '@keyframes apFireA{to{background-position:0 100%}}'; document.head.appendChild(s); } };
+      if (src) createImageBitmap(src).then(b => set(URL.createObjectURL(src), Math.max(1, Math.round(b.height / b.width)))).catch(() => { });
+      else { const c = document.createElement('canvas'); c.width = c.height = 16; const g = c.getContext('2d'); for (let x = 0; x < 16; x++) { const h = 6 + Math.sin(x * 1.3) * 3 + Math.random() * 4; for (let y = 0; y < 16; y++) if (y > 16 - h) { g.fillStyle = y > 16 - h * .5 ? '#ff7814' : '#ffd23c'; g.fillRect(x, y, 1, 1); } } set(c.toDataURL(), 1); } }
+  },
+  burnFx() { // flames on every burning body (others: presence flag 64) - local particles, so everyone sees them without extra traffic
+    if (G.tick === this._bfT) return; this._bfT = G.tick; if (G.tick % 2) return;
+    for (const p of G.players()) { if (!p || p.spectator || p.alive === false) continue; const burning = p.local ? p.fire > 0 : p.burning; if (!burning) continue; if (p === G.me && !R.third) continue; G.particles('burn', p.x, p.y, p.z, 2); }
+  },
   hud(dt) {
     const me = G.me; if (!me) return; const now = performance.now();
+    this.fireOv(me); this.burnFx();
     this.drawHearts(me);
     // hotbar
     const hb = $('hotbar').children;

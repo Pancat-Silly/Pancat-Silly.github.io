@@ -8,7 +8,9 @@ const G = {
   tick: 0, phase: 'menu', world: null, me: null, bots: [], remotes: new Map(), mobs: [], rmobs: new Map(), arrows: [], drops: [], chains: [], parts: [], timers: [], ices: [], vigs: [], pigs: [], dancers: new Map(), jvis: new Map(), vbolts: [], cut: null, domains: [], ghosts: [], dashFx: new Map(), fangs: [], fangLines: [], zones: [], fangHit: new Map(),
   match: false, winShown: false, kills: {}, mobN: 0, fangN: 0, arrowN: 0, dropN: 0, practice: false, nid: uid(6),
   pads: PAD_ORDER.map(k => ({ x: PAD_POS[k][0], y: PAD_POS[k][1], z: PAD_POS[k][2], k })),
-  initWorld() { const [sx, sy, sz] = MAPDATA.size; this.world = new World(sx, sy, sz); this.world.loadRLE(MAPDATA.rle); this.orig = this.world.b.slice(); },
+  initWorld() { const [sx, sy, sz] = MAPDATA.size; this.world = new World(sx, sy, sz); this.world.loadRLE(MAPDATA.rle);
+    const W = this.world; for (let z = 0; z < sz; z++) for (let x = 0; x < sx; x++) if (W.get(x, 1, z) === 39 && W.get(x, 2, z) === 39) W.set(x, 1, z, 1); // lava sea 1 deep: y1 = light gray concrete (same as y0)
+    this.orig = this.world.b.slice(); },
   resetWorld() { this.world.b.set(this.orig); for (let i = 0; i < this.world.cx * this.world.cy * this.world.cz; i++) this.world.dirty.add(i); this.ices = []; this.vigs = []; this.fangs = []; this.fangLines = []; this.zones = []; this.fangHit.clear(); MOD.proj = []; SK.bolts = []; this.vbolts = []; this.jvis.clear(); this.pigs = []; this.dancers.clear(); this.cut = null; this.domains = []; this.ghosts = []; this.dashFx.clear(); },
   // ---------- entity queries ----------
   players() {
@@ -304,6 +306,7 @@ const G = {
       case 'sweep': for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI; add({ x: x + Math.cos(a), z: z + Math.sin(a), col: [.9, .9, .9], life: 6, s: .12, a: .7 }); } break;
       case 'explosion': for (let i = 0; i < 18; i++) add({ x: x + rand(-1, 1), y: y + rand(-.5, 1), z: z + rand(-1, 1), vx: rand(-.1, .1), vy: rand(0, .1), vz: rand(-.1, .1), col: [.85, .85, .85].map(c => c * rand(.7, 1)), life: randi(10, 22), s: rand(.15, .35) }); break;
       case 'poof': for (let i = 0; i < (n || 8); i++) add({ x: x + rand(-.4, .4), y: y + rand(-.3, .3), z: z + rand(-.4, .4), vx: rand(-.05, .05), vy: rand(0, .08), vz: rand(-.05, .05), col: [.95, .95, .95], life: 16, s: .1 }); break;
+      case 'burn': for (let i = 0; i < (n || 2); i++) add({ x: x + rand(-.32, .32), y: y + rand(0, 1.7), z: z + rand(-.32, .32), vy: rand(.03, .07), col: [1, rand(.45, .75), .08], life: randi(8, 14), s: rand(.06, .1) }); break; // on fire (lava, fire aspect …)
       case 'flame': for (let i = 0; i < 14; i++) add({ x: x + rand(-1, 1), y: y + rand(0, .3), z: z + rand(-1, 1), vy: rand(.02, .08), col: [1, rand(.4, .7), .1], life: 18, s: .07 }); add({ col: [.9, .9, .9], s: .4, life: 6 }); break;
       case 'ice': for (let i = 0; i < (n || 6); i++) add({ x: x + rand(-.4, .4), y: y + rand(-.4, .4), z: z + rand(-.4, .4), vx: rand(-.1, .1), vy: rand(0, .2), vz: rand(-.1, .1), g: .04, col: [.6, .8, 1], life: 18, s: .07 }); break;
       case 'slime': for (let i = 0; i < 16; i++) add({ x: x + rand(-1.5, 1.5), y: y + rand(-.5, .5), z: z + rand(-1.5, 1.5), vy: rand(0, .2), g: .04, col: [.45, .85, .35], life: 16, s: .08 }); break;
