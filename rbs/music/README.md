@@ -11,4 +11,4 @@ YouTube 오디오 보관함 무료 음악:
 - getdown.mp3: Getdown - Point Green (인게임)
 - bubble.mp3: Bubble - Raven & Kreyn (데스매치 고정, 0:32부터 페이드인)
 
-로비 음악 Sleeplessness - The Brothers Records는 원작처럼 꺼져 있어서 받지 않아요.
+- sleeplessness.mp3: Sleeplessness - The Brothers Records (로비 · 놀이터, 설정 "로비 음악")

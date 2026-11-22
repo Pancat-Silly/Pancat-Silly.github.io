@@ -1,14 +1,14 @@
 // ===================== Random Block Survival: UI (HUD, chat, containers, menu chest) =====================
 const RUI = {
-  name: '', skin: '', sens: 1, fov: 70, vol: .8, mvol: 1, res: 1, bob: true, musicOn: true, sfxOn: true, bgm: 'barge', splash: false, winSnd: 'sfx_win_yay', lobbyMusic: false, autoFs: true, room: 'main', rdist: 8, pmax: 3000, sndLim: false, // rdist: 경기장 렌더 거리(청크), pmax: 파티클 최대 개수, sndLim: 같은 소리 제한. BGM / win sound / lobby music choices removed for now (defaults only). room: 기본 멀티 방 이름
+  name: '', skin: '', sens: 1, fov: 70, vol: .8, mvol: 1, res: 1, bob: true, musicOn: true, sfxOn: true, bgm: 'barge', splash: false, winSnd: 'sfx_win_yay', lobbyBgm: true, autoFs: true, room: 'main', rdist: 8, pmax: 3000, sndLim: false, // rdist: 경기장 렌더 거리(청크), pmax: 파티클 최대 개수, sndLim: 같은 소리 제한. BGM / win sound / lobby music choices removed for now (defaults only). room: 기본 멀티 방 이름
   mobile: false, god: false, botAI: true, gui: null, paused: false, chatOpen: false, promptOpen: false, follow: null, followThird: false, hideHud: false, started: false, cursor: null, iconCache: {},
   load() {
     let s = {}; try { s = JSON.parse(localStorage.getItem('rbs_set') || '{}'); } catch (e) { }
     let ap = {}; try { ap = JSON.parse(localStorage.getItem('apvp') || '{}'); } catch (e) { }
     this.name = s.name || ap.name || ('플레이어' + randi(100, 999)); this.skin = s.skin !== undefined ? s.skin : (ap.skin || '');
-    for (const k of ['sens', 'fov', 'vol', 'mvol', 'res', 'bob', 'sfxOn', 'bgm', 'autoFs', 'room', 'rdist', 'pmax', 'sndLim']) if (s[k] !== undefined) this[k] = s[k]; if (!this.room) this.room = 'main';
+    for (const k of ['sens', 'fov', 'vol', 'mvol', 'res', 'bob', 'sfxOn', 'bgm', 'lobbyBgm', 'autoFs', 'room', 'rdist', 'pmax', 'sndLim']) if (s[k] !== undefined) this[k] = s[k]; if (!this.room) this.room = 'main';
   },
-  save() { try { const o = {}; for (const k of ['name', 'skin', 'sens', 'fov', 'vol', 'mvol', 'res', 'bob', 'musicOn', 'sfxOn', 'bgm', 'winSnd', 'lobbyMusic', 'autoFs', 'room', 'rdist', 'pmax', 'sndLim']) o[k] = this[k]; localStorage.setItem('rbs_set', JSON.stringify(o)); } catch (e) { } },
+  save() { try { const o = {}; for (const k of ['name', 'skin', 'sens', 'fov', 'vol', 'mvol', 'res', 'bob', 'musicOn', 'sfxOn', 'bgm', 'winSnd', 'lobbyBgm', 'autoFs', 'room', 'rdist', 'pmax', 'sndLim']) o[k] = this[k]; localStorage.setItem('rbs_set', JSON.stringify(o)); } catch (e) { } },
   // ---------- § colour codes ----------
   COL: { 0: '#000', 1: '#00a', 2: '#0a0', 3: '#0aa', 4: '#a00', 5: '#a0a', 6: '#fa0', 7: '#aaa', 8: '#555', 9: '#55f', a: '#5f5', b: '#5ff', c: '#f55', d: '#f5f', e: '#ff5', f: '#fff' },
   fmt(s) { let out = '', col = null, b = false, it = false; const parts = String(s).split('§'); const open = () => { const st = (col ? 'color:' + col + ';' : '') + (b ? 'font-weight:bold;' : '') + (it ? 'font-style:italic;' : ''); return st ? '<span style="' + st + '">' : '<span>'; };
@@ -163,7 +163,7 @@ const RUI = {
     } else if (pg === 'set') {
       h += R('효과음 볼륨', 0, 1, .05, this.vol, v => Math.round(v * 100) + '%', v => { this.vol = v; RAU.setVol(); });
       h += R('음악 볼륨', 0, 1, .05, this.mvol, v => Math.round(v * 100) + '%', v => { this.mvol = v; RAU.setVol(); });
-      if (RBGM.has && !RBGM.busy) { h += B('인게임 배경음악: ' + RBGM.name(this.bgm), () => { const G = RBGM.GAME; this.bgm = G[(Math.max(0, G.indexOf(this.bgm)) + 1) % G.length]; this.save(); if (G.includes(RAU.bgmKey)) RAU.gameBgm(RAU.bgm.playbackRate); this.menuDraw(); }, '', 'Barge · Burner · Detour · Getdown 중 하나 (데스매치는 Bubble 고정)'); h += B('배경음악 다시 받기', () => RBGM.download()); }
+      if (RBGM.has && !RBGM.busy) { h += B('인게임 배경음악: ' + RBGM.name(this.bgm), () => { const G = RBGM.GAME; this.bgm = G[(Math.max(0, G.indexOf(this.bgm)) + 1) % G.length]; this.save(); if (G.includes(RAU.bgmKey)) RAU.gameBgm(RAU.bgm.playbackRate); this.menuDraw(); }, '', 'Barge · Burner · Detour · Getdown 중 하나 (데스매치는 Bubble 고정)'); h += T('로비 음악', this.lobbyBgm, () => { this.lobbyBgm = !this.lobbyBgm; this.save(); RAU.lobbyMusic(); this.menuDraw(); }, '', '로비 · 놀이터에서 Sleeplessness가 나와요'); h += B('배경음악 다시 받기', () => RBGM.download()); }
       else h += B('배경음악: ' + RBGM.label(), () => RBGM.download(), '', 'YouTube 오디오 보관함의 무료 음악을 이 기기의 브라우저가 직접 받아요 (게임에 포함 안 됨)');
       h += T('효과음', this.sfxOn, () => { this.sfxOn = !this.sfxOn; this.save(); this.menuDraw(); });
       if (!this.mobile) h += T('자동 전체화면', SITE.autoFs(), () => { SITE.setAutoFs(!SITE.autoFs()); this.menuDraw(); }, '', '게임 화면을 클릭하면 브라우저를 전체화면으로 바꿔요 (게임 창 크기는 그대로) · 바탕화면 설정과 같은 값');

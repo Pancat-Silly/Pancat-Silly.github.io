@@ -3,6 +3,7 @@
 //   (RDL, 33_rbs_pack.js) and RBGM downloads them into IndexedDB ('rbs_bgm'). Without them the game runs silent (volume 0.5, loop).
 //   Game BGM by player setting RUI.bgm: Barge (default) / Burner / Detour / Getdown. At 1:30 left: stop -> sfx_hurry -> title ->
 //   2 s later the same BGM again at pitch 1.5. Deathmatch: Bubble, always, starting at 0:32 with a fade-in (loops back to 0:32).
+//   Lobby: Sleeplessness (setting RUI.lobbyBgm, default on).
 // Effects: the pack's custom sfx (embedded). Minecraft's own sounds are NOT bundled: with the vanilla resource pack
 //   downloaded by the player they come from there, otherwise short synthesized stand-ins are used.
 const RAU = {
@@ -38,8 +39,11 @@ const RAU = {
   gameBgm(rate) { const k = RBGM.GAME.includes(RUI.bgm) ? RUI.bgm : 'barge'; this.music(k, rate); },
   dmBgm() { this.music('bubble', 1, 32, 4); }, // 데스매치: Bubble from 0:32, 4 s fade-in
   stopBgm() { if (this.bgm) { try { this.bgm.onended = null; this.bgm.pause(); this.bgm.removeAttribute('src'); this.bgm.load(); } catch (e) { } this.bgm = null; this.bgmKey = ''; } },
-  lobbyMusic() { return; }, // lobby music (Sleeplessness - The Brothers Records) stays off like the original
-  lobbyMusic() { return; if (RUI.lobbyMusic && RUI.musicOn && !this.bgm && RG.gs.ph === 'lobby') this.music('bgm_sleeplessness'); if ((!RUI.lobbyMusic || RG.gs.ph !== 'lobby') && this.bgmKey === 'bgm_sleeplessness') this.stopBgm(); },
+  lobbyMusic() { // 로비 (놀이터 포함): Sleeplessness - The Brothers Records, looped; stops when the round starts
+    const lob = RG.gs.ph === 'lobby' && RUI.lobbyBgm && RUI.musicOn && RBGM.has;
+    if (lob && !this.bgm) this.music('sleeplessness'); else if (!lob && this.bgmKey === 'sleeplessness') this.stopBgm();
+    const a = this.bgm; if (a && a.paused && !a.ended && !this._retry && this.ctx && this.ctx.state === 'running') { this._retry = 1; const p = a.play(); const ok = () => this._retry = 0; if (p && p.then) p.then(ok, () => setTimeout(ok, 1000)); else ok(); } // autoplay was blocked before the first click
+  },
   // ---------- synthesized stand-ins (used without the vanilla pack) ----------
   noise(dur) { const n = Math.floor(this.ctx.sampleRate * dur), b = this.ctx.createBuffer(1, n, this.ctx.sampleRate), d = b.getChannelData(0); for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1; return b; },
   tone(type, f0, f1, dur, vol, t0 = 0) { const c = this.ctx, t = c.currentTime + t0; const o = c.createOscillator(), g = c.createGain(); o.type = type; o.frequency.setValueAtTime(f0, t); if (f1) o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t + dur); o.connect(g); g.connect(this.master); o.start(t); o.stop(t + dur + .02); },

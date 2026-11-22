@@ -64,7 +64,7 @@ const RPACK = {
 // Free tracks from the YouTube Audio Library. Not bundled with the game: fetched from SRC (tried in order, needs CORS) into IndexedDB 'rbs_bgm'.
 const RBGM = {
   SRC: ['rbs/music/'], // base URLs, <SRC><key>.mp3
-  T: { barge: ['Barge', 'Gunnar Olsen'], burner: ['Burner', 'Gunnar Olsen'], detour: ['Detour', 'Gunnar Olsen'], getdown: ['Getdown', 'Point Green'], bubble: ['Bubble', 'Raven & Kreyn'] },
+  T: { barge: ['Barge', 'Gunnar Olsen'], burner: ['Burner', 'Gunnar Olsen'], detour: ['Detour', 'Gunnar Olsen'], getdown: ['Getdown', 'Point Green'], bubble: ['Bubble', 'Raven & Kreyn'], sleeplessness: ['Sleeplessness', 'The Brothers Records'] },
   GAME: ['barge', 'burner', 'detour', 'getdown'], // in-game choices (RUI.bgm); bubble = deathmatch
   has: false, data: null, urls: {}, busy: false, msg: '',
   name(k) { return (this.T[k] || this.T.barge)[0]; },
@@ -92,7 +92,7 @@ const RDL = {
     const opt = (id, on, title, sub) => '<label class="rdlo"><input type="checkbox" id="' + id + '"' + (on ? ' checked' : '') + '><div><b>' + title + '</b><small>' + sub + '</small></div></label>';
     const el = document.createElement('div'); el.className = 'rdl'; el.id = 'rbDl';
     el.innerHTML = '<div class="rgw"><h3>📦 외부 다운로드</h3><p>게임에 들어 있지 않은 파일을 이 기기의 브라우저가 외부에서 직접 받아 저장해요.<br>받을 것을 골라 주세요 · 나중에 설정에서도 바꿀 수 있어요.</p>'
-      + (RBGM.has ? '' : opt('rdlBgm', true, '🎵 배경음악', 'YouTube 오디오 보관함 무료 음악 · 인게임 곡은 설정에서 골라요 (데스매치는 Bubble)<br>' + RBGM.credits('|').split('|').map(esc).join('<br>')))
+      + (RBGM.has ? '' : opt('rdlBgm', true, '🎵 배경음악', 'YouTube 오디오 보관함 무료 음악 · 인게임 곡은 설정에서 골라요 (데스매치는 Bubble · 로비는 Sleeplessness)<br>' + RBGM.credits('|').split('|').map(esc).join('<br>')))
       + (RPACK.has ? '' : opt('rdlPack', true, '🧱 마인크래프트 리소스팩', '1.21.4 바닐라 텍스처 · 사운드 (공식 미러) · 없으면 직접 만든 텍스처와 합성음을 써요'))
       + '<div class="rdlb"><button class="rbtn" data-dl="0">받지 않기</button><button class="rbtn on" data-dl="1">선택한 것 받기</button></div></div>';
     document.body.appendChild(el);
