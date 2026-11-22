@@ -88,3 +88,12 @@ const AU = {
     }
   },
 };
+// simple synth (jobs ported from the dev tool, mod API api.synth): APVP.api.synth({ wave:'square', freq:440, to:220, dur:.2, vol:.4, noise:false }, at)
+AU.synth = function (d, pos) {
+  if (!this.ctx) return; const c = this.ctx, t = c.currentTime, g0 = this.gainFor(pos, d.vol === undefined ? .5 : d.vol, d.range || 16); if (g0 <= .01) return;
+  const g = c.createGain(); g.connect(this.abBus); const dur = clamp(d.dur || .2, .02, 3), at = clamp(d.attack || .005, .001, 1);
+  g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(g0, t + at); g.gain.exponentialRampToValueAtTime(.0001, t + at + dur);
+  let src; if (d.noise) { src = c.createBufferSource(); src.buffer = this.noise; const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = d.freq || 1000; f.Q.value = d.q || 1; src.connect(f); f.connect(g); }
+  else { src = c.createOscillator(); src.type = ['sine', 'square', 'sawtooth', 'triangle'].includes(d.wave) ? d.wave : 'square'; src.frequency.setValueAtTime(d.freq || 440, t); if (d.to) src.frequency.exponentialRampToValueAtTime(Math.max(20, d.to), t + at + dur); src.connect(g); }
+  src.start(t); src.stop(t + at + dur + .05);
+};

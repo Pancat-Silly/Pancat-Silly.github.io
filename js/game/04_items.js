@@ -31,5 +31,9 @@ const JOBS = {}; // 직업 정의: 직업마다 js/jobs/<직업>.js 가 JOBS.<id
 const BOT_JOB = {};
 // 개발 도구로 만든 내장 직업: js/jobs/<직업>.js 중 tools/mkmodjobs.py가 만든 것들이 BUILTIN_JOBS.push({file, code, snd}) (11f_upload.js BUILTIN.load가 모드 API로 불러옴)
 const BUILTIN_JOBS = [];
-const JOB_ORDER = ['rusher', 'policer', 'spider', '360', 'ice_wizard', 'randomizer', 'suno', 'mefab3', 'slime', 'viggle', 'summoner', 'seryong', 'ai', 'bilcorner', 'dude'];
+// 직업별 이벤트 훅: js/jobs/<직업>.js 가 JOB_HOOK.<id> = { tick(p), hit(p, t, dmg), hurt(p, a, src), kill(p, victim, pos), death(p), respawn(p) } 로 넣는다
+// (모드 API의 tick/hit/hurt/kill/death/respawn과 같은 자리에서 불림: 05_player.js, 09_game.js)
+const JOB_HOOK = {};
+function jobHook(p, ev, ...a) { const H = JOB_HOOK[p.job], f = H && H[ev]; if (f) f(p, ...a); }
+const JOB_ORDER = ['rusher', 'policer', 'spider', '360', 'ice_wizard', 'randomizer', 'suno', 'mefab3', 'slime', 'viggle', 'summoner', 'seryong', 'ai', 'bilcorner', 'dude', 'jemwenti', 'yuntomman', 'susu'];
 function mkSlot(id, count = 1) { return { id, count }; }

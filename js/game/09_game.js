@@ -190,7 +190,7 @@ const G = {
   deathMsg(vid, kid, c, pos) {
     if (kid) this.kills[kid] = (this.kills[kid] || 0) + 1;
     this.domains = this.domains.filter(d => d.by !== vid); // 세룡이's space ends when its owner dies
-    if (kid && kid !== vid) { const k = [this.me, ...this.bots].find(q => q && q.id === kid); if (k) { if (k.job === 'seryong') SK.srKill(k, pos); if (MOD.defs[k.job]) MOD.fire(k, 'kill', this.players().find(q => q.id === vid) || { id: vid }, pos || null); } }
+    if (kid && kid !== vid) { const k = [this.me, ...this.bots].find(q => q && q.id === kid); if (k) { if (k.job === 'seryong') SK.srKill(k, pos); jobHook(k, 'kill', this.players().find(q => q.id === vid) || { id: vid }, pos || null); if (MOD.defs[k.job]) MOD.fire(k, 'kill', this.players().find(q => q.id === vid) || { id: vid }, pos || null); } }
     // 세룡이's space also ends when the enemy trapped in it dies (after srKill above, so the in-space kill bonus still counts):
     // the space disappears on every client and its owner loses the space's Regeneration III / Strength II
     for (const dm of this.domains) if (dm.tid === vid) {
@@ -376,7 +376,7 @@ const G = {
         if (rattle) AU.sfx('chain', null, .55, .85 + Math.random() * .3); if (done) AU.sfx('chainplace', null, .7); }
       this.chains = this.chains.filter(c => c.t <= 20);
       for (const r of this.remotes.values()) { if (r.hurtTime > 0) r.hurtTime--; if (r.swingT > 0) r.swingT--; if (r.spectator || r.ph !== 'game') r.hurtTime = 0; } // remotes: hurt flash/swing count down here (they have no own tick) -> no permanent red skin
-      SK.fangTick(); if (MOD.proj.length) MOD.projTick(); if (this.pigs.length) SK.srPigTick(); if (this.domains.length) SK.srDomainTick(); if (this.zones.length) SK.zoneTick();
+      SK.fangTick(); if (MOD.proj.length) MOD.projTick(); if (SK.bolts.length) SK.boltTick(); if (this.pigs.length) SK.srPigTick(); if (this.domains.length) SK.srDomainTick(); if (this.zones.length) SK.zoneTick();
       if (PACK.on) this.footsteps();
       // 창찬 dash afterimages: a fading copy every tick while dashing (works for remote players too)
       for (const [id, until] of this.dashFx) { if (this.tick >= until) { this.dashFx.delete(id); continue; } const e = this.players().find(q => q.id === id); if (!e) continue; const lg = this.ghosts[this.ghosts.length - 1]; if (lg && lg.id === id && Math.hypot(lg.x - e.x, lg.z - e.z) < .4) continue; this.ghosts.push({ id, e, x: e.x, y: e.y, z: e.z, yaw: e.yaw, pitch: e.pitch, walkP: e.walkP || 0, walkA: e.walkA || 0, life: 10 }); }

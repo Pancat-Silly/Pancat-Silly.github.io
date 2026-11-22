@@ -88,7 +88,7 @@ class Player {
     this.updAttr();
     if (this.job === 'dude') this.addEff('jump_boost', 1, 11);
     this.tickEff();
-    if (MOD.defs[this.job] && this.alive) MOD.fire(this, 'tick');
+    if (this.alive) jobHook(this, 'tick'); if (MOD.defs[this.job] && this.alive) MOD.fire(this, 'tick');
     if (this.hurtTime > 0) this.hurtTime--; if (this.invul > 0) this.invul--; this.attackTimer++; if (this.swingT > 0) this.swingT--;
     if (this.jumpCd > 0) this.jumpCd--;
     // sneak / sprint state
@@ -241,7 +241,7 @@ class Player {
     const dx = best.x - this.x, dz = best.z - this.z, dl = Math.hypot(dx, dz) || 1;
     if (this.inv[this.sel] && this.inv[this.sel].id === 'ai_prompt') { const pre = best.hp || 0; dmg = Math.max(dmg, (pre <= 5 ? 2 : pre * .25) * (0.2 + ch * ch * 0.8)); G.particles('crit', best.x, best.y + 1, best.z); } // 프롬프트: 25% of the target's current health
     G.damage(best, dmg, { type: 'melee', by: this.id, dx: dx / dl, dz: dz / dl, kbx, axe: !!h.axe, fx: this.x, fz: this.z, crit });
-    if (MOD.defs[this.job]) MOD.fire(this, 'hit', best, dmg);
+    jobHook(this, 'hit', best, dmg); if (MOD.defs[this.job]) MOD.fire(this, 'hit', best, dmg);
     if (PACK.on) AU.sfx(crit ? 'atk_crit' : sprintHit ? 'atk_kb' : ch > .9 ? 'atk_strong' : 'atk_weak', this, .8);
     if (h.chang) G.sound('chang', this);
     if (this.job === 'summoner' && !G.sameTeam(best.id, this.id)) this.st.dogMark = { id: best.id, until: G.tick + 200 };
@@ -324,7 +324,7 @@ class Player {
       if (this === G.me) { AU.sfx('hurt', null, .9); UI.hurtFlash(); }
       else AU.sfx('hurt', this, .8);
     }
-    if (MOD.defs[this.job]) MOD.fire(this, 'hurt', a, src);
+    jobHook(this, 'hurt', a, src); if (MOD.defs[this.job]) MOD.fire(this, 'hurt', a, src);
     if (this.hp <= 0) this.die(src);
     return true;
   }
@@ -340,7 +340,7 @@ class Player {
     this.hp = 0; const killer = (this.lastAtk && G.tick - this.lastAtk.t < 100) ? this.lastAtk.id : (src.by || null);
     G.onDeath(this, killer, src.type);
     this.deaths++;
-    SK.onDeath(this); if (MOD.defs[this.job]) MOD.fire(this, 'death');
+    SK.onDeath(this); jobHook(this, 'death'); if (MOD.defs[this.job]) MOD.fire(this, 'death');
     this.effects = {}; this.fire = 0; this.vx = this.vy = this.vz = 0; this.fallDist = 0; this.lastAtk = null; this.blockT = 0; this.drawT = 0; this.st = {};
     this.updAttr();
     if (G.match && this.deaths >= 11) { this.spectator = true; this.alive = true; this.hp = this.maxHp(); if (this === G.me) UI.title('§c탈락', '관전자 모드로 전환되었습니다'); G.checkWin(); return; }
@@ -356,6 +356,6 @@ class Player {
     const p = G.pads[this.pad]; this.x = p.x + rand(-.3, .3); this.y = p.y; this.z = p.z + rand(-.3, .3); this.px = this.x; this.py = this.y; this.pz = this.z;
     this.hp = this.maxHp(); this.alive = true; this.invul = 0; this.updAttr(); this.prot = G.tick + 60; this.spawnT = G.tick;
     this.yaw = yawTo(G.world.sx / 2 - this.x, G.world.sz / 2 - this.z);
-    if (MOD.defs[this.job]) MOD.fire(this, 'respawn');
+    jobHook(this, 'respawn'); if (MOD.defs[this.job]) MOD.fire(this, 'respawn');
   }
 }

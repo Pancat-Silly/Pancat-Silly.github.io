@@ -4,7 +4,7 @@
 // API_DOC is the single source for both the api object's documentation in the AI prompt and the dev log hints.
 const MOD = {
   // src: job id -> the code that registered it (✏️ 수정) · userSnd: sounds added in the dev tool (go into the result)
-  defs: {}, sounds: {}, src: {}, curCode: '', userSnd: new Set(), builtinSnd: new Set(), proj: [], missing: {}, errCount: {}, codeLines: [],
+  defs: {}, sounds: {}, src: {}, alias: {}, curCode: '', userSnd: new Set(), builtinSnd: new Set(), proj: [], missing: {}, errCount: {}, codeLines: [],
   // map a stack trace back to the pasted code (new Function adds 2 header lines)
   where(e) { const m = String(e && e.stack || '').match(/mod_job\.js:(\d+):(\d+)/); if (!m) return ''; const ln = +m[1] - 2, col = +m[2]; const src = (this.codeLines[ln - 1] || '').trim(); return ' (코드 ' + ln + '번째 줄 ' + col + '번째 칸' + (src ? ': ' + src.slice(0, 120) : '') + ')'; },
   err(where, e) {
@@ -43,10 +43,13 @@ const MOD = {
     const JOBKEYS = ['id', 'name', 'icon', 'desc', 'maxHp', 'speed', 'kit', 'items', 'offhand', 'armor', 'boots', 'sounds', 'tick', 'hit', 'hurt', 'kill', 'death', 'respawn', 'bot'];
     for (const k in def) if (!JOBKEYS.includes(k)) DEV.log('warn', '직업 "' + id + '": 알 수 없는 항목 "' + k + '" 은 무시돼요 (쓸 수 있는 항목: ' + JOBKEYS.join(', ') + ')');
     const items = def.items || {}; const kit = []; const ITEMKEYS = ['type', 'name', 'icon', 'lore', 'damage', 'dmg', 'speed', 'spd', 'knockback', 'reach', 'color', 'cooldown', 'cd', 'use', 'consume', 'count', 'mc'];
-    for (const iid in items) {
-      if (!/^[a-z][a-z0-9_]{1,30}$/.test(iid)) throw new Error('아이템 id는 영어 소문자/숫자/_ 로 해 주세요: "' + iid + '"');
+    // ✏️ edited official job (id -> <id>_mod): its items keep the official ids in the code, so they load as <item>_mod too (api.useItem / cooldown … translate)
+    const al = MOD.alias[id] = {};
+    for (const iid0 in items) {
+      if (!/^[a-z][a-z0-9_]{1,30}$/.test(iid0)) throw new Error('아이템 id는 영어 소문자/숫자/_ 로 해 주세요: "' + iid0 + '"');
+      const iid = id !== origId && ITEMS[iid0] && !ITEMS[iid0].custom ? iid0 + '_mod' : iid0; if (iid !== iid0) al[iid0] = iid;
       if (ITEMS[iid] && !ITEMS[iid].custom) throw new Error('이미 있는 기본 아이템 id예요: ' + iid + ' (다른 이름을 써 주세요)');
-      const I = items[iid], D = { custom: true, name: I.name || iid, icon: I.icon || '❔', lore: I.lore || '' };
+      const I = items[iid0], D = { custom: true, name: I.name || iid, icon: I.icon || '❔', lore: I.lore || '' };
       for (const k in I) if (!ITEMKEYS.includes(k)) DEV.log('warn', '아이템 "' + iid + '": 알 수 없는 항목 "' + k + '" 은 무시돼요');
       const type = I.type || (I.use ? 'skill' : 'weapon');
       if (type === 'weapon') { D.dmg = +I.damage || +I.dmg || 1; D.spd = +I.speed || +I.spd || 1.6; if (I.knockback) D.kb = +I.knockback; if (I.reach) D.reach = clamp(+I.reach, 2, 6) / 3 - 1; /* player reach = 3 * (1 + reach) */ D.sword = true; D.col = I.color || [.75, .75, .8]; }
@@ -63,10 +66,10 @@ const MOD = {
       else throw new Error(iid + ': type은 weapon / skill / bow / shield / item 중 하나예요 (지금: "' + type + '")');
       ITEMS[iid] = D; try { const A = MOD.artFor(I, type, iid); if (A) ITEM_ART[iid] = A; else delete ITEM_ART[iid]; } catch (e) { DEV.log('warn', '아이템 "' + iid + '": mc 텍스처 이름이 이상해요 (' + e.message + ')'); }
     }
-    for (const k of def.kit || Object.keys(items)) { const ks = [].concat(k).filter(Boolean); for (const x of ks) if (!ITEMS[x]) throw new Error('kit에 없는 아이템: "' + x + '" (items에 만들었거나 기본 아이템 id여야 해요)'); kit.push(ks.length ? ks : null); }
+    for (const k of def.kit || Object.keys(items)) { const ks = [].concat(k).filter(Boolean).map(x => al[x] || x); for (const x of ks) if (!ITEMS[x]) throw new Error('kit에 없는 아이템: "' + x + '" (items에 만들었거나 기본 아이템 id여야 해요)'); kit.push(ks.length ? ks : null); }
     if (!kit.length) throw new Error('kit(핫바에 줄 아이템)이 비어 있어요');
     if (kit.length > 9) throw new Error('kit은 최대 9칸이에요');
-    JOBS[id] = { custom: true, wip: true, name: (def.name || id) + (id !== origId ? ' (모드)' : ''), icon: def.icon || '✨', desc: '커스텀 · ' + (def.desc || ''), kit, maxHp: def.maxHp ? clamp(+def.maxHp, 2, 100) : undefined, speedMul: def.speed ? clamp(+def.speed, .3, 3) : undefined, off: def.offhand || undefined };
+    JOBS[id] = { custom: true, wip: true, name: (def.name || id) + (id !== origId ? ' (모드)' : ''), icon: def.icon || '✨', desc: '커스텀 · ' + (def.desc || ''), kit, maxHp: def.maxHp ? clamp(+def.maxHp, 2, 100) : undefined, speedMul: def.speed ? clamp(+def.speed, .3, 3) : undefined, off: def.offhand ? al[def.offhand] || def.offhand : undefined };
     if (def.armor) JOBS[id].armor = def.armor; if (def.boots) JOBS[id].boots = def.boots;
     this.defs[id] = def; this.src[id] = this.curCode || ''; if (!JOB_ORDER.includes(id)) JOB_ORDER.push(id); if (this.upIds) this.upIds.push(id);
     for (const s of def.sounds || []) if (s && s.name && s.data) this.addSound(s.name, s.data);
@@ -102,17 +105,9 @@ const MOD = {
   },
   missingApi(name) { if (this.missing[name]) { this.missing[name]++; return; } this.missing[name] = 1; DEV.log('error', '없는 API 호출: api.' + name + '(...) — 무시하고 계속 실행해요. 결과물 txt의 "구현 메모"에 자동으로 적혀요'); },
 };
-// simple synth for AI-made sound effects: APVP.api.synth({ wave:'square', freq:440, to:220, dur:.2, vol:.4, noise:false }, at)
-AU.synth = function (d, pos) {
-  if (!this.ctx) return; const c = this.ctx, t = c.currentTime, g0 = this.gainFor(pos, d.vol === undefined ? .5 : d.vol, d.range || 16); if (g0 <= .01) return;
-  const g = c.createGain(); g.connect(this.abBus); const dur = clamp(d.dur || .2, .02, 3), at = clamp(d.attack || .005, .001, 1);
-  g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(g0, t + at); g.gain.exponentialRampToValueAtTime(.0001, t + at + dur);
-  let src; if (d.noise) { src = c.createBufferSource(); src.buffer = this.noise; const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = d.freq || 1000; f.Q.value = d.q || 1; src.connect(f); f.connect(g); }
-  else { src = c.createOscillator(); src.type = ['sine', 'square', 'sawtooth', 'triangle'].includes(d.wave) ? d.wave : 'square'; src.frequency.setValueAtTime(d.freq || 440, t); if (d.to) src.frequency.exponentialRampToValueAtTime(Math.max(20, d.to), t + at + dur); src.connect(g); }
-  src.start(t); src.stop(t + at + dur + .05);
-};
 const MOD_PARTICLES = ['hit', 'crit', 'sweep', 'explosion', 'poof', 'flame', 'ice', 'slime', 'red', 'heart', 'spit', 'block', 'glow', 'totem', 'suck', 'potion', 'dust'];
 const MOD_SOUNDS = 'hit_ crit_ hurt_ swing_ hat_ bass_ anvil_ glass_ explode_ chain_ bow_ arrowhit_ pop_ drink_ eat_ shield_ shieldbreak_ click_ levelup_ firework_ fizz_ splat_ smash_ spider_ reel_ death_ siren_'.split(' ');
+const AID = (p, id) => { const a = p && MOD.alias[p.job]; return a && a[id] || id; }; // item id inside an edited official job (<id>_mod)
 const vec = o => o && typeof o === 'object' && isFinite(o.x) && isFinite(o.z);
 const API = {
   // ---------- info ----------
@@ -186,11 +181,11 @@ const API = {
   chat(text) { UI.chat(text); DEV.log('chat', String(text).replace(/§./g, '')); },
   log(text) { DEV.log('user', String(text)); },
   after(ticks, fn) { G.after(Math.max(1, ticks | 0), () => { try { fn(); } catch (e) { MOD.err('after', e); } }); },
-  addItem(p, id, n = 1) { if (!ITEMS[id]) { DEV.log('warn', 'api.addItem: 없는 아이템 "' + id + '"'); return false; } return p.addItem(id, n); },
-  removeItem(p, id, n = 1) { let k = 0; while (k < n && p.take(id, 1)) k++; return k; }, count(p, id) { return p.count(id); },
-  cooldown(p, itemId) { const D = ITEMS[itemId]; return D && D.group ? p.cdLeft(D.group) / 20 : 0; },
-  setCooldown(p, itemId, sec) { const D = ITEMS[itemId]; if (D && D.group) p.setCd(D.group, sec); else DEV.log('warn', 'api.setCooldown: 쿨타임이 있는 능력 아이템이 아니에요 "' + itemId + '"'); },
-  useItem(p, itemId) { if (!p.inv) return false; const i = p.inv.findIndex(s => s && s.id === itemId); if (i < 0) return false; const s0 = p.sel; p.sel = i; const r = p.usePress(); p.sel = s0; return r === 'used'; },
+  addItem(p, id, n = 1) { id = AID(p, id); if (!ITEMS[id]) { DEV.log('warn', 'api.addItem: 없는 아이템 "' + id + '"'); return false; } return p.addItem(id, n); },
+  removeItem(p, id, n = 1) { id = AID(p, id); let k = 0; while (k < n && p.take(id, 1)) k++; return k; }, count(p, id) { return p.count(AID(p, id)); },
+  cooldown(p, itemId) { const D = ITEMS[AID(p, itemId)]; return D && D.group ? p.cdLeft(D.group) / 20 : 0; },
+  setCooldown(p, itemId, sec) { const D = ITEMS[AID(p, itemId)]; if (D && D.group) p.setCd(D.group, sec); else DEV.log('warn', 'api.setCooldown: 쿨타임이 있는 능력 아이템이 아니에요 "' + itemId + '"'); },
+  useItem(p, itemId) { itemId = AID(p, itemId); if (!p.inv) return false; const i = p.inv.findIndex(s => s && s.id === itemId); if (i < 0) return false; const s0 = p.sel; p.sel = i; const r = p.usePress(); p.sel = s0; return r === 'used'; },
   random: (a = 0, b = 1) => a + Math.random() * (b - a), chance: pct => Math.random() * 100 < pct,
 };
 // in the dev tool, unknown api.xxx calls are logged (and recorded for the 구현 메모) instead of crashing
@@ -303,8 +298,13 @@ const DEV = {
         for (const b of BIG) if (fn(b)) for (const l of String(SK[b]).split('\n')) if ([...stKeys].some(s => l.includes('.st.' + s))) for (const m of l.matchAll(/SK\.([a-zA-Z_$][\w$]*)\s*\(/g)) if (fn(m[1]) && !BIG.has(m[1])) want.add(m[1]);
         for (const k of [...want]) for (const m of String(SK[k]).matchAll(/SK\.([a-zA-Z_$][\w$]*)\s*\(/g)) if (fn(m[1]) && !BIG.has(m[1])) want.add(m[1]); }
       let src = '', cut = false; for (const k of want) { const t = '  ' + String(SK[k]) + ',\n'; if (src.length + t.length > 16000) { cut = true; break; } src += t; }
+      const cs = [...new Set([...(src + Object.values(JOB_HOOK[id] || {}).join('\n') + String(BOT_JOB[id] || '')).matchAll(/SK\.([A-Z][A-Z0-9_]*)\b/g)].map(m => m[1]))].filter(k => k in SK); // constants the code uses (SK.SS_CYAN …)
+      if (cs.length) src = cs.map(k => '  ' + k + ': ' + JSON.stringify(SK[k] instanceof Set ? [...SK[k]] : SK[k]) + ',' + (SK[k] instanceof Set ? ' // Set' : '')).join('\n') + '\n' + src;
       const pl = []; for (const k of BIG) if (fn(k)) for (const l of String(SK[k]).split('\n')) if (l.includes("'" + id + "'") || [...want].some(w => l.includes('SK.' + w + '('))) pl.push(l.trim());
-      L.push('게임 원본 코드 (참고용. 게임 내부 변수 G · p.addEff · AU 등을 써서 그대로는 못 쓴다 → 같은 동작을 APVP API로 옮겨서 만들 것):\n```js\nconst SK = {\n' + src + (cut ? '  // … (길어서 생략)\n' : '') + '};' + (pl.length ? '\n// 매 틱 / 사망 처리 중 이 직업 관련 줄:\n' + pl.join('\n') : '') + '\n```');
+      // the job's event hooks and bot (js/jobs/<직업>.js): JOB_HOOK = mod API tick / hit / hurt / kill / death / respawn, BOT_JOB = bot
+      const H = JOB_HOOK[id] || {}, hk = Object.keys(H).filter(k => typeof H[k] === 'function').map(k => '  ' + String(H[k]) + ',').join('\n');
+      const extra = (hk ? '\nJOB_HOOK.' + id + ' = { // 이 직업의 이벤트 (모드 API의 tick / hit / hurt / kill / death / respawn과 같은 자리에서 불림)\n' + hk + '\n};' : '') + (BOT_JOB[id] ? '\nBOT_JOB.' + id + ' = ' + String(BOT_JOB[id]) + '; // 봇 행동 (모드 API의 bot)' : '');
+      L.push('게임 원본 코드 (참고용. 게임 내부 변수 G · p.addEff · AU 등을 써서 그대로는 못 쓴다 → 같은 동작을 APVP API로 옮겨서 만들 것):\n```js\nconst SK = {\n' + src + (cut ? '  // … (길어서 생략)\n' : '') + '};' + extra + (pl.length ? '\n// 매 틱 / 사망 처리 중 이 직업 관련 줄:\n' + pl.join('\n') : '') + '\n```');
       L.push('이 밖의 패시브(맞을 때·이동 등)는 게임 다른 곳에 있어서 위에 없을 수 있다. 설명을 보고 최대한 같게 만들고, 못 옮긴 부분은 구현 메모에 적는다.');
     }
     L.push('규칙: 원래 id "' + id + '"를 그대로 써서 APVP.addJob으로 직업 전체를 다시 만든다. 사용자가 바꾸라고 한 것 말고는 이름 · 아이콘 · 아이템 · 수치 · 동작을 지금과 똑같이 둔다.');

@@ -41,6 +41,52 @@ const SK = {
     for (const t of otherTargets(p, max + 2)) { const hw = t.w / 2 + .1; const h = rayAABB(o, d, { x0: t.x - hw, y0: t.y, z0: t.z - hw, x1: t.x + hw, y1: t.y + t.h, z1: t.z + hw }); if (h !== null && h < bt) { bt = h; best = t; } } return best; },
   srRing(x, y, z, r, col, n) { for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2; G.particles('dust', x + Math.cos(a) * r, y, z + Math.sin(a) * r, 1, col); } },
   srLine(a, b, col, step) { const L = dist3(a, b); for (let s = 0; s <= L; s += step) { const k = L ? s / L : 0; G.particles('dust', a.x + (b.x - a.x) * k, a.y + (b.y - a.y) * k, a.z + (b.z - a.z) * k, 1, col); } },
+  // ---------- shared helpers (same behavior as the dev tool's mod API, for jobs ported from dev-tool results) ----------
+  // damage t from entity `by`, knocked away from `from` (or the attacker); type 'melee' | 'magic' | 'explosion' | 'fire'
+  deal(t, amt, by, type = 'magic', kb = 0, from) {
+    if (!t || !t.alive) return; const f = from || by; let dx, dz; if (f) { dx = t.x - f.x; dz = t.z - f.z; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l; }
+    G.damage(t, Math.max(0, +amt || 0), { type, by: by ? by.id : undefined, dx, dz, kbx: +kb || 0, nokb: !f, fx: f ? f.x : undefined, fz: f ? f.z : undefined });
+  },
+  near(p, x, y, z, r) { return otherTargets(p).filter(t => Math.hypot(t.x - x, t.y + t.h / 2 - y, t.z - z) <= r + t.w / 2); }, // enemies around a point
+  // explosion at (x, y, z): every enemy in r takes dmg (falloff: less at the edge), knockback kb
+  blast(p, x, y, z, r, dmg, kb = 1.2, falloff = true) {
+    const hit = SK.near(p, x, y, z, r); for (const t of hit) { const d = Math.hypot(t.x - x, t.z - z), f = falloff ? clamp(1 - d / (r + .5), .35, 1) : 1; SK.deal(t, dmg * f, p, 'explosion', kb, { x, z }); }
+    G.fx('explosion', x, y, z); G.sound('explode_', { x, y, z }, 24, 1); return hit;
+  },
+  effOn(t, name, amp, sec) { if (!t || t.kind === 'mob') return; if (t.local) t.addEff(name, amp, sec); else G.applyFx(t, [[name, amp, sec]]); }, // effect on anyone (remote players too)
+  maxHpOf(t) { return !t ? 0 : typeof t.maxHp === 'function' ? t.maxHp() : t.maxHp || 0; },
+  addMaxHp(p, n) { if (!p || !p.local) return; p.st.modHp = clamp((p.st.modHp || 0) + (+n || 0), -18, 80); p.hp = Math.min(p.hp, p.maxHp()); }, // this life only (p.st resets on death)
+  title(p, a, b) { if (p === G.me) UI.title(a, b || '', { fi: 5, st: 40, fo: 15 }); },
+  solid(x, y, z) { return !!BL[G.world.get(Math.floor(x), Math.floor(y), Math.floor(z))].solid; },
+  // straight-line teleport up to dist blocks on the ground plane, stopping before walls; returns the distance moved
+  blink(p, dist) {
+    const d = lookVec(p.yaw, 0); let k = 0; for (let s = .5; s <= dist; s += .5) { const x = p.x + d.x * s, z = p.z + d.z * s; if (G.world.solidAt(x, p.y + .1, z) || G.world.solidAt(x, p.y + 1.5, z)) break; k = s; }
+    p.x = p.px = p.x + d.x * k; p.py = p.y; p.z = p.pz = p.z + d.z * k; p.vx = p.vy = p.vz = 0; p.fallDist = 0; return k;
+  },
+  // simple magic projectile (particle trail), simulated by the owner's client: o = { speed, gravity, size, life (ticks), damage, type, kb, color, trail, pierce, onHit(t, pos) }
+  bolts: [],
+  bolt(p, o) {
+    const d = o.dir || lookVec(p.yaw, p.pitch), sp = o.speed || 1.2, e = { x: p.x, y: p.y + p.eye, z: p.z };
+    SK.bolts.push({ owner: p, x: e.x + d.x * .6, y: e.y + d.y * .6 - .1, z: e.z + d.z * .6, vx: d.x * sp, vy: d.y * sp, vz: d.z * sp, gravity: o.gravity || 0, size: o.size || .3, damage: o.damage || 0, type: o.type || 'magic', kb: o.kb || 0,
+      life: o.life || 60, color: o.color || [1, .6, .2], trail: o.trail || 2, pierce: !!o.pierce, onHit: o.onHit, hitIds: new Set(), age: 0 });
+  },
+  boltTick() {
+    const W = G.world;
+    for (const q of SK.bolts) {
+      if (q.dead) continue; q.age++; const sub = 4;
+      for (let s = 0; s < sub && !q.dead; s++) {
+        q.vy -= q.gravity / sub; q.x += q.vx / sub; q.y += q.vy / sub; q.z += q.vz / sub;
+        if (W.solidAt(q.x, q.y, q.z)) { q.dead = true; break; }
+        for (const t of otherTargets(q.owner, 60)) { if (q.hitIds.has(t.id)) continue; const hw = t.w / 2 + q.size; if (Math.abs(t.x - q.x) < hw && Math.abs(t.z - q.z) < hw && q.y > t.y - q.size && q.y < t.y + t.h + q.size) {
+          q.hitIds.add(t.id); if (q.damage) SK.deal(t, q.damage, q.owner, q.type, q.kb, { x: q.x - q.vx, z: q.z - q.vz });
+          if (q.onHit) q.onHit(t, { x: q.x, y: q.y, z: q.z });
+          if (!q.pierce) { q.dead = true; break; } } }
+      }
+      if (!q.dead && q.age >= q.life) q.dead = true;
+      if (!q.dead || q.age < 2) G.particles('dust', q.x, q.y, q.z, q.trail, q.color);
+    }
+    SK.bolts = SK.bolts.filter(q => !q.dead);
+  },
 };
 
 // ===================== mobs =====================
