@@ -128,7 +128,7 @@ const RUI = {
   // ---------- the one menu (Esc · ☰ · M): 게임 메뉴 -> 설정 -> 화면 · 조작 / 조작법, 호스트 설정. Minecraft-style stone buttons
   // like 4중인격's pause screen; replaces the old menu chest, the lobby hotbar items and the separate settings chests.
   pg: 'main',
-  MPAGE: { main: ['게임 메뉴', null], set: ['설정', 'main'], video: ['화면 · 조작 설정', 'set'], help: ['조작법', 'set'], host: ['호스트 설정', 'main'], multi: ['멀티플레이 설정', null] },
+  MPAGE: { main: ['게임 메뉴', null], set: ['설정', 'main'], video: ['화면 · 조작 설정', 'set'], help: ['조작법', 'set'], music: ['배경음악 정보', 'set'], host: ['호스트 설정', 'main'], multi: ['멀티플레이 설정', null] },
   pause(on, pg) {
     if (on && (this.gui || this.chatOpen || RG.gs.ph === 'win')) return; this.paused = !!on; $('rbPause').classList.toggle('hide', !on);
     if (on) { if (document.pointerLockElement) document.exitPointerLock(); this.pg = pg || 'main'; this.menuDraw(); }
@@ -163,12 +163,13 @@ const RUI = {
     } else if (pg === 'set') {
       h += R('효과음 볼륨', 0, 1, .05, this.vol, v => Math.round(v * 100) + '%', v => { this.vol = v; RAU.setVol(); });
       h += R('음악 볼륨', 0, 1, .05, this.mvol, v => Math.round(v * 100) + '%', v => { this.mvol = v; RAU.setVol(); });
-      if (RBGM.has && !RBGM.busy) { h += B('인게임 배경음악: ' + RBGM.name(this.bgm), () => { const G = RBGM.GAME; this.bgm = G[(Math.max(0, G.indexOf(this.bgm)) + 1) % G.length]; this.save(); if (G.includes(RAU.bgmKey)) RAU.gameBgm(RAU.bgm.playbackRate); this.menuDraw(); }, '', 'Barge · Burner · Detour · Getdown 중 하나 (데스매치는 Bubble 고정)'); h += T('로비 음악', this.lobbyBgm, () => { this.lobbyBgm = !this.lobbyBgm; this.save(); RAU.lobbyMusic(); this.menuDraw(); }, '', '로비 · 놀이터에서 Sleeplessness가 나와요'); h += B('배경음악 다시 받기', () => RBGM.download()); }
+      if (RBGM.has && !RBGM.busy) { h += B('인게임 배경음악: ' + RBGM.name(this.bgm), () => { const G = RBGM.GAME; this.bgm = G[(Math.max(0, G.indexOf(this.bgm)) + 1) % G.length]; this.save(); if (G.includes(RAU.bgmKey)) RAU.gameBgm(RAU.bgm.playbackRate); this.menuDraw(); }, '', 'Barge · Burner · Detour 중 하나 (데스매치는 Bubble, 로비는 Sleeplessness)'); h += T('로비 음악', this.lobbyBgm, () => { this.lobbyBgm = !this.lobbyBgm; this.save(); RAU.lobbyMusic(); this.menuDraw(); }, '', '로비 · 놀이터에서 Sleeplessness가 나와요'); h += B('배경음악 다시 받기', () => RBGM.download()); }
       else h += B('배경음악: ' + RBGM.label(), () => RBGM.download(), '', 'YouTube 오디오 보관함의 무료 음악을 이 기기의 브라우저가 직접 받아요 (게임에 포함 안 됨)');
       h += T('효과음', this.sfxOn, () => { this.sfxOn = !this.sfxOn; this.save(); this.menuDraw(); });
       if (!this.mobile) h += T('자동 전체화면', SITE.autoFs(), () => { SITE.setAutoFs(!SITE.autoFs()); this.menuDraw(); }, '', '게임 화면을 클릭하면 브라우저를 전체화면으로 바꿔요 (게임 창 크기는 그대로) · 바탕화면 설정과 같은 값');
       h += B('리소스팩: ' + RPACK.label(), () => RPACK.click(0), RPACK.on ? 'on' : '', '마인크래프트 1.21.4 바닐라 텍스처 · 사운드를 이 기기의 브라우저가 공식 미러에서 직접 받아요 (게임에 포함 안 됨)');
       if (RPACK.has) h += B('리소스팩 다시 받기', () => RPACK.click(2));
+      h += B('배경음악 정보...', () => this.menuGo('music'), '', '곡 · 원작자 · 출처');
       h += B('화면 · 조작 설정...', () => this.menuGo('video'));
       h += B('조작법...', () => this.menuGo('help'), 'full');
     } else if (pg === 'multi') { // hotbar slot 4 in the lobby
@@ -195,6 +196,8 @@ const RUI = {
         h += B('웅크리기: ' + (RTCTL.sneakHold ? '누르는 동안만' : '눌러서 켜기/끄기'), () => { RTCTL.setSneakHold(!RTCTL.sneakHold); this.menuDraw(); });
         h += B('버튼 배치 편집...', () => RTCTL.openEditor(), 'full', '버튼을 끌어서 옮기고, 크기를 바꾸고, 빼거나 더할 수 있어요 (같은 버튼 여러 개도 가능)');
       }
+    } else if (pg === 'music') {
+      h += '<div class="rmhelp rbgm">' + RBGM.listHTML(false) + '</div><div class="rmnote">' + esc(RBGM.has ? '받음 · 이 기기의 브라우저에 저장돼 있어요' : '아직 받지 않았어요 · 설정에서 받을 수 있어요') + '</div>';
     } else if (pg === 'help') {
       h += '<div class="rmhelp">' + this.HELP + '</div>';
     } else if (pg === 'host') {
@@ -264,6 +267,9 @@ const RUI = {
   beChanged(key) { if (this.gui && this.gui.ctx && this.gui.ctx.key === key && !this.gui.dragging) this.render(); },
 };
 const RUI_CSS = `
+.rbgl{display:flex;flex-direction:column;gap:4px;margin:2px 0}.rbgi{background:rgba(0,0,0,.18);padding:5px 8px;color:#222;font-size:13px;line-height:1.35}.rbgt b{font-weight:bold}.rbgt span{display:block;font-size:11.5px;color:#444}.rbgi small{display:block;font-size:11px;color:#333;margin-top:2px;word-break:break-all}
+.rbgp{position:relative;height:16px;background:#555;border:1px solid #222;margin-top:4px}.rbgp i{position:absolute;left:0;top:0;bottom:0;background:#5a9;transition:width .15s}.rbgp em{position:relative;display:block;text-align:center;font:normal 11px/16px system-ui,sans-serif;color:#fff;text-shadow:1px 1px 0 #000}.rbgp.ok i{background:#3d8a3d}.rbgp.bad i{width:100%!important;background:#8a3d3d}
+.rdlh{font-weight:normal;font-size:15px;color:#222;margin-top:4px}.rdl .rgw{max-height:94vh;overflow:auto}.rbgm .rbgi{background:rgba(255,255,255,.08);color:#eee}.rbgm .rbgt span,.rbgm .rbgi small{color:#bbb}
 .rdl{position:fixed;inset:0;z-index:150000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);font:14px system-ui,'Malgun Gothic',sans-serif}
 .rdl .rgw{width:min(460px,94vw);display:flex;flex-direction:column;gap:8px}.rdl h3{margin:2px 0 0;font-size:18px;font-weight:normal;color:#222;text-align:center}.rdl p{margin:0;font-size:13px;color:#333;line-height:1.45;text-align:center}
 .rdlo{display:flex;gap:10px;align-items:flex-start;background:#8b8b8b;border:2px solid;border-color:#373737 #fff #fff #373737;padding:8px;cursor:pointer;color:#fff;text-shadow:1px 1px 0 #333}.rdlo input{width:20px;height:20px;margin:2px 0 0;flex:none;accent-color:#3d8a3d}

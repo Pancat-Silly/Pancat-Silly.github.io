@@ -20,3 +20,11 @@
 원작 : 마인크래프트 베드락에디션 1.17 에서 만들어진 [랜덤블록 서바이벌 V2.1](https://youtu.be/C_QVJYME30A)을 기반으로 함.
 
 원작자 : 본인
+
+배경음악 (선택 다운로드, 게임 첫 실행 때 "외부 다운로드" 화면에서 고름) :
+- Barge · Burner · Detour – Gunnar Olsen (YouTube 오디오 보관함) : 인게임
+- Sleeplessness – The Brothers Records (YouTube 오디오 보관함) : 로비 · 놀이터
+- Bubble – Raven & Kreyn : 데스매치  
+  Song: Raven & Kreyn - Bubble [NCS Release]  
+  Music provided by NoCopyrightSounds  
+  Free Download/Stream: https://ncs.io/bubble
