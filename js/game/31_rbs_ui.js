@@ -107,8 +107,13 @@ const RUI = {
   drawBars() {
     const me = RG.me; const c = $('rbBars'); const W = 364, H = 46; if (c.width !== W) { c.width = W; c.height = H; } const g = c.getContext('2d'); g.clearRect(0, 0, W, H);
     if (me.mode === 'spectator') return;
-    const heart = (x, y, fill, col) => { g.fillStyle = '#000'; g.beginPath(); g.arc(x + 4, y + 4, 4.4, 0, 7); g.arc(x + 10, y + 4, 4.4, 0, 7); g.moveTo(x - .5, y + 5); g.lineTo(x + 7, y + 13); g.lineTo(x + 14.5, y + 5); g.fill(); if (!fill) { g.fillStyle = '#3a1010'; g.beginPath(); g.arc(x + 4, y + 4, 3, 0, 7); g.arc(x + 10, y + 4, 3, 0, 7); g.moveTo(x + 1, y + 5); g.lineTo(x + 7, y + 11.5); g.lineTo(x + 13, y + 5); g.fill(); return; }
-      g.save(); g.beginPath(); g.rect(x, y - 2, fill === .5 ? 7 : 16, 18); g.clip(); g.fillStyle = col; g.beginPath(); g.arc(x + 4, y + 4, 3, 0, 7); g.arc(x + 10, y + 4, 3, 0, 7); g.moveTo(x + 1, y + 5); g.lineTo(x + 7, y + 11.5); g.lineTo(x + 13, y + 5); g.fill(); g.fillStyle = 'rgba(255,255,255,.6)'; g.fillRect(x + 2, y + 2, 2, 2); g.restore(); };
+    // Minecraft-style pixel heart (9x8 sprite, 1.6 px per pixel): K outline, r fill, h highlight; half = left 4.5 columns filled
+    const HS = ['.KK...KK.', 'KhrK.KrrK', 'KhrrKrrrK', 'KrrrrrrrK', '.KrrrrrK.', '..KrrrK..', '...KrK...', '....K....'], PS = 1.6;
+    const heart = (x, y, fill, col) => { y -= 1;
+      for (let r = 0; r < HS.length; r++) for (let q = 0; q < 9; q++) { const ch = HS[r][q]; if (ch === '.') continue;
+        const on = fill === 1 || (fill === .5 && q < 4) || (fill === .5 && q === 4 && ch === 'K');
+        g.fillStyle = ch === 'K' ? '#000' : !on ? '#2b0b0b' : ch === 'h' ? 'rgba(255,255,255,.75)' : col; g.fillRect(Math.round(x + q * PS), Math.round(y + r * PS), Math.ceil(PS), Math.ceil(PS));
+        if (on && ch === 'h') { g.fillStyle = col; g.globalAlpha = .45; g.fillRect(Math.round(x + q * PS), Math.round(y + r * PS), Math.ceil(PS), Math.ceil(PS)); g.globalAlpha = 1; } } };
     const hp = Math.max(0, me.hp); const hc = me.eff('poison') ? '#7a8f1e' : me.eff('wither') ? '#333' : '#e8231d';
     for (let i = 0; i < 10; i++) { const v = clamp(hp - i * 2, 0, 2); heart(i * 16, 28, v >= 2 ? 1 : v >= 1 ? .5 : 0, hc); }
     for (let i = 0; i < Math.ceil(me.absorb / 2); i++) heart(i * 16, 12, me.absorb - i * 2 >= 2 ? 1 : .5, '#e8c51d');

@@ -144,10 +144,14 @@ const RMESH = {
           const pts = F.c.map(c => [x + (c[0] ? bx[3] : bx[0]), y + (c[1] ? bx[4] : bx[1]), z + (c[2] ? bx[5] : bx[2])]);
           const [u0, v0, s] = tUV((bx[6] || B.tiles)[f]); // bx[6]: per-box tiles (glass panes)
           const e = f >= 4 ? [bx[0], bx[2], bx[3], bx[5]] : (f < 2 ? [bx[0], bx[1], bx[3], bx[4]] : [bx[2], bx[1], bx[5], bx[4]]);
-          const fr = v => clamp(v, 0, 1); const uvs = [[u0 + fr(e[0]) * s, v0 + (1 - fr(e[1])) * s], [u0 + fr(e[2]) * s, v0 + (1 - fr(e[1])) * s], [u0 + fr(e[2]) * s, v0 + (1 - fr(e[3])) * s], [u0 + fr(e[0]) * s, v0 + (1 - fr(e[3])) * s]];
+          const fr = v => clamp(v, 0, 1), U = bx[7] && bx[7][f]; let uvs = [[u0 + fr(e[0]) * s, v0 + (1 - fr(e[1])) * s], [u0 + fr(e[2]) * s, v0 + (1 - fr(e[1])) * s], [u0 + fr(e[2]) * s, v0 + (1 - fr(e[3])) * s], [u0 + fr(e[0]) * s, v0 + (1 - fr(e[3])) * s]];
+          if (U) { const q = [[U[0], U[3]], [U[2], U[3]], [U[2], U[1]], [U[0], U[1]]].map(([a, c]) => [u0 + a / 16 * s, v0 + c / 16 * s]), k = (U[4] || 0) & 3; uvs = [0, 1, 2, 3].map(i => q[(i + k) % 4]); } // bx[7]: MC model uv [u0,v0,u1,v1,rot90s] per face (campfire)
           const sh = B.emis ? 1 : F.s; push(pass, pts, uvs, B.col, [sh, sh, sh, sh], 1);
           if (B.cut && !B.solid) push(pass, [pts[1], pts[0], pts[3], pts[2]], [uvs[1], uvs[0], uvs[3], uvs[2]], B.col, [sh, sh, sh, sh], 1); // ladders / rails visible from both sides
         }
+        if (B.xfire) { const [u0, v0, s] = tUV(B.xfire); const uv = [[u0, v0 + s], [u0 + s, v0 + s], [u0 + s, v0], [u0, v0]], Y = y + 1 / 16; // campfire flames: two crossed planes like the MC model
+          quad2('o', [[x + .15, Y, z + .15], [x + .85, Y, z + .85], [x + .85, Y + 1, z + .85], [x + .15, Y + 1, z + .15]], uv, B.col, 1);
+          quad2('o', [[x + .85, Y, z + .15], [x + .15, Y, z + .85], [x + .15, Y + 1, z + .85], [x + .85, Y + 1, z + .15]], uv, B.col, 1); }
       }
     }
     return out;

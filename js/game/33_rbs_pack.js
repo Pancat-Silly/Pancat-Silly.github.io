@@ -4,7 +4,7 @@
 // The original pack's own textures (lucky block "?", nether bedrock) always stay.
 const RPACK = {
   has: false, on: false, data: null, busy: false, msg: '',
-  KEEP: new Set(['sponge', 'nether_bedrock_rp', 'deny', 'barrier', 'bell', 'chest_front', 'chest_side', 'chest_top']),
+  KEEP: new Set(['sponge', 'nether_bedrock_rp', 'deny', 'barrier', 'bell', 'chest_front', 'chest_side', 'chest_top', 'chest_bottom']),
   REN: { banner: 'white_wool', 'item/music_disc': 'item/music_disc_cat', 'item/lever': 'block/lever', 'item/tripwire_hook': 'block/tripwire_hook', 'item/ender_eye': 'item/ender_eye' },
   TINT: { grass_block_top: '#91bd59', short_grass: '#91bd59', fern: '#91bd59', tall_grass_bottom: '#91bd59', tall_grass_top: '#91bd59', sugar_cane: '#91bd59', oak_leaves: '#77ab2f', birch_leaves: '#80a755', water_still: '#3f76e4' },
   SND: { // our key -> vanilla sound events
@@ -54,7 +54,7 @@ const RPACK = {
       const [ox, oy] = RTEX.xy(t); g.clearRect(ox, oy, 16, 16); g.drawImage(tmp, ox, oy);
     }
     if (T.__chest) try { const img = await createImageBitmap(T.__chest); const k = img.width / 64; const put = (name, parts) => { const t = RTEX.T(name); const [ox, oy] = RTEX.xy(t); g.clearRect(ox, oy, 16, 16); for (const [sx, sy, w, h, dx, dy] of parts) g.drawImage(img, sx * k, sy * k, w * k, h * k, ox + dx, oy + dy, w, h); };
-      put('chest_top', [[14, 0, 14, 14, 1, 1]]); put('chest_front', [[14, 14, 14, 5, 1, 2], [14, 33, 14, 10, 1, 6], [1, 1, 2, 4, 7, 4]]); put('chest_side', [[0, 14, 14, 5, 1, 2], [0, 33, 14, 10, 1, 6]]); } catch (e) { }
+      put('chest_top', [[28, 0, 14, 14, 1, 1]]); put('chest_bottom', [[14, 19, 14, 14, 1, 1]]); /* outside faces: lid top (28,0), base bottom (14,19) - (14,0) / (28,19) are the dark insides */ put('chest_front', [[14, 14, 14, 5, 1, 2], [14, 33, 14, 10, 1, 6], [1, 1, 2, 4, 7, 4]]); put('chest_side', [[0, 14, 14, 5, 1, 2], [0, 33, 14, 10, 1, 6]]); } catch (e) { }
     RR.gfx && RR.gfx.refreshAtlas(); RUI.iconCache = {}; RUI._hs = ''; this.decode();
   },
   off() { for (const [name, t] of RTEX.map) { const [ox, oy] = RTEX.xy(t); RTEX.g.clearRect(ox, oy, 16, 16); RTEX.paint(name, t); } RR.gfx && RR.gfx.refreshAtlas(); RUI.iconCache = {}; RUI._hs = ''; RAU.pack = {}; },

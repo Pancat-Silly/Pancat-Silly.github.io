@@ -73,7 +73,7 @@ const RBLK = {
       case 'stone_bricks': case 'mossy_stone_bricks': case 'cracked_stone_bricks': full(k0); mine(1.5, 'pickaxe', 1); break;
       case 'tnt': full('tnt_side', 'tnt_top', 'tnt_bottom'); mine(0, null, 0, 'grass'); break;
       case 'furnace': case 'furnace_on': case 'blast_furnace': case 'blast_furnace_on': { const bf = k0.startsWith('blast'), on = k0.endsWith('_on'); const b = bf ? 'blast_furnace' : 'furnace'; full(b + '_side', b + '_top', b + '_top', b + '_front' + (on ? '_on' : ''), p[1]); mine(3.5, 'pickaxe', 1); B.use = 'furnace'; B.blast = bf; B.item = b; B.dir = p[1]; B.on = on; B.name = this.NAME[b]; if (on) B.emis = true; break; }
-      case 'chest': { box([[1 / 16, 0, 1 / 16, 15 / 16, 14 / 16, 15 / 16]], 'chest_side', 'chest_top', 'chest_top'); B.solid = true; B.tiles['snwe'.indexOf(p[1])] = T('chest_front'); mine(2.5, 'axe', 0, 'wood'); B.use = 'chest'; B.dir = p[1]; break; }
+      case 'chest': { box([[1 / 16, 0, 1 / 16, 15 / 16, 14 / 16, 15 / 16]], 'chest_side', 'chest_top', 'chest_bottom'); B.solid = true; B.tiles['snwe'.indexOf(p[1])] = T('chest_front'); mine(2.5, 'axe', 0, 'wood'); B.use = 'chest'; B.dir = p[1]; break; }
       case 'anvil': { const x = p[1] === 'x'; B.fall = true; B.anvil = true; box(x ? [[0, 0, 2 / 16, 1, 4 / 16, 14 / 16], [3 / 16, 4 / 16, 4 / 16, 13 / 16, 10 / 16, 12 / 16], [0, 10 / 16, 3 / 16, 1, 1, 13 / 16]] : [[2 / 16, 0, 0, 14 / 16, 4 / 16, 1], [4 / 16, 4 / 16, 3 / 16, 12 / 16, 10 / 16, 13 / 16], [3 / 16, 10 / 16, 0, 13 / 16, 1, 1]], 'anvil', 'anvil_top', 'anvil'); B.solid = true; mine(5, 'pickaxe', 1, 'metal'); B.use = 'anvil'; B.fall = true; B.axis = p[1]; break; }
       case 'water': case 'lava': { const lv = +p[1]; B.liquid = k0; B.level = lv; B.solid = false; B.full = false; B.opaque = false; B.trans = k0 === 'water'; B.lava = k0 === 'lava'; B.emis = B.lava; B.unbreak = true; B.repl = true; B.tiles = this.tiles6(k0 + '_still'); B.h = lv === 0 ? 14 / 16 : lv >= 8 ? 1 : Math.max(2, 14 - lv * 1.7) / 16; B.item = null; break; }
       case 'glowstone': full('glowstone'); mine(.3, null, 0, 'glass'); B.emis = true; B.drop = 'glowstone_dust'; B.dropN = [2, 4]; break;
@@ -137,7 +137,11 @@ const RBLK = {
       case 'plant': { const n = p[1]; B.full = false; B.opaque = false; B.solid = false; B.cross = true; B.boxes = [[.15, 0, .15, .85, .8, .85]]; B.tiles = [T(n), 0, 0, 0, 0, 0]; mine(0, null, 0, 'grass'); B.repl = n.includes('grass') || n === 'fern'; B.noDrop = B.repl; B.name = '식물'; break; }
       case 'composter': full('composter_side', 'composter_top', 'composter_side'); mine(.6, 'axe', 0, 'wood'); break;
       case 'scaffolding': full('scaffolding_side', 'scaffolding_top'); B.opaque = false; B.cut = true; B.ladder = true; B.scaf = true; /* collision: only the top, and not while sneaking (RWorld.boxes) */ mine(0, null, 0, 'wood'); break;
-      case 'campfire': box([[0, 0, 0, 1, 7 / 16, 1]], 'campfire_log', 'campfire_log'); B.solid = true; B.emis = true; mine(2, 'axe', 0, 'wood'); break;
+      case 'campfire': { // MC template_campfire: 2 logs along z, 2 along x on top, glowing base between, crossed flames (campfire_log: bark strip uv 0,0-16,4, log end 0,4-4,8)
+        const L = T('campfire_log'), LT = [L, L, L, L, L, L], E = [0, 4, 4, 8], K = [0, 0, 16, 4], Kr = [0, 0, 16, 4, 1], n = v => v / 16;
+        const zl = (x0, x1) => [n(x0), 0, 0, n(x1), n(4), 1, LT, [E, E, K, K, Kr, Kr]], xl = (z0, z1) => [0, n(3), n(z0), 1, n(7), n(z1), LT, [K, K, E, E, K, K]];
+        box([zl(1, 5), zl(11, 15), xl(1, 5), xl(11, 15), [n(5), 0, 0, n(11), n(1), 1, this.tiles6('campfire_log_lit')]], 'campfire_log', 'campfire_log');
+        B.xfire = T('campfire_fire'); B.solid = true; B.emis = true; mine(2, 'axe', 0, 'wood'); break; }
       case 'bell': box([[.25, .25, .25, .75, .9, .75]], 'bell'); B.solid = true; mine(5, 'pickaxe', 0, 'metal'); break;
       case 'sponge': full('sponge'); mine(.6, null, 0, 'grass'); B.name = '럭키 블록'; break;
       case 'redstone_lamp': case 'redstone_lamp_on': full(k0); mine(.3, null, 0, 'glass'); B.emis = k0.endsWith('on'); B.lamp = true; break;
