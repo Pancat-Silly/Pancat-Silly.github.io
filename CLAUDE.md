@@ -33,7 +33,7 @@ js/data/              생성된 데이터 (손으로 고치지 말고 tools/ 스
   dances.js           공용 춤 DANCE_DATA (마카레나·강남스타일, Mixamo FBX → mkdance.py). 두 게임이 같이 쓴다
 js/game/              게임 코드. 파일 이름 순서로 로드하는 일반 <script>들 (전역 공유)
 rbs/music/            랜덤블록 BGM mp3 (선택)
-(가사 타이밍 도구는 사이트에 안 올림: 로컬 tools/lyrics/lyrics_timing.html 한 파일, 사용자에게 파일로 전달) 노래+가사를 넣고 문장·단어·글자 단위로 TAP해서 시간을 찍고 파형 위 세로선을 끌어 고친다. 확장 LRC(txt)·JSON·게임 JS(DUDE_LYRICS 형식)로 내보냄. examples/dude_dance.lrc = 지금 게임 가사. ?audio=&lrc=로 바로 불러옴
+(가사 타이밍 도구는 사이트에 안 올림: 로컬 tools/lyrics/lyrics_timing.html 한 파일, 사용자에게 파일로 전달) 노래+가사를 넣고 문장·단어·글자 단위로 TAP해서 시간을 찍고 파형 위 세로선을 끌어 고친다. 확장 LRC(txt)·JSON으로 내보냄(게임은 LRC를 그대로 씀). examples/dude_dance.lrc = 지금 게임 가사. ?audio=&lrc=로 바로 불러옴
 sounds/               효과음 파일 (apvp/, rbs/, jobs/<직업>/). 랜덤블록 sfx_gameover·sfx_error·sfx_win_sin*는 사용자 요청으로 저장소에 안 올림(.gitignore, RB_SFX에서도 뺌 → 합성음). 예전에 js/data 안에 base64로 있던 것 (tools/split_sounds.py)
 tools/                [로컬 전용 · .gitignore로 저장소에 안 올림] mkdance.py + fbxbin.py + dance/*.fbx, mkentry.py, split_sounds.py, bump_version.py, hooks/pre-commit, build_single.py, rbsconv.py, rbsassets.py, mkmodjobs.py, mkassets.py, modjobs/*.txt, normalize_sounds.py + sound_norm.json + sounds_orig/
 ```
@@ -87,7 +87,7 @@ tools/                [로컬 전용 · .gitignore로 저장소에 안 올림] m
   - 내장 미완성 직업: 젬웬티, 윤톰맨(jobs_builtin).
   - `DEV_JOBS`는 "개발중" 구분선 아래에 표시된다.
   - **dude 바리에이션:** dude 카드에 New / old 선택(`JOBS.dude.vars`, 선택된 상태에서 누르면 바뀜, `UI.jobVar`). old = 원래 dude, New = 직업 `dude_new`(`varOf: 'dude'`, JOB_ORDER에는 없음, 돌 검 + 체력 40).
-  - **dude New 댄스(`SK.dance` 토글):** 제자리 춤(이동·공격·다른 스킬 잠김), 카메라는 뒷통수 기준 뒤 5.5·위 1.6에서 플레이어를 보고 마우스로 주변을 돌려 볼 수 있음(몸 방향은 `G.dancers`의 yaw로 고정). 노래 `dude_dance`(사용자 제공 mp3, `AU.posLoop`로 주변에도 들림), 1초마다 주변에 개구리(`R.drawFrogs`, FROG 모델)가 나타나 같이 강남스타일. 그만두면 개구리 수만큼 신속(≤IV)·힘(≤II)·회복(2/마리)·체력 증가(≤+20) 30초, 개구리당 5% `dude_bullet`(총알). 이벤트 `dance`/`dfrog`, 상태 `G.dancers`. 노래 가사는 06b_lyrics.js `DUDE_LYRICS`(단어별 시작 시각, faster-whisper로 뽑고 괄호 뒷소리는 박자로 맞춤)·`LYR`: 실제로 재생 중인 루프 위치(`AU.loopPos`)를 따라 본인은 액션바 위 `#lyrics`, 다른 사람은 머리 위(`.tag u`)에 뜨고 부른 단어는 노란색.
+  - **dude New 댄스(`SK.dance` 토글):** 제자리 춤(이동·공격·다른 스킬 잠김), 카메라는 뒷통수 기준 뒤 5.5·위 1.6에서 플레이어를 보고 마우스로 주변을 돌려 볼 수 있음(몸 방향은 `G.dancers`의 yaw로 고정). 노래 `dude_dance`(사용자 제공 mp3, `AU.posLoop`로 주변에도 들림), 1초마다 주변에 개구리(`R.drawFrogs`, FROG 모델)가 나타나 같이 강남스타일. 그만두면 개구리 수만큼 신속(≤IV)·힘(≤II)·회복(2/마리)·체력 증가(≤+20) 30초, 개구리당 5% `dude_bullet`(총알). 이벤트 `dance`/`dfrog`, 상태 `G.dancers`. 노래 가사는 06b_lyrics.js `DUDE_LRC`(사용자가 가사 타이밍 도구로 찍은 확장 LRC 원문, 고칠 땐 통째로 붙여 넣기) → `lrcParse` → `DUDE_LYRICS`(글자별 시각; 시간 없는 단어는 뺌, 이상한 줄 끝은 고침)·`LYR`: 실제로 재생 중인 루프 위치(`AU.loopPos`)를 따라 본인은 액션바 위 `#lyrics`, 다른 사람은 머리 위(`.tag u`)에 뜨고 부른 글자는 노란색.
   - **dude New 권총(`use: 'gun'`, `SK.gunFire`):** 총알 1개, 활처럼 꾹 눌러 조준(느려짐), 떼면 일직선 히트스캔. 플레이어를 맞히면 쏜 사람·맞은 사람만 컷씬(`G.cut`, `R.cutCam`/`cutDraw`, `SK.CUT_T`): 카메라가 두 사람 사이 옆으로(그쪽에 블록이 가리면 반대쪽 → 돌려서 → 더 높이 → 더 가까이 순으로 두 사람이 다 보이는 자리를 찾음) easeOutCubic 0.977초 → 검은 화면 0.088초 → 빨간 배경에 두 사람·총알만 흰색 1.167초(맞은 사람이 천천히 뒤로 쓰러짐), 효과음 `dudeshot`. 맞은 사람이 안 죽으면(스폰 보호·같은 팀은 쏘는 쪽이 미리 판단, 창찬 각성 등은 `gcutx`로 취소) 컷씬 없음. 맞은 사람은 맞자마자 죽지만(`alive=false`, presence 플래그 512) 겉보기엔 안 죽음(계속 그리고 이름표도 유지, 사망 연기·소리는 컷씬 끝날 때) 컷씬이 끝나면 리스폰(`Player.die`의 `cutUntil` 대기). 쏜 사람은 컷씬 동안 제자리에서 못 움직이고 깜빡이며 무적(`prot`). 권총을 들면 모바일 마크 PE에서도 십자선이 뜸.
 - **모드 API·개발 도구:** 직업 코드는 `new Function('APVP','api', code)`로 실행된다. 프롬프트 버전은 `DEV_VER`이고, 프롬프트를 바꾸면 하나 올린다.
 - **ESC 메뉴:**
