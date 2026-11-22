@@ -205,16 +205,15 @@ const RR = {
     return out;
   },
   drawSigns() {
-    // text textures per distance band (near / mid / far): farther = thinner strokes (glyph edges eaten with a destination-out stroke),
-    // so small far-away text doesn't blur into blobs through the mipmaps. Made lazily, 256x128, LINEAR + mipmaps
-    if (!this.signTex.length) { for (const o of this.signs || (this.signs = this.signFix())) if (o.s[4].trim()) this.signTex.push(Object.assign(o, { texL: [] })); if (!this.signTex.length) this.signTex.push({ none: true }); }
-    const signTex = (o, k) => { if (o.texL[k]) return o.texL[k];
-      const c = document.createElement('canvas'); c.width = 256; c.height = 128; const x = c.getContext('2d'); x.textAlign = 'center'; x.textBaseline = 'middle';
+    // sign text = a small pixel texture like MC's font: 224x112, anti-aliasing thresholded away (hard pixels), NEAREST, no mipmaps,
+    // so it reads as crisp pixels up close and doesn't smear into blobs far away
+    if (!this.signTex.length) { for (const o of this.signs || (this.signs = this.signFix())) if (o.s[4].trim()) this.signTex.push(o); if (!this.signTex.length) this.signTex.push({ none: true }); }
+    const signTex = o => { if (o.tex) return o.tex; const W = 224, H = 112;
+      const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#000';
       const lines = o.s[4].replace(/랜덤블록 서바이벌 V2[^\n]*/g, '랜덤블록 서바이벌').split('\n').slice(0, 4); while (lines.length < 4) lines.push('');
-      lines.forEach((l, i) => { const t = l.replace(/§./g, ''); let fs = 24; do { x.font = '500 ' + fs + "px 'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif"; } while (fs-- > 12 && x.measureText(t).width > 244); // long lines shrink to fit the board
-        x.fillStyle = '#1a1208'; x.fillText(t, 128, 18 + i * 30);
-        if (k) { x.globalCompositeOperation = 'destination-out'; x.lineWidth = k === 1 ? 1.3 : 2.4; x.strokeStyle = '#000'; x.strokeText(t, 128, 18 + i * 30); x.globalCompositeOperation = 'source-over'; } });
-      return o.texL[k] = this.gfx.makeTex(c, true); };
+      lines.forEach((l, i) => { const t = l.replace(/§./g, ''); let fs = 21; do { x.font = '500 ' + fs + "px 'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif"; } while (fs-- > 11 && x.measureText(t).width > W - 8); x.fillText(t, W / 2, 15 + i * 27.3); }); // long lines shrink to fit
+      const id = x.getImageData(0, 0, W, H), d = id.data; for (let i = 0; i < d.length; i += 4) { const on = d[i + 3] > 105; d[i] = 26; d[i + 1] = 18; d[i + 2] = 8; d[i + 3] = on ? 255 : 0; } x.putImageData(id, 0, 0);
+      return o.tex = this.gfx.makeTex(c, false); };
     const g = this.gfx; const b = this.bs;
     // quad on the face of a board that faces f: wall board = back 2/16 of the cell (y .3-.85), standing board = middle (y .5-1)
     const quad = (P, f, d, y0, y1) => { const o = d + .004;
@@ -227,7 +226,7 @@ const RR = {
       b.reset();
       if (!o.stand) { const q = quad(P, o.f, 2 / 16, P.y + .3, P.y + .85); b.quadUV(q[0], q[1], q[2], q[3], 0, 0, 1, 1, [1, 1, 1]); }
       else for (const f of [o.f, opp[o.f]]) { const q = quad(P, f, 9 / 16, P.y + .52, P.y + .98); b.quadUV(q[0], q[1], q[2], q[3], 0, 0, 1, 1, [1, 1, 1]); } // board 7/16..9/16: text 1/16 off its faces
-      g.bind(signTex(o, dist < 5 ? 0 : dist < 11 ? 1 : 2)); g.drawBatch(b); }
+      g.bind(signTex(o)); g.drawBatch(b); }
     g.bind();
   },
   // screen projection for name tags / floating texts

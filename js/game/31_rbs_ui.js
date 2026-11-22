@@ -113,7 +113,7 @@ const RUI = {
     el.style.display = on ? '' : 'none'; if (!on) return;
     const src = RPACK.on && RPACK.data && RPACK.data.tex && RPACK.data.tex.fire_0;
     if (this._fovSrc !== (src || 'x')) { this._fovSrc = src || 'x';
-      const set = (url, n) => { for (const [i, f] of [...el.children].entries()) f.style.cssText = 'position:absolute;bottom:0;width:50vw;height:30vh;opacity:.9;image-rendering:pixelated;background:url(' + url + ') 0 0/100% ' + n * 100 + '% no-repeat;' + (i ? 'right:0;transform:scaleX(-1)' : 'left:0') /* from the very bottom, never above 30 % of the screen */ + (n > 1 ? ';animation:rbFireA ' + n * .05 + 's steps(' + n + ') infinite' : '');
+      const set = (url, n) => { for (const [i, f] of [...el.children].entries()) f.style.cssText = 'position:absolute;bottom:0;width:50vw;height:30vh;opacity:.9;image-rendering:pixelated;background:url(' + url + ') 0 0/100% ' + n * 100 + '% no-repeat;' + (i ? 'right:0;transform:scaleX(-1)' : 'left:0') /* from the very bottom, never above 30 % of the screen */ + (n > 1 ? ';animation:rbFireA ' + (n - 1) * .05 + 's steps(' + (n - 1) + ') infinite' : '') /* n-1 steps from 0% to 100% land exactly on frame 0..n-1 (n steps showed two half frames stacked) */;
         if (n > 1 && !document.getElementById('rbFireK')) { const s = document.createElement('style'); s.id = 'rbFireK'; s.textContent = '@keyframes rbFireA{to{background-position:0 100%}}'; document.head.appendChild(s); } };
       if (src) createImageBitmap(src).then(b => set(URL.createObjectURL(src), Math.max(1, Math.round(b.height / b.width)))).catch(() => { });
       else { const t = RTEX.T('fire_0'), [ox, oy] = RTEX.xy(t), c = document.createElement('canvas'); c.width = c.height = 16; c.getContext('2d').drawImage(RTEX.cv, ox, oy, 16, 16, 0, 0, 16, 16); set(c.toDataURL(), 1); } }
@@ -285,7 +285,7 @@ const RUI = {
     const f = this.follow ? RG.byId(this.follow) : null; $('rbSpecBar').innerHTML = '<div class="rsbn">' + (f ? esc(f.name) : '플레이어를 골라 관전하세요') + '</div><div class="rsbh">' + h + '</div>'; },
   // host: change one of the 9 mini palette blocks (chests keep their contents as the mini chest loot; open them to edit, sneak to replace)
   miniPalPick(x, y, z) {
-    const C = this.palCands().filter(c => !c[2]); let h = '<div class="rgw rlist rpal"><div class="rlhead"><b>미니 랜덤블록 · ' + (RG.miniPalIdx(x, y, z) + 1) + '번 블록</b><button class="rbtn" data-lb="x">✕ 닫기</button></div><div class="rgnote">이 칸에 놓을 블록을 고르세요 · 미니 경기장의 칸마다 9칸 중 하나가 같은 확률로 나와요 · 상자는 열어서 안의 아이템을 바꾸면 그대로 미니 상자에 들어가요 (상자를 바꾸려면 웅크리고 우클릭)</div><div class="rpick">';
+    const C = this.palCands().filter(c => !c[2]); let h = '<div class="rgw rlist rpal"><div class="rlhead"><b>미니 랜덤블록 · ' + (RG.miniPalIdx(x, y, z) + 1) + '번 블록</b><button class="rbtn" data-lb="x">✕ 닫기</button></div><div class="rgnote">이 칸에 놓을 블록을 고르세요 · 미니 경기장의 칸마다 9칸 중 하나가 같은 확률로 나와요 · 상자 칸은 열면 안의 아이템을 바꿀 수 있고, 그대로 미니 상자에 들어가요 (상자 화면의 \'블록 바꾸기\'로 다른 블록으로)</div><div class="rpick">';
     C.forEach((c, i) => { h += '<img src="' + this.iconURL('blk:' + c[0]) + '" data-mp="' + i + '" title="' + esc(this.palName(c)) + '" data-tip="' + esc(this.palName(c)) + '">'; });
     this.open('form', { html: h + '</div></div>', bind: el => { const xb = el.querySelector('[data-lb]'); if (xb) xb.onclick = () => this.close(); for (const b of el.querySelectorAll('[data-mp]')) b.onclick = () => { const k = C[+b.dataset.mp][0], id = k === 'air' ? 0 : RBLK.K(k);
       const key = x + ',' + y + ',' + z; if (RG.be.has(key)) { RG.be.delete(key); RG.emit({ k: 'be', key, d: null }); } RG.setBlock(x, y, z, id); RAU.play('pop', 1, true); this.close(); this.actionbar('§a' + (RG.miniPalIdx(x, y, z) + 1) + '번 블록: ' + this.palName([k])); }; } });
@@ -293,7 +293,7 @@ const RUI = {
   // ---------- interaction with blocks (right click) ----------
   interact(x, y, z) {
     const id = RW.getM(x, y, z), B = BL[id];
-    if (RG.miniPalIdx(x, y, z) >= 0) { if (!RG.isHost()) { this.actionbar('§c호스트만 바꿀 수 있어요'); return true; } if (B.use !== 'chest' || RG.me.sneaking) { this.miniPalPick(x, y, z); return true; } } // 미니 블록 팔레트 (호스트)
+    if (RG.miniPalIdx(x, y, z) >= 0) { if (!RG.isHost()) { this.actionbar('§c호스트만 바꿀 수 있어요'); return true; } if (B.use !== 'chest') { this.miniPalPick(x, y, z); return true; } this.open('chest', { x, y, z, pal: 1 }); RAU.play('chest_open', 1, false, .6); return true; } // 미니 블록 팔레트 (호스트): chests open with the 블록 바꾸기 · 아이템 넣기 panel
     if (B.use === 'chest') { if (RG.chestBlocked(x, y, z)) return true; this.open('chest', { x, y, z }); RAU.play('chest_open', 1, false, .6); return true; }
     if (B.use === 'furnace') { this.open('furnace', { x, y, z }); return true; }
     if (B.use === 'craft') { this.open('craft'); return true; }
@@ -383,6 +383,7 @@ body.rbmob #rbTt{font-size:36px}body.rbmob #rbTs{font-size:18px}body.rbmob #rbCh
 .rpbtn{flex-wrap:wrap;gap:6px;margin-top:6px}.rpbtn .rbtn{font-size:13px;padding:7px 10px}.rpsave{background:#3d8a3d!important}
 .rpick{display:grid;grid-template-columns:repeat(auto-fill,34px);gap:3px;max-height:150px;overflow-y:auto;margin-top:6px;padding:4px;background:#8b8b8b;border:2px solid;border-color:#373737 #fff #fff #373737}
 .rpick img{width:32px;height:32px;image-rendering:pixelated;cursor:pointer;background:#9d9d9d}.rpick img:hover{background:#c8e0a8}
+.rpick .rpci{position:relative;display:block;width:32px;height:32px;cursor:pointer;background:#9d9d9d;overflow:hidden}.rpick .rpci:hover{background:#c8e0a8}.rpick .rpci .ric{left:0;top:0;width:32px;height:32px}.rpick .rpci b,.rpick .rpci i{display:none}.rpcat .rpick{max-height:300px}
 .rbotp{width:min(440px,94vw);text-align:center}.rbotp small{display:block;margin:6px 0;color:#333}.rbnrow{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:8px 0}.rbnrow .rbtn{width:44px;font-size:18px}.rbotp .rblv{min-width:150px;margin-right:auto}
 body.rbmob .rrb{width:180px}body.rbmob .rrbg{grid-template-columns:repeat(4,38px)}
 .rli .rbtn{font-size:13px;padding:8px 10px;flex:none}

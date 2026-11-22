@@ -46,9 +46,14 @@ Object.assign(RUI, {
         h += '</div><div class="rarrow">➜</div>' + out(() => this.craftOut(3), () => this.craftTake(3)) + '</div>' + this.invSlots() + '</div>'; h = '<div class="rgwrap">' + this.rbHTML(3) + h + '</div>'; g.rb = 3; break;
       }
       case 'chest': {
-        const d = RG.beGet(g.ctx.x, g.ctx.y, g.ctx.z); h = '<div class="rgw"><h4>상자</h4>';
+        const d = RG.beGet(g.ctx.x, g.ctx.y, g.ctx.z); h = '<div class="rgw"><h4>' + (g.ctx.pal ? '미니 랜덤블록 · ' + (RG.miniPalIdx(g.ctx.x, g.ctx.y, g.ctx.z) + 1) + '번 상자 <small>(이 내용물이 미니 상자에 들어가요)</small>' : '상자') + '</h4>';
         for (let r = 0; r < 3; r++) { h += '<div class="rgrow">'; for (let c = 0; c < 9; c++) { const i = r * 9 + c; h += this.slotEl(this.addS({ get: () => d.inv[i], set: v => d.inv[i] = v, cont: true })); } h += '</div>'; }
-        h += this.invSlots() + '</div>'; break;
+        h += this.invSlots() + '</div>';
+        if (g.ctx.pal && RG.isHost()) { // host: any item into the palette chest (tap = +1, x16 mode = +16), trash for the cursor item, swap the block
+          h = '<div class="rgwrap">' + h + '<div class="rgw rpcat"><div class="rgflex"><button class="rbtn" data-pcb="1">🔁 블록 바꾸기</button><button class="rbtn' + (g.x16 ? ' on' : '') + '" data-pc16="1">한 번에 16개</button><button class="rbtn" data-pct="1" title="커서에 든 아이템 버리기">🗑 버리기</button><button class="rbtn" data-pcc="1">상자 비우기</button></div><div class="rgnote">아이템을 누르면 상자에 들어가요 · 상자 칸을 눌러 집은 건 🗑 로 버려요</div><div class="rpick">';
+          for (const k of this.palItems()) h += '<span class="rpci" data-pci="' + k + '" title="' + esc(RITEM.name({ id: k }).replace(/§./g, '')) + '">' + this.slotHTML({ id: k, n: 1 }) + '</span>';
+          h += '</div></div></div>'; }
+        break;
       }
       case 'furnace': {
         const d = RG.beGet(g.ctx.x, g.ctx.y, g.ctx.z); const B = BL[RW.getM(g.ctx.x, g.ctx.y, g.ctx.z)];
@@ -77,6 +82,7 @@ Object.assign(RUI, {
     if (g.cells) for (const el of $('rbGui').querySelectorAll('[data-li],[data-la],[data-lb]')) el.onclick = e => { e.stopPropagation(); const d = el.dataset; if (d.lb) { if (d.lb === 'x') this.close(); else this.open(g.back || 'menu'); return; } const C = g.cells.find(c => c.i === +(d.la || d.li)); if (C) C.act(d.la ? 2 : 0); if (this.gui && this.gui.cells && this.gui.type === g.type) this.render(); };
     if (g.type === 'form' && g.ctx.bind) g.ctx.bind($('rbGui'));
     if (g.type === 'palette') this.palBind();
+    if (g.type === 'chest' && g.ctx.pal) this.palChestBind();
     if (g.rb) this.rbBind();
   },
   paint() { const g = this.gui; if (!g) return; for (const el of $('rbGui').querySelectorAll('.rs')) { const S = g.S[+el.dataset.s]; if (!S) continue; if (S.html) { el.innerHTML = S.html; continue; } el.innerHTML = this.slotHTML(S.get()); } $('rbCursor').innerHTML = this.cursor ? this.slotHTML(this.cursor) : ''; },
@@ -242,6 +248,19 @@ Object.assign(RUI, {
   // ---------- host: arena block palette (any blocks, any number of kinds, any weights or exact counts) ----------
   PAL_CHEST: { 27: 'A (조약돌 · 치유 물약 · 경험치 병 · 다이아)', 29: 'B (원목 · 철 원석 · 석탄 · 마법부여대 · 경험치 병)', 31: 'C (청금석 · 치유 물약 · 금 원석 · 경험치 병)' },
   palName(e) { if (e[0] === 'air') return '빈 공간 (공기)'; if (e[2]) return '상자 ' + (this.PAL_CHEST[e[2]] || e[2]); const B = BL[RBLK.K(e[0])]; if (!B) return e[0]; if (e[0].startsWith('chest')) return '빈 상자'; const I = RIT[B.item]; return (B.name !== e[0].split('|')[0] ? B.name : I ? RITEM.name({ id: B.item }) : B.name).replace(/§./g, ''); },
+  palItems() { return this._pi || (this._pi = Object.keys(RIT).filter(k => !RIT[k].menu && k !== 'xp')); },
+  palChestBind() {
+    const g = this.gui, el = $('rbGui'), { x, y, z } = g.ctx, save = () => { const d = RG.beGet(x, y, z); if (d) RG.beSave(x, y, z, d); this.paint(); };
+    const on = (s, f) => { for (const b of el.querySelectorAll(s)) b.onclick = e => { e.stopPropagation(); f(b); }; };
+    on('[data-pcb]', () => this.miniPalPick(x, y, z));
+    on('[data-pc16]', () => { g.x16 = !g.x16; this.render(); });
+    on('[data-pct]', () => { this.cursor = null; this.paint(); });
+    on('[data-pcc]', () => { const d = RG.beGet(x, y, z); if (d) { d.inv.fill(null); save(); } });
+    on('[data-pci]', b => { const d = RG.beGet(x, y, z); if (!d) return; const id = b.dataset.pci, max = (RIT[id] && RIT[id].stack) || 64; let n = g.x16 ? 16 : 1;
+      for (let i = 0; i < 27 && n > 0; i++) { const s = d.inv[i]; if (s && s.id === id && !s.en && s.n < max) { const t = Math.min(n, max - s.n); s.n += t; n -= t; } }
+      for (let i = 0; i < 27 && n > 0; i++) if (!d.inv[i]) { const t = Math.min(n, max); d.inv[i] = { id, n: t }; n -= t; }
+      if (n > 0) this.actionbar('§c상자가 가득 찼어요'); save(); });
+  },
   palCands() {
     if (this._pc) return this._pc; const seen = new Set(), out = [['air', 1], ['chest|s', 1, 27], ['chest|w', 1, 29], ['chest|n', 1, 31], ['chest|e', 1]];
     const skip = /^(cmd|diode|door|wsign|wbanner|button|lever|plate|rtorch|trapdoor|gate|rail|ladder|carpet|chest|furnace_on|blast_furnace_on|redstone_lamp_on|barrier|deny|fire)/;
