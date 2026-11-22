@@ -2,6 +2,7 @@
 // loading screen: each step yields a frame so the bar actually moves (the page itself is one ~1 MB file)
 const BOOT = (pct, msg) => { const b = $('bootBar'), t = $('bootMsg'), n = $('bootPct'); if (b) b.style.width = pct + '%'; if (t) t.textContent = msg; if (n) n.textContent = pct + '%'; return new Promise(r => requestAnimationFrame(() => setTimeout(r, 0))); };
 async function APVP_BOOT() {
+  const bt = document.querySelector('#boot .boott'); if (bt) bt.textContent = '4중인격 PvP'; // the page default (index.html) is the site name
   try {
     await BOOT(15, '맵 불러오는 중…'); G.initWorld();
     await BOOT(35, '3D 화면 준비 중…'); R.init($('cv')); UI.init();
