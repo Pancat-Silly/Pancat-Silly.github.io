@@ -18,7 +18,7 @@ const RUI = {
     this.load(); this.mobile = SITE.isMobile();
     const st = document.createElement('style'); st.textContent = RUI_CSS; document.head.appendChild(st);
     const d = document.createElement('div'); d.id = 'rbs'; d.innerHTML = RUI_HTML; document.body.appendChild(d); document.body.classList.add('rbsapp'); document.body.classList.toggle('rbmob', this.mobile);
-    $('rbCredit').innerHTML = '<b class="rbbeta">BETA</b>' + (SITE.VER ? ' <span class="rbver">' + SITE.verLabel() + '</span>' : '');
+    $('rbCredit').innerHTML = SITE.VER ? '<span class="rbver">' + SITE.verLabel() + '</span>' : '';
     $('rbHot').innerHTML = Array.from({ length: 9 }, (_, i) => '<div class="rhs" data-i="' + i + '"></div>').join('');
     { const sb = $('rbSpecBar'), f = e => { const t = e.target.closest('[data-si]'); if (!t) return; e.preventDefault(); e.stopPropagation(); this.specJump(+t.dataset.si); }; sb.addEventListener('mousedown', f); sb.addEventListener('touchstart', f, { passive: false }); } // spectator hotbar
     for (const el of document.querySelectorAll('.rhs')) { const f = () => { RG.me.sel = +el.dataset.i; }; el.addEventListener('mousedown', f); el.addEventListener('touchstart', e => { e.preventDefault(); f(); }, { passive: false }); }
@@ -304,7 +304,7 @@ body.rbsapp #app,body.rbsapp #newJobPop{display:none!important}body.rbsapp{backg
 #rbChat{position:absolute;left:6px;bottom:150px;width:min(520px,70vw);max-height:44vh;overflow:hidden;font-size:14px;line-height:1.35}#rbChat.open{background:rgba(0,0,0,.4);overflow-y:auto;pointer-events:auto}.rcl{padding:1px 4px;background:rgba(0,0,0,.35);white-space:pre-wrap;transition:opacity .3s}
 #rbChatF{position:absolute;left:6px;right:6px;bottom:110px;display:flex;gap:6px;pointer-events:auto}#rbChatF.hide{display:none}#rbChatIn{flex:1;font-size:16px;padding:6px;background:rgba(0,0,0,.6);color:#fff;border:1px solid #888}#rbChatF button{padding:0 12px}
 #rbSide{position:absolute;right:4px;top:42%;transform:translateY(-50%);background:rgba(0,0,0,.35);font-size:13px;min-width:180px;text-shadow:none}#rbSide .rsh{text-align:center;padding:2px 6px;background:rgba(0,0,0,.3)}#rbSide>div:not(.rsh){display:flex;justify-content:space-between;gap:12px;padding:1px 6px}#rbSide b{color:#ff5555}
-#rbCredit{position:absolute;right:6px;top:4px;font-size:12px;opacity:.85}.rbver{opacity:.8;margin-left:4px}.rbbeta{background:#e8a317;color:#000;font-size:10px;padding:0 4px;border-radius:2px;text-shadow:none;margin-left:4px}
+#rbCredit{position:absolute;right:6px;top:4px;font-size:12px;opacity:.85}.rbver{opacity:.8;margin-left:4px}
 #rbEff{position:absolute;right:6px;top:24px;font-size:13px;text-align:right}
 #rbTags .rtag{position:absolute;transform:translate(-50%,-100%);background:rgba(0,0,0,.3);padding:0 4px;font-size:13px;white-space:nowrap;text-shadow:none}#rbTags .rft{background:transparent;text-shadow:2px 2px 0 #222;font-size:14px}
 #rbTab{position:absolute;left:50%;top:10px;transform:translateX(-50%);background:rgba(0,0,0,.6);min-width:260px;font-size:14px;padding:4px;text-shadow:none}#rbTab .rth{text-align:center;color:#ff5}#rbTab>div:not(.rth){display:flex;justify-content:space-between;padding:1px 6px}#rbTab b{color:#ff5}#rbTab.hide{display:none}

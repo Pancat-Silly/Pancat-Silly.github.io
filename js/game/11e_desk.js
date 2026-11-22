@@ -245,7 +245,7 @@ const DESK = {
 // 게임 폴더 (안드로이드식): in: 'games' 앱들은 바탕화면 대신 이 폴더 안에 보인다 (시작 메뉴에는 그대로)
 DESK.addApp({ id: 'games', folder: true, icon: '📁', label: '게임', title: '게임' });
 DESK.addApp({ id: 'apvp', in: 'games', icon: '⚔️', label: '4중인격<br>PvP', title: '4중인격 PvP', game: true, w: 1280, h: 800, bg: 'linear-gradient(#5b8a3a,#3c6a24)' });
-DESK.addApp({ id: 'rbs', in: 'games', icon: '🧱', img: (typeof RB_ICON !== 'undefined' ? RB_ICON : ''), label: '랜덤블록<br>서바이벌 <b class="dkbeta">베타</b>', title: '랜덤블록 서바이벌 · 베타', game: true, w: 1280, h: 800, bg: 'linear-gradient(#3a7bd5,#22427a)' });
+DESK.addApp({ id: 'rbs', in: 'games', icon: '🧱', img: (typeof RB_ICON !== 'undefined' ? RB_ICON : ''), label: '랜덤블록<br>서바이벌', title: '랜덤블록 서바이벌', game: true, w: 1280, h: 800, bg: 'linear-gradient(#3a7bd5,#22427a)' });
 // 개발 도구: the 4중인격 game with APVP_DEV, offline only. No icon; opened from the game's '개발 도구 창 열기' or 사이트주소/ability_pvp_dev
 DESK.addApp({ id: 'apvp_dev', app: 'apvp', dev: true, offline: true, hidden: true, icon: '🛠', title: '4중인격 개발 도구', game: true, w: 1280, h: 800 });
 // 가사 맞추기 (베타): 노래 가사를 문장·단어·글자 단위로 TAP해서 시간을 찍는 도구 (lyrics/index.html, 게임과 따로인 한 파일) -> 확장 LRC
