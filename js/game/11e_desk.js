@@ -15,6 +15,23 @@ const SITE = {
   // its own size. One site-wide switch (localStorage site_autofs, default on) shared by the desktop settings and both games.
   autoFs() { try { return localStorage.getItem('site_autofs') !== '0'; } catch (e) { return true; } },
   setAutoFs(v) { try { localStorage.setItem('site_autofs', v ? '1' : '0'); } catch (e) { } },
+  // 캐시 초기화 (desktop settings): close the game windows (they hold the IndexedDB open), delete downloaded data (IndexedDB
+  // 'apvp4' = vanilla packs + RBS BGM, Cache Storage, service workers), re-fetch the page's own files past the HTTP cache, reload.
+  // Settings (localStorage) stay, except rbs_dl_asked so the 외부 다운로드 screen asks again.
+  async clearCache(msg) {
+    const say = t => { if (msg) msg.textContent = t; }; say('지우는 중…');
+    try { if (typeof DESK !== 'undefined') for (const id in DESK.wins) DESK.close(id); } catch (e) { }
+    try { if (window.caches) for (const k of await caches.keys()) await caches.delete(k); } catch (e) { }
+    try { if (navigator.serviceWorker) for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister(); } catch (e) { }
+    let names = ['apvp4']; try { if (indexedDB.databases) names = [...new Set(names.concat((await indexedDB.databases()).map(d => d.name).filter(Boolean)))]; } catch (e) { }
+    if (typeof IDB !== 'undefined' && IDB._db) try { (await IDB._db).close(); IDB._db = null; } catch (e) { }
+    await Promise.all(names.map(n => new Promise(res => { try { const r = indexedDB.deleteDatabase(n); r.onsuccess = r.onerror = () => res(); r.onblocked = () => setTimeout(res, 1500); } catch (e) { res(); } })));
+    try { localStorage.removeItem('rbs_dl_asked'); } catch (e) { }
+    say('사이트 파일을 새로 받는 중…');
+    const urls = [location.href, 'version.json', ...[...document.querySelectorAll('script[src], link[rel=stylesheet][href]')].map(e => e.src || e.href)];
+    await Promise.all(urls.map(u => fetch(u, { cache: 'reload' }).catch(() => { })));
+    location.reload();
+  },
   toParent(m) { if (this.inFrame) try { parent.postMessage(Object.assign({ site: 1 }, m), '*'); } catch (e) { } },
   // 가로 전체화면 끄기 (phones): leave fullscreen right away, inside the tap (waiting for the rotation first left some phones
   // turned portrait but still fullscreen). Ask for portrait at the same moment, retry the exit once, then release the lock.
@@ -264,11 +281,13 @@ DESK.addApp({ id: 'settings', icon: '⚙️', label: '설정', title: '설정', 
       + '<label><input type="checkbox" id="setFs"' + (SITE.autoFs() ? ' checked' : '') + '> 자동 전체화면 <small>바탕화면이나 게임 화면을 클릭하면 브라우저를 전체화면으로 바꿔요 (게임 창 크기는 그대로 · PC)</small></label>'
       + '<h3>🖼️ 바탕화면 그림</h3><div class="row"><label class="dkbtn">사진 고르기<input type="file" id="setWallF" accept="image/*" style="display:none"></label><button class="dkbtn" id="setWallR">기본 그림으로</button></div>'
       + '<h3>🪟 창 위치</h3><div class="row"><button class="dkbtn" id="setWinR">모든 창 위치 · 크기 초기화</button></div>'
+      + '<h3>🧹 캐시</h3><div class="row"><button class="dkbtn" id="setCache">캐시 초기화</button></div><small class="dkhint" id="setCacheMsg" style="display:block;margin-top:6px">받아 둔 리소스팩 · 배경음악과 저장된 사이트 파일을 지우고 새로 불러와요. 설정은 그대로예요. (열려 있는 게임 창은 닫혀요)</small>'
       + '<p class="dkhint">게임 아이콘을 ' + (DESK.mobile ? '탭' : '더블클릭') + '하면 창으로 열려요. 게임 창 제목줄의 ⛶ 로 꽉 찬 화면을 쓸 수 있어요.</p>';
     body.querySelector('#setP2P').onchange = e => SITE.setP2P(e.target.checked);
     body.querySelector('#setFs').onchange = e => { SITE.setAutoFs(e.target.checked); if (!e.target.checked && document.fullscreenElement) try { document.exitFullscreen(); } catch (x) { } };
     body.querySelector('#setAsk').onchange = e => SITE.setP2P((SITE.getP2P() || {}).allow !== false, !e.target.checked);
     body.querySelector('#setWallF').onchange = e => { const f = e.target.files[0]; if (!f) return; const img = new Image(); img.onload = () => { const c = document.createElement('canvas'), k = Math.min(1, 1600 / img.width); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); DESK.setWall(c.toDataURL('image/jpeg', .6)); DESK.save(); }; img.src = URL.createObjectURL(f); };
     body.querySelector('#setWallR').onclick = () => { DESK.setWall(null); DESK.save(); };
+    body.querySelector('#setCache').onclick = () => { if (confirm('캐시를 초기화할까요?\n받아 둔 리소스팩 · 배경음악을 지우고 사이트를 새로 불러와요. (설정은 그대로)')) SITE.clearCache(body.querySelector('#setCacheMsg')); };
     body.querySelector('#setWinR').onclick = () => { DESK.saved = {}; for (const id in DESK.wins) { const W = DESK.wins[id]; Object.assign(W, DESK.defRect(W.A), { mode: DESK.mobile ? 'max' : 'normal' }); } DESK.sync(); DESK.save(); };
   } });

@@ -85,6 +85,7 @@ tools/                [로컬 전용 · .gitignore로 저장소에 안 올림] p
 - **가사 맞추기 앱 (`lyrics`, 베타):** `frame: 'lyrics/index.html'` 앱(`DESK.loadFrame`이 그 페이지를 iframe으로 띄움). 게임 폴더 바로 아래.
 - **GitHub 앱 (`github`):** 링크 앱. 이 저장소를 새 탭으로 연다.
 - **내 정보 앱 (`me`):** 링크 앱(`url`). 누르면 pancat-silly.carrd.co를 브라우저 새 탭으로 연다(Carrd는 X-Frame-Options: deny라 창 안에 못 띄움). `DESK.open`이 `url` 있는 앱은 창 대신 새 탭으로 연다.
+- **캐시 초기화 (데스크톱 설정 → 🧹 캐시):** `SITE.clearCache()`가 게임 창을 닫고 IndexedDB(`apvp4`: 바닐라 팩·랜덤블록 BGM)·Cache Storage·서비스 워커를 지우고, `rbs_dl_asked`를 지워 외부 다운로드 화면이 다시 뜨게 한 뒤, 페이지의 css·js를 `cache: 'reload'`로 다시 받아 새로고침한다. 다른 설정(localStorage)은 그대로.
 - **P2P 동의:** 게임 아이콘을 누르면 "P2P 멀티플레이 허용" 화면이 뜬다. 결정은 localStorage `site_p2p`에 저장되고 게임 안 설정에서 바꿀 수 있다.
 - **개발 도구 창:** 4중인격의 "🛠 개발 도구 창 열기"(`SITE.openDev`)는 데스크톱 안이면 `{t:'dev'}`를 보내서 숨은 앱 `apvp_dev`(아이콘 없음, 오프라인 전용이라 P2P 질문 없음) 창을 보통 앱처럼 새 창으로 연다(게임 창 옆으로 조금 비켜서, 게임 창은 그대로; 예전 좌우 2분할 `DESK.tile`은 없앰). 단독 실행이면 새 탭으로 `사이트주소/ability_pvp_dev/nodesktop`을 연다. 분할 빌드의 개발 도구 창은 `index.html?app=apvp&dev=1`이고, 01_core.js가 `dev=1`을 `APVP_DEV`로 바꾼다.
 - **개발 도구 다운로드:** (사이트 파일 없이 디스크에서 연 한 파일 빌드에서만 `devDownload` 대체) 분할 빌드에서는 `devToolHTMLMulti()`가 index.html과 css, js를 fetch해서 한 파일로 인라인한다. 한 파일 빌드에서는 `SELF_HTML`에 `APVP_DEV`를 넣는다.
