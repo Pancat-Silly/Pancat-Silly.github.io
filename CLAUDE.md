@@ -72,7 +72,7 @@ tools/                [로컬 전용 · .gitignore로 저장소에 안 올림] m
 - **바로 들어가기:** `사이트주소/ability_pvp`, `사이트주소/randomblock` → 가상 데스크톱 위에 그 게임 창만 연다(`SITE_OPEN`). 뒤에 `/nodesktop`을 붙이면 바탕화면 없이 단독 실행한다(`SITE_APP`). 단독 실행(창 밖, `p2p=` 없음)이면 `SITE_ASK_P2P`(99_boot.js)가 같은 동의 화면을 먼저 띄운다.
 - **사이트 버전·새 버전 알림:** 커밋할 때마다 pre-commit 훅(`tools/hooks/pre-commit`, `git config core.hooksPath tools/hooks`)이 `tools/bump_version.py`로 버전(`YYYY.MM.DD-N`)을 올린다. 바뀌는 파일은 `version.json`, `js/data/version.js`(`SITE_VER`), index.html의 css·js `?v=`(Pages 10분 캐시 회피)이다. 열려 있는 최상위 페이지는 `SITE.watchVer()`가 3분마다 `version.json`을 확인하고, 바뀌면 "새 버전이 나왔어요 · 새로고침" 알림을 띄운다. 버전명은 4중인격 메뉴 부제와 랜덤블록 오른쪽 위에 표시된다. GitHub 웹에서 직접 커밋하면 버전이 안 올라가니 주의한다.
 - **게임 폴더 (`games`, `folder: true`):** 안드로이드식 폴더. `in: 'games'`인 앱(4중인격, 랜덤블록)은 바탕화면 대신 폴더 안에 있고(시작 메뉴에는 그대로), 폴더 아이콘은 안에 든 앱 2×2 미리보기. 누르면(PC도 한 번 클릭) `DESK.folder()`가 아이콘에서 커져 나오는 둥근 패널을 띄우고, 패널 안 앱은 한 번 클릭으로 열린다. 바깥을 누르면 닫힘.
-- **가사 맞추기 앱 (`lyrics`, 베타):** `frame: 'lyrics/index.html'` 앱(`DESK.loadFrame`이 그 페이지를 iframe으로 띄움). GitHub 아이콘 위.
+- **가사 맞추기 앱 (`lyrics`, 베타):** `frame: 'lyrics/index.html'` 앱(`DESK.loadFrame`이 그 페이지를 iframe으로 띄움). 게임 폴더 바로 아래.
 - **GitHub 앱 (`github`):** 링크 앱. 이 저장소를 새 탭으로 연다.
 - **내 정보 앱 (`me`):** 링크 앱(`url`). 누르면 pancat-silly.carrd.co를 브라우저 새 탭으로 연다(Carrd는 X-Frame-Options: deny라 창 안에 못 띄움). `DESK.open`이 `url` 있는 앱은 창 대신 새 탭으로 연다.
 - **P2P 동의:** 게임 아이콘을 누르면 "P2P 멀티플레이 허용" 화면이 뜬다. 결정은 localStorage `site_p2p`에 저장되고 게임 안 설정에서 바꿀 수 있다.
