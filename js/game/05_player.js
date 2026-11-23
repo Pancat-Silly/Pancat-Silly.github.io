@@ -339,7 +339,7 @@ class Player {
     const hold = (this.st.cutUntil || 0) - G.tick; // 권총 컷씬 victim: dead now, respawn when the 컷씬 ends
     this.hp = 0; const killer = (this.lastAtk && G.tick - this.lastAtk.t < 100) ? this.lastAtk.id : (src.by || null);
     G.onDeath(this, killer, src.type);
-    this.deaths++;
+    this.deaths++; this.cds = {}; this.cdLen = {}; // 죽으면 모든 쿨타임 초기화 (죽을 때 훅이 거는 쿨타임은 그 뒤라 유지)
     SK.onDeath(this); jobHook(this, 'death'); if (MOD.defs[this.job]) MOD.fire(this, 'death');
     this.effects = {}; this.fire = 0; this.vx = this.vy = this.vz = 0; this.fallDist = 0; this.lastAtk = null; this.blockT = 0; this.drawT = 0; this.st = {};
     this.updAttr();

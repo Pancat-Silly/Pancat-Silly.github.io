@@ -58,10 +58,17 @@ const SK = {
   addMaxHp(p, n) { if (!p || !p.local) return; p.st.modHp = clamp((p.st.modHp || 0) + (+n || 0), -18, 80); p.hp = Math.min(p.hp, p.maxHp()); }, // this life only (p.st resets on death)
   title(p, a, b) { if (p === G.me) UI.title(a, b || '', { fi: 5, st: 40, fo: 15 }); },
   solid(x, y, z) { return !!BL[G.world.get(Math.floor(x), Math.floor(y), Math.floor(z))].solid; },
-  // straight-line teleport up to dist blocks on the ground plane, stopping before walls; returns the distance moved
+  // straight-line teleport up to dist blocks on the ground plane, stopping before walls; returns the distance moved.
+  // checks the whole body box (not just the center line) every 0.1 so it can't end half inside a wall and slip through
   blink(p, dist) {
-    const d = lookVec(p.yaw, 0); let k = 0; for (let s = .5; s <= dist; s += .5) { const x = p.x + d.x * s, z = p.z + d.z * s; if (G.world.solidAt(x, p.y + .1, z) || G.world.solidAt(x, p.y + 1.5, z)) break; k = s; }
+    const d = lookVec(p.yaw, 0), k = SK.blinkDist(p, dist);
     p.x = p.px = p.x + d.x * k; p.py = p.y; p.z = p.pz = p.z + d.z * k; p.vx = p.vy = p.vz = 0; p.fallDist = 0; return k;
+  },
+  blinkDist(p, dist) { // how far blink can go (no move); also used by the mod API api.blink
+    const d = lookVec(p.yaw, 0), hw = p.w / 2, y0 = p.y + .1, y1 = p.y + p.h - .01, bs = [];
+    const free = (x, z) => { G.world.boxes(x - hw, y0, z - hw, x + hw, y1, z + hw, bs); for (const o of bs) if (x - hw < o[3] && x + hw > o[0] && y0 < o[4] && y1 > o[1] && z - hw < o[5] && z + hw > o[2]) return false; return true; };
+    let k = 0; for (let i = 1, n = Math.floor(dist * 10 + 1e-6); i <= n; i++) { const s = i / 10; if (!free(p.x + d.x * s, p.z + d.z * s)) break; k = s; }
+    return k;
   },
   // ---------- effects everyone sees (G.emitAndApply → every client draws the same thing) ----------
   // one-shot: ops ['p', type, x, y, z, n, col] particles · ['l', ax, ay, az, bx, by, bz, col, step] line · ['r', x, y, z, r, col, n] ring

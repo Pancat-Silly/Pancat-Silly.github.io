@@ -157,7 +157,7 @@ const API = {
   setVelocity(p, vx, vy, vz) { if (!p || !p.local) return; p.vx = vx || 0; p.vy = vy || 0; p.vz = vz || 0; if (vy > 0) p.onGround = false; p.fallDist = 0; },
   dash(p, power = 1.2, up = .25) { const d = lookVec(p.yaw, 0); API.push(p, d.x * power, up, d.z * power); },
   teleport(p, x, y, z) { if (!p || !p.local) return; p.x = p.px = x; p.y = p.py = y; p.z = p.pz = z; p.vx = p.vy = p.vz = 0; p.fallDist = 0; },
-  blink(p, dist = 6) { const d = lookVec(p.yaw, 0); let k = 0; for (let s = .5; s <= dist; s += .5) { const x = p.x + d.x * s, z = p.z + d.z * s; if (G.world.solidAt(x, p.y + .1, z) || G.world.solidAt(x, p.y + 1.5, z)) break; k = s; } API.teleport(p, p.x + d.x * k, p.y, p.z + d.z * k); return k; },
+  blink(p, dist = 6) { const d = lookVec(p.yaw, 0), k = SK.blinkDist(p, dist); API.teleport(p, p.x + d.x * k, p.y, p.z + d.z * k); return k; },
   shootArrow(p, power = 3, o = {}) { const d = API.look(p); G.spawnArrow(p, API.eye(p), d, clamp(power, .2, 6), { crit: !!o.crit, potion: !!o.potion, noPick: true }); AU.sfx('bow', p, .7); },
   projectile(p, o = {}) {
     const d = o.dir || API.look(p), sp = clamp(o.speed === undefined ? 1.2 : +o.speed, .05, 4), e = API.eye(p);
