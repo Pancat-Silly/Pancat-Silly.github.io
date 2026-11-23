@@ -7,7 +7,7 @@ JOBS.susu = { name: '수수', icon: '🔺', desc: '미완성 직업 · 딜러형
 Object.assign(ITEMS, {
   ss_shot: { name: '삼각형의 한 꼭짓점', icon: '▲', use: 'skill', cd: 3, group: 'ss_shot', cast: 'ssShot', lore: '각도 60° 소모 · 피해 6 (헤드샷 ×1.5) · 180° 레이저+폭발 / 120° 머리 유도 / 60° 직선' },
   ss_leap: { name: '삼각 도약', icon: '💠', use: 'skill', cd: 10, group: 'ss_leap', cast: 'ssLeap', lore: '각도 60° 소모 · 8칸 순간이동 · 180° 신속 2·재생 2·투명화 2 / 120° 신속 1 / 60° 사용 불가' },
-  ss_half: { name: '절반 조각기', icon: '✂️', use: 'skill', cd: 15, group: 'ss_half', cast: 'ssHalf', lore: '현재 체력의 50%만큼 최대 체력 감소 (이번 목숨 동안) · 각도 180° 회복 (체력 6 이상 · 전투불능 중 사용 가능)' },
+  ss_half: { name: '절반 조각기', icon: '✂️', use: 'skill', cd: 15, group: 'ss_half', cast: 'ssHalf', lore: '최대 체력의 50%만큼 최대 체력 감소 (이번 목숨 동안) · 각도 180° 회복 (체력 6 이상 · 전투불능 중 사용 가능)' },
   ss_ult: { name: '일루미나티 파워', icon: '👁️', use: 'skill', cd: 20, group: 'ss_ult', cast: 'ssUlt', lore: '모든 각도 소모 · 즉시 전투불능 · 40칸 안 모든 적에게 피할 수 없는 4 피해 + 구속 II · 나는 재생 III 3초 · 맞은 인원당 최대 체력 +4' },
 });
 Object.assign(ITEM_ART, {
@@ -92,8 +92,8 @@ Object.assign(SK, {
   },
   ssHalf(p) {
     if (p.hp < 6) { p.actionbar && p.actionbar('§c체력이 6 이상이어야 사용할 수 있습니다'); return false; }
-    const cost = p.hp * .5; if (p.maxHp() - cost < 4) { p.actionbar && p.actionbar('§c최대 체력이 너무 낮아 사용할 수 없습니다'); return false; }
-    SK.addMaxHp(p, -cost); const excess = p.hp - p.maxHp(); if (excess > 0) SK.deal(p, excess, p, 'magic'); // 현재 체력의 절반만큼 최대 체력 감소
+    const cost = p.maxHp() * .5; if (p.maxHp() - cost < 4) { p.actionbar && p.actionbar('§c최대 체력이 너무 낮아 사용할 수 없습니다'); return false; }
+    SK.addMaxHp(p, -cost); const excess = p.hp - p.maxHp(); if (excess > 0) SK.deal(p, excess, p, 'magic'); // 최대 체력의 절반만큼 최대 체력 감소
     p.st.angle = 180; SK.ssSync(p); SK.ssCheck(p);
     SK.np('dust', p.x, p.y + 1, p.z, 12, SK.SS_CYAN); SK.nsyn({ wave: 'triangle', freq: 300, to: 900, dur: .3, vol: .4 }, p);
     p.actionbar && p.actionbar('§b절반 조각기 §c최대 체력 -' + cost.toFixed(1) + ' §f각도 180°'); return true;

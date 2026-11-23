@@ -12,7 +12,7 @@ Object.assign(SK, {
   // ---------- dude New: 댄스 ----------
   // toggle: dance in place (no moving / attacking, other skills locked) to the song while a frog joins every second;
   // stopping gives buffs for the frogs gathered. Everyone sees it through 'dance' / 'dfrog' events (G.dancers, R.drawFrogs).
-  DANCE_MAX: 30, DANCE_FX_SEC: 30,
+  DANCE_FX_SEC: 30, DANCE_PER: { str: 1.5 / 40, spd: 2 / 40, heal: 6 / 40, hb: 4 / 40 }, // per frog (fractional, floored at the end): 40 frogs = 힘 1.5 · 신속 2 · 회복 6 · 체력 증가 4
   dance(p) {
     if (p.st.dance) return SK.danceEnd(p, true);
     p.st.dance = { t: G.tick, yaw: p.yaw, n: 0 }; p.sprinting = false; p.vx = p.vz = 0;
@@ -21,24 +21,25 @@ Object.assign(SK, {
   },
   danceTick(p) {
     const d = p.st.dance; const a = G.tick - d.t; // the body keeps facing d.yaw (G.dancers); p.yaw is free for the orbit camera
-    if (a > 0 && a % 20 === 0 && d.n < SK.DANCE_MAX) {
+    if (a > 0 && a % 20 === 0) { // no frog limit
       for (let k = 0; k < 8; k++) { // a random free spot on the ground around the dancer
         const ang = Math.random() * Math.PI * 2, r = rand(2, 5.5), x = p.x + Math.cos(ang) * r, z = p.z + Math.sin(ang) * r, gy = SK.fangY(x, p.y + 1, z);
         if (gy === null || Math.abs(gy - p.y) > 3) continue;
         d.n++; G.emitAndApply({ k: 'dfrog', by: p.id, x: r1(x), y: r1(gy), z: r1(z), yaw: r1(d.yaw + rand(-.35, .35)) }); break;
       }
-      p.actionbar('§a🐸 개구리 ' + d.n + '마리' + (d.n >= SK.DANCE_MAX ? ' §7(최대)' : ''));
+      p.actionbar('§a🐸 개구리 ' + d.n + '마리');
     }
   },
-  // reward: n frogs -> 신속 (max IV), 힘 (max II), 회복 (2 HP per frog, up to full), 체력 증가 (+4 HP per 3 frogs, max +20), each frog 5% -> 총알
+  // reward: n frogs × DANCE_PER (no cap), each floored -> 신속 / 힘 / 체력 증가 levels, 회복 = instant HP; each frog 5% -> 총알
   danceEnd(p, reward) {
     const d = p.st && p.st.dance; if (!d) return false; p.st.dance = null; G.emitAndApply({ k: 'dance', by: p.id, on: 0 });
     if (!reward) return false;
-    const n = d.n, T = SK.DANCE_FX_SEC, spd = Math.min(4, Math.ceil(n / 4)), str = Math.min(2, Math.floor(n / 6)), hb = Math.min(5, Math.floor(n / 3));
+    const n = d.n, T = SK.DANCE_FX_SEC, P = SK.DANCE_PER, fl = x => Math.floor(x + 1e-9); // 1e-9: 40 × (1.5/40) must floor to 1, not 0.999…
+    const spd = fl(n * P.spd), str = fl(n * P.str), hb = fl(n * P.hb), heal = fl(n * P.heal);
     if (spd) p.addEff('speed', spd - 1, T); if (str) p.addEff('strength', str - 1, T); if (hb) p.addEff('health_boost', hb - 1, T);
-    p.heal(n * 2); let ammo = 0; for (let i = 0; i < n; i++) if (Math.random() < .05) ammo++; if (ammo) p.addItem('dude_bullet', ammo);
-    const R = ['I', 'II', 'III', 'IV'];
-    p.msg('§a[댄스] §f개구리 ' + n + '마리' + (n ? ' → ' + [spd && '신속 ' + R[spd - 1], str && '힘 ' + R[str - 1], hb && '체력 +' + hb * 4, '회복 ' + n * 2].filter(Boolean).join(' · ') + (ammo ? ' · §6총알 ' + ammo + '개' : '') : ''));
+    if (heal) p.heal(heal); let ammo = 0; for (let i = 0; i < n; i++) if (Math.random() < .05) ammo++; if (ammo) p.addItem('dude_bullet', ammo);
+    const R = v => ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'][v - 1] || String(v);
+    p.msg('§a[댄스] §f개구리 ' + n + '마리' + (n ? ' → ' + [spd && '신속 ' + R(spd), str && '힘 ' + R(str), hb && '체력 +' + hb * 4, heal && '회복 ' + heal].filter(Boolean).join(' · ') + (ammo ? ' · §6총알 ' + ammo + '개' : '') : ''));
     if (n) AU.sfx('levelup', p); p.setCd('dance', ITEMS.dance.cd); return 'nocd';
   },
   // ---------- dude New: 권총 ----------
