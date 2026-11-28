@@ -33,6 +33,7 @@
   .topbar .right { margin-left: auto; display: flex; gap: 8px; }
   .iconbtn { width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel);
     font-size: 20px; line-height: 1; display: grid; place-items: center; }
+  .iconbtn.on { background: var(--fg); color: var(--bg); border-color: var(--fg); }
   .backbtn { height: 36px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); }
   .touchOnly { display: none !important; }
   body.touch .touchOnly { display: grid !important; }
@@ -50,15 +51,16 @@
   h2 { margin: 0 0 8px; font-size: 18px; }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 14px; }
 
-  /* 고정 무대: 메뉴·게임 화면은 960×540 설계 크기로 배치하고 창에 맞춰 통째로 확대·축소 (fitStages). 창 비율이 달라도 모양이 그대로 */
+  /* 고정 무대: 메뉴·게임 화면은 960×540(최소) 설계 크기로 배치하고 창에 맞춰 통째로 확대·축소 (fitStages).
+     크기는 비율 그대로, 남는 쪽(가로나 세로)은 무대를 그만큼 늘려 화면을 꽉 채움 → 요소는 가장자리 기준이라 자리만 벌어짐 */
   .stageBox { position: absolute; inset: 0; overflow: hidden; }
   .stage { position: absolute; left: 50%; top: 50%; width: 960px; height: 540px; transform: translate(-50%, -50%) scale(var(--s, 1)); transform-origin: center; }
   #scr-menu .stageBox { top: 52px; }
 
   /* 메인 메뉴 */
   #scr-menu { padding: 0; }
-  #scr-menu .stage { display: flex; align-items: center; gap: 40px; }
-  #scr-menu .menuCol { flex: 1; display: flex; flex-direction: column; gap: 14px; max-width: 380px; margin-left: 56px; }
+  #scr-menu .stage { display: flex; align-items: center; justify-content: center; gap: 60px; }
+  #scr-menu .menuCol { flex: 0 1 380px; display: flex; flex-direction: column; gap: 14px; }
   #scr-menu .logo { white-space: nowrap; font-size: 72px; font-weight: 900; letter-spacing: -0.02em; line-height: 1; margin-bottom: 8px; }
   #scr-menu .logo b { color: var(--bbak); } #scr-menu .logo i { color: var(--tta); font-style: normal; }
   .menuBtn { white-space: nowrap; gap: 10px; text-align: left; padding: 14px 18px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel);
@@ -69,7 +71,7 @@
   #noteHint .card { max-width: 360px; text-align: center; }
   #landHint { position: absolute; inset: 0; z-index: 20; background: rgba(0,0,0,.45); display: grid; place-items: center; padding: 20px; }
   #landHint .card { max-width: 320px; text-align: center; }
-  #scr-menu .stage img { height: 440px; max-width: 420px; object-fit: contain; margin-right: 48px; pointer-events: none; }
+  #scr-menu .stage img { height: 440px; max-width: 420px; object-fit: contain; pointer-events: none; }
 
   /* 게임 선택 */
   #scr-select .grid { display: flex; flex-wrap: wrap; gap: 14px; }
@@ -81,9 +83,8 @@
   /* 잘자콘 게임 */
   #app.zdark .topbar { display: none; }
   #scr-zalza { padding: 0; }
-  /* 터치: 양쪽 아래 누름 패드 자리를 비우고 그 안에 무대를 맞춤 */
-  #app { --padS: 84px; --padR: calc(var(--padS) + 28px); }
-  body.touch #scr-zalza .stageBox { left: calc(var(--padR) + env(safe-area-inset-left, 0px)); right: calc(var(--padR) + env(safe-area-inset-right, 0px)); }
+  /* 터치: 누름 패드도 무대 안(양쪽 아래 모서리)이라 같이 커지고 작아짐. 댄서는 빡 패드 옆으로 비킴 */
+  body.touch #dancer { right: 150px; }
   #zExit { position: absolute; z-index: 5; left: 24px; top: 16px;
     display: flex; flex-direction: column; align-items: center; gap: 2px; background: none; border: none; padding: 0; color: var(--muted); }
   #zExit i { width: 56px; height: 56px; border: 4px solid #ff6b6b; border-radius: 30%;
@@ -145,7 +146,7 @@
   .sq.miss { border-color: #6b6e75; } .sq.miss b { background: rgba(120,123,130,.45); height: 100% !important; }
 
   /* 가사 */
-  #lyrics { position: absolute; z-index: 4; left: 40px; top: 216px; width: 560px; pointer-events: none; }
+  #lyrics { position: absolute; z-index: 4; left: 40px; top: calc(50% - 54px); width: 560px; pointer-events: none; }
 
   /* 세부 판정 인디케이터 */
   #zInd { position: absolute; z-index: 4; left: 50%; transform: translateX(-50%); bottom: 22px;
@@ -170,11 +171,11 @@
   #zResRows div { display: flex; justify-content: space-between; font-variant-numeric: tabular-nums; }
   #zLoad { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); color: var(--muted); }
 
-  .pad { position: absolute; z-index: 7; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); width: var(--padS); height: var(--padS);
+  .pad { position: absolute; z-index: 7; bottom: 22px; width: 112px; height: 112px;
     border-radius: 50%; border: none; font-size: 32px; font-weight: 800; color: #fff; opacity: .88; display: none; touch-action: none; }
   .pad.down { transform: scale(.92); opacity: 1; }
-  .pad.L { left: calc(16px + env(safe-area-inset-left, 0px)); background: var(--tta); }
-  .pad.R { right: calc(16px + env(safe-area-inset-right, 0px)); background: var(--bbak); }
+  .pad.L { left: 22px; background: var(--tta); }
+  .pad.R { right: 22px; background: var(--bbak); }
   body.touch .pad { display: block; }
 
 
@@ -331,9 +332,9 @@
       <div id="zResRows"></div>
       <button class="btn primary" id="zAgain">다시 하기</button> <button class="btn" id="zClose">나가기</button>
     </div>
-    </div></div>
     <button class="pad L" data-key="L">따</button>
     <button class="pad R" data-key="R">빡</button>
+    </div></div>
   </section>
 
   <!-- 보정 -->
@@ -692,16 +693,33 @@ $("setGoCalib").addEventListener("click", () => { $("settings").hidden = true; g
 
 // ---- 가로 회전 (모바일) ----
 // 화면을 CSS로 90° 돌려서 가로처럼 보이게 함 (폰을 가로로 들고 사용)
+// 다른 게임(4중인격·랜덤블록)처럼 브라우저 전체화면 + 가로 고정. 사이트 데스크톱 창 안이면 부모에게 {t:'land'}를 보내서
+// 창도 꽉 찬 화면으로 바꾸고 부모가 전체화면·가로 고정을 함. 가로 고정이 안 되는 기기(iOS 등)는 잠시 뒤에도 세로면 CSS로 90° 돌림
+let landOn = false;
+const inSite = window.parent !== window;
+function landCheck() { setTimeout(() => { if (landOn && innerHeight > innerWidth) document.body.classList.add("forceLand"); fitStages(); resizeCanvases(); }, 900); }
 $("btnRotate").addEventListener("click", () => {
-  const want = !document.body.classList.contains("forceLand") && innerHeight > innerWidth;
-  document.body.classList.toggle("forceLand", want);
-  setTimeout(() => { fitStages(); resizeCanvases(); }, 50);
+  landOn = !landOn;
+  if (!landOn) document.body.classList.remove("forceLand");
+  if (inSite) { try { parent.postMessage({ site: 1, t: "land", on: landOn }, "*"); } catch (e) { } }
+  else if (landOn) {
+    const el = document.documentElement, rq = el.requestFullscreen || el.webkitRequestFullscreen;
+    const lock = () => { try { const q = screen.orientation && screen.orientation.lock && screen.orientation.lock("landscape"); if (q && q.catch) q.catch(() => { }); } catch (e) { } };
+    try { const q = rq && rq.call(el, { navigationUI: "hide" }); if (q && q.then) q.then(lock).catch(lock); else lock(); } catch (e) { lock(); }
+  } else {
+    const d = document; try { screen.orientation && screen.orientation.unlock && screen.orientation.unlock(); } catch (e) { }
+    if (d.fullscreenElement || d.webkitFullscreenElement) { try { const q = (d.exitFullscreen || d.webkitExitFullscreen).call(d); if (q && q.catch) q.catch(() => { }); } catch (e) { } }
+  }
+  $("btnRotate").classList.toggle("on", landOn);
+  landCheck();
 });
 // 고정 무대(.stage, 960×540)를 들어 있는 칸에 맞게 비율 그대로 확대·축소
 function fitStages() {
   document.querySelectorAll(".stage").forEach(st => {
     const b = st.parentElement, w = b.clientWidth, h = b.clientHeight;
-    if (w && h) st.style.setProperty("--s", Math.min(w / 960, h / 540));
+    if (!w || !h) return;
+    const k = Math.min(w / 960, h / 540);
+    st.style.setProperty("--s", k); st.style.width = w / k + "px"; st.style.height = h / k + "px";
   });
 }
 new ResizeObserver(fitStages).observe($("app"));

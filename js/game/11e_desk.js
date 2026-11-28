@@ -184,7 +184,7 @@ const DESK = {
     const L = this.APPS.find(a => a.id === id); if (L && L.url) { window.open(L.url, '_blank', 'noopener'); this.startMenu(false); return; } // link apps
     const W = this.wins[id] || this.mkWin(id); if (!W) return; const was = W.closed; const prev = this.top(); W.min = false; W.closed = false; if (W.mode === 'full' && !(this.mobile && W.A.game)) W.mode = this.mobile ? 'max' : 'normal'; if (this.mobile && W.A.game) W.mode = 'full'; W.z = ++this.z; if (prev && prev !== W) this.blurApp(prev);
     this.startMenu(false); this.sync(); this.save();
-    if (was) { if (W.A.game) this.gameStart(W); else if (W.A.frame) this.loadFrame(W); else if (W.A.build) W.A.build(W.body, W); }
+    if (was) { if (W.A.frame) this.loadFrame(W); else if (W.A.game) this.gameStart(W); else if (W.A.build) W.A.build(W.body, W); }
     else if (W.A.onOpen) W.A.onOpen(W.body, W);
   },
   minimize(id) { const W = this.wins[id]; W.min = true; this.blurApp(W); this.sync(); },
@@ -263,8 +263,8 @@ const DESK = {
 DESK.addApp({ id: 'games', folder: true, icon: '📁', label: '게임', title: '게임' });
 DESK.addApp({ id: 'apvp', in: 'games', icon: '⚔️', label: '4중인격<br>PvP', title: '4중인격 PvP', game: true, w: 1280, h: 800, bg: 'linear-gradient(#5b8a3a,#3c6a24)' });
 DESK.addApp({ id: 'rbs', in: 'games', icon: '🧱', img: (typeof RB_ICON !== 'undefined' ? RB_ICON : ''), label: '랜덤블록<br>서바이벌', title: '랜덤블록 서바이벌', game: true, w: 1280, h: 800, bg: 'linear-gradient(#3a7bd5,#22427a)' });
-// 빡따빡 (베타): 리듬 게임 (zalza/index.html, 따로인 한 파일 페이지 + music·charts·lyrics·sfx·img)
-DESK.addApp({ id: 'zalza', in: 'games', icon: '🌙', label: '빡따빡 <b class="dkbeta">베타</b>', title: '빡따빡 · 베타', frame: 'zalza/index.html', w: 1280, h: 800, bg: 'linear-gradient(#ff9a5c,#2563eb)' });
+// 빡따빡 (베타): 리듬 게임 (zalza/index.html, 따로인 한 파일 페이지 + music·charts·lyrics·sfx·img). game: 창은 게임처럼(모바일 꽉 찬 화면, ⛶), frame: P2P 동의 없이 그 페이지를 띄움
+DESK.addApp({ id: 'zalza', in: 'games', icon: '🌙', label: '빡따빡 <b class="dkbeta">베타</b>', title: '빡따빡 · 베타', frame: 'zalza/index.html', game: true, w: 1280, h: 800, bg: 'linear-gradient(#ff9a5c,#2563eb)' });
 // 개발 도구: the 4중인격 game with APVP_DEV, offline only. No icon; opened from the game's '개발 도구 창 열기' or 사이트주소/ability_pvp_dev
 DESK.addApp({ id: 'apvp_dev', app: 'apvp', dev: true, offline: true, hidden: true, icon: '🛠', title: '4중인격 개발 도구', game: true, w: 1280, h: 800 });
 // 가사 맞추기 (베타): 노래 가사를 문장·단어·글자 단위로 TAP해서 시간을 찍는 도구 (lyrics/index.html, 게임과 따로인 한 파일) -> 확장 LRC
