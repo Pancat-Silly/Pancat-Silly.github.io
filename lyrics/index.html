@@ -276,10 +276,26 @@ async function loadAudio(blob, name, keep) {
     for (let i = 0; i < n; i++) { let a = 0, b = 0; const s0 = Math.floor(i * spb), s1 = Math.min(chs[0].length, Math.floor((i + 1) * spb)); for (const ch of chs) for (let s = s0; s < s1; s++) { const v = ch[s]; if (v < a) a = v; else if (v > b) b = v; } mn[i] = a; mx[i] = b; }
     let pk = 0; for (let i = 0; i < n; i++) pk = Math.max(pk, -mn[i], mx[i]); const k = pk > 0 ? 1 / pk : 1; for (let i = 0; i < n; i++) { mn[i] *= k; mx[i] *= k; }
     peaks = { mn, mx, n }; ac.close && ac.close();
+    // MP3(특히 VBR)는 <audio>가 중간으로 건너뛸 때 위치를 어림잡아서 처음부터 틀 때와 시간이 어긋난다.
+    // 디코딩한 소리를 WAV로 바꿔 틀면 어디서 시작해도 샘플 단위로 정확하다 (게임도 디코딩한 소리를 씀).
+    const wasT = A.currentTime, wasP = playing(), old = A.src;
+    A.src = URL.createObjectURL(toWav(buf)); A.playbackRate = +$('sRate').value;
+    URL.revokeObjectURL(old);
+    if (wasT) A.addEventListener('loadedmetadata', () => { A.currentTime = wasT; }, { once: true });
+    if (wasP) A.play().catch(() => {});
     $('waveMsg').textContent = '';
   } catch (e) { peaks = null; $('waveMsg').textContent = '파형을 못 만들었어요 (재생은 돼요)'; }
   if (!keep) idbSet('audio', { blob, name: audioName });
   toast('🎧 ' + audioName);
+}
+function toWav(buf) {
+  const nc = Math.min(2, buf.numberOfChannels), len = buf.length, sr = buf.sampleRate, ab = new ArrayBuffer(44 + len * nc * 2), v = new DataView(ab);
+  const str = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+  str(0, 'RIFF'); v.setUint32(4, 36 + len * nc * 2, true); str(8, 'WAVE'); str(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, nc, true);
+  v.setUint32(24, sr, true); v.setUint32(28, sr * nc * 2, true); v.setUint16(32, nc * 2, true); v.setUint16(34, 16, true); str(36, 'data'); v.setUint32(40, len * nc * 2, true);
+  const out = new Int16Array(ab, 44), chs = []; for (let c = 0; c < nc; c++) chs.push(buf.getChannelData(c));
+  for (let i = 0, o = 0; i < len; i++) for (let c = 0; c < nc; c++) { const x = chs[c][i]; out[o++] = x < -1 ? -32768 : x > 1 ? 32767 : x * 32767 | 0; }
+  return new Blob([ab], { type: 'audio/wav' });
 }
 const playing = () => !A.paused && !A.ended;
 function seek(t) { A.currentTime = clamp(t, 0, dur || A.duration || 1e9); }
