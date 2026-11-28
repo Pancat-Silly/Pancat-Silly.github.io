@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>빡따빡</title>
+<style>html,body{margin:0;height:100%;background:#000;color:#aaa;font:14px sans-serif}body{display:flex;align-items:center;justify-content:center}</style>
+</head>
+<body>
+불러오는 중…
+<script>
+// 사이트주소/zalza/nodesktop : 바탕화면 없이 빡따빡만 실행한다. (tools/mkentry.py로 만든 파일)
+// 게임 페이지(zalza/game.html)를 받아 <base href>(그 폴더 기준 경로)만 넣어 그린다. 주소는 그대로.
+(function () {
+  var page = new URL('../../zalza/game.html', location.href), base = new URL('./', page);
+  fetch(page, { cache: 'no-cache' }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); }).then(function (h) {
+    h = /<head[^>]*>/i.test(h) ? h.replace(/<head([^>]*)>/i, function (m) { return m + '<base href="' + base.href + '">'; }) : '<base href="' + base.href + '">' + h;
+    document.open(); document.write(h); document.close();
+  }).catch(function () { location.replace(page.href); });
+})();
+</script>
+</body>
+</html>

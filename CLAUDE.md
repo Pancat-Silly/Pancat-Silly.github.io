@@ -43,6 +43,7 @@ js/jobs/<직업>.js     4중인격 직업 전부 (직업당 한 파일, dude는 
                       맞을 때·그리기 같은 엔진 쪽 훅(05_player, 09_game, 10_render)과 가사(06b_lyrics)는 그대로 엔진 파일에 있음
 js/game/              게임 코드. 파일 이름 순서로 로드하는 일반 <script>들 (전역 공유)
 rbs/music/            랜덤블록 BGM mp3 (선택)
+zalza/                빡따빡 (베타) 리듬 게임: 게임과 따로인 한 파일 페이지 game.html + music·charts·lyrics·sfx·img. index.html은 바로 들어가기(데스크톱 위에 창), nodesktop/은 game.html을 <base href>로 그림 (둘 다 mkentry.py). 원본은 사용자 로컬 Desktop\claude\zalza
 lyrics/index.html     가사 맞추기 (베타) 앱: 게임과 따로인 한 파일 페이지 (로컬 사본 tools/lyrics/lyrics_timing.html). 노래+가사를 넣고 문장·단어·글자 단위로 TAP해서 시간을 찍고 파형 위 세로선을 끌어 고친다. 확장 LRC(txt)·JSON으로 내보냄(게임은 LRC를 그대로 씀). ?audio=&lrc=로 바로 불러옴
 sounds/               효과음 파일 (apvp/, rbs/, jobs/<직업>/). 랜덤블록 sfx_gameover·sfx_error·sfx_win_sin*는 사용자 요청으로 저장소에 안 올림(.gitignore, RB_SFX에서도 뺌 → 합성음). 예전에 js/data 안에 base64로 있던 것 (tools/split_sounds.py)
 tools/                [로컬 전용 · .gitignore로 저장소에 안 올림] preview.py/.bat(같은 와이파이 폰 미리보기), hooks/post-commit(preview 브랜치), mkdance.py + fbxbin.py + dance/*.fbx, mkentry.py, split_sounds.py, bump_version.py, hooks/pre-commit, build_single.py, rbsconv.py, rbsassets.py, mkmodjobs.py, mkassets.py, modjobs/*.txt, normalize_sounds.py + sound_norm.json + sounds_orig/
@@ -82,6 +83,7 @@ tools/                [로컬 전용 · .gitignore로 저장소에 안 올림] p
 - **바로 들어가기:** `사이트주소/ability_pvp`, `사이트주소/randomblock` → 가상 데스크톱 위에 그 게임 창만 연다(`SITE_OPEN`). 뒤에 `/nodesktop`을 붙이면 바탕화면 없이 단독 실행한다(`SITE_APP`). 단독 실행(창 밖, `p2p=` 없음)이면 `SITE_ASK_P2P`(99_boot.js)가 같은 동의 화면을 먼저 띄운다.
 - **사이트 버전·새 버전 알림:** 커밋할 때마다 pre-commit 훅(`tools/hooks/pre-commit`, `git config core.hooksPath tools/hooks`)이 `tools/bump_version.py`로 버전(`YYYY.MM.DD-N`)을 올린다. 바뀌는 파일은 `version.json`, `js/data/version.js`(`SITE_VER`), index.html의 css·js `?v=`(Pages 10분 캐시 회피)이다. 열려 있는 최상위 페이지는 `SITE.watchVer()`가 3분마다 `version.json`을 확인하고, 바뀌면 "새 버전이 나왔어요 · 새로고침" 알림을 띄운다. 버전명은 4중인격 메뉴 부제와 랜덤블록 오른쪽 위에 표시된다. GitHub 웹에서 직접 커밋하면 버전이 안 올라가니 주의한다.
 - **게임 폴더 (`games`, `folder: true`):** 안드로이드식 폴더. `in: 'games'`인 앱(4중인격, 랜덤블록)은 바탕화면 대신 폴더 안에 있고(시작 메뉴에는 그대로), 폴더 아이콘은 안에 든 앱 2×2 미리보기. 누르면(PC도 한 번 클릭) `DESK.folder()`가 아이콘에서 커져 나오는 둥근 패널을 띄우고, 패널 안 앱은 한 번 클릭으로 열린다. 바깥을 누르면 닫힘.
+- **빡따빡 앱 (`zalza`, 베타):** `frame: 'zalza/game.html'` + `game: true`(창은 게임처럼: 모바일 꽉 찬 화면, ⛶) + `land: true`(모바일에서 열면 `DESK.land(true)`로 바로 가로 전체화면). 게임 페이지는 창 안이면(`body.insite`) '바탕화면으로'(`{t:'close'}`)·⟳(`{t:'land'}`)를 부모에 보내고, 가로 고정이 안 되면 CSS로 돌림(`forceLand`). 메뉴·게임 화면은 960×540 무대(`.stage`, `fitStages`)를 비율 그대로 키우고 남는 쪽은 늘려 꽉 채움. 채보 제작기(옛 타이밍 측정)는 메뉴 댄서 9번 클릭(효과음 9~17.wav)으로만 들어감. 바로 들어가기: `사이트주소/zalza`, `/zalza/nodesktop`.
 - **가사 맞추기 앱 (`lyrics`, 베타):** `frame: 'lyrics/index.html'` 앱(`DESK.loadFrame`이 그 페이지를 iframe으로 띄움). 게임 폴더 바로 아래.
 - **GitHub 앱 (`github`):** 링크 앱. 이 저장소를 새 탭으로 연다.
 - **내 정보 앱 (`me`):** 링크 앱(`url`). 누르면 pancat-silly.carrd.co를 브라우저 새 탭으로 연다(Carrd는 X-Frame-Options: deny라 창 안에 못 띄움). `DESK.open`이 `url` 있는 앱은 창 대신 새 탭으로 연다.
