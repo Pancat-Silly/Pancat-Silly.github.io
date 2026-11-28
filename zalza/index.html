@@ -1,8 +1,8 @@
 <meta charset="utf-8">
-<title>잘자콘 리듬 초안</title>
+<title>빡따빡</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <style>
-  /* 레이아웃: 화면 하나짜리 앱. #app 을 컨테이너로 두고 cqw/cqh 로 배치 → 가로 강제 회전 시에도 그대로 동작 */
+  /* 레이아웃: 화면 하나짜리 앱. #app 을 컨테이너로 두고, 메뉴·게임은 고정 크기 무대(.stage)를 비율 그대로 확대·축소 → 가로 강제 회전 시에도 그대로 동작 */
   :root {
     --bg: #fbfaf7; --panel: #ffffff; --fg: #1d1b22; --muted: #77737f; --line: #e6e2da;
     --bbak: #ea580c; --bbak-soft: #ffe4cf;   /* 빡 = → */
@@ -50,20 +50,26 @@
   h2 { margin: 0 0 8px; font-size: 18px; }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 14px; }
 
+  /* 고정 무대: 메뉴·게임 화면은 960×540 설계 크기로 배치하고 창에 맞춰 통째로 확대·축소 (fitStages). 창 비율이 달라도 모양이 그대로 */
+  .stageBox { position: absolute; inset: 0; overflow: hidden; }
+  .stage { position: absolute; left: 50%; top: 50%; width: 960px; height: 540px; transform: translate(-50%, -50%) scale(var(--s, 1)); transform-origin: center; }
+  #scr-menu .stageBox { top: 52px; }
+
   /* 메인 메뉴 */
-  #scr-menu { display: flex; align-items: center; gap: 4cqw; }
-  #scr-menu .menuCol { flex: 1; display: flex; flex-direction: column; gap: 12px; max-width: 360px; margin-left: 4cqw; }
-  #scr-menu .logo { white-space: nowrap; font-size: clamp(28px, min(9cqh, 13cqw), 64px); font-weight: 900; letter-spacing: -0.02em; line-height: 1; margin-bottom: 1cqh; }
+  #scr-menu { padding: 0; }
+  #scr-menu .stage { display: flex; align-items: center; gap: 40px; }
+  #scr-menu .menuCol { flex: 1; display: flex; flex-direction: column; gap: 14px; max-width: 380px; margin-left: 56px; }
+  #scr-menu .logo { white-space: nowrap; font-size: 72px; font-weight: 900; letter-spacing: -0.02em; line-height: 1; margin-bottom: 8px; }
   #scr-menu .logo b { color: var(--bbak); } #scr-menu .logo i { color: var(--tta); font-style: normal; }
   .menuBtn { white-space: nowrap; gap: 10px; text-align: left; padding: 14px 18px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel);
-    font-size: clamp(16px, 4.2cqh, 22px); font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
+    font-size: 22px; font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
   .menuBtn span { font-size: 13px; font-weight: 500; color: var(--muted); }
   .menuBtn:active { transform: scale(.98); }
   #noteHint { position: absolute; inset: 0; z-index: 21; background: rgba(0,0,0,.45); display: grid; place-items: center; padding: 20px; }
   #noteHint .card { max-width: 360px; text-align: center; }
   #landHint { position: absolute; inset: 0; z-index: 20; background: rgba(0,0,0,.45); display: grid; place-items: center; padding: 20px; }
   #landHint .card { max-width: 320px; text-align: center; }
-  #scr-menu img { height: 78cqh; max-width: 40cqw; object-fit: contain; margin-right: 4cqw; pointer-events: none; }
+  #scr-menu .stage img { height: 440px; max-width: 420px; object-fit: contain; margin-right: 48px; pointer-events: none; }
 
   /* 게임 선택 */
   #scr-select .grid { display: flex; flex-wrap: wrap; gap: 14px; }
@@ -74,19 +80,21 @@
 
   /* 잘자콘 게임 */
   #app.zdark .topbar { display: none; }
-  #scr-zalza { padding: 0; --padW: 0px; }
-  body.touch #scr-zalza { --padW: max(17cqh, 72px); }
-  #zExit { position: absolute; z-index: 5; left: calc(2.5cqw + env(safe-area-inset-left, 0px)); top: calc(2.5cqh + env(safe-area-inset-top, 0px));
+  #scr-zalza { padding: 0; }
+  /* 터치: 양쪽 아래 누름 패드 자리를 비우고 그 안에 무대를 맞춤 */
+  #app { --padS: 84px; --padR: calc(var(--padS) + 28px); }
+  body.touch #scr-zalza .stageBox { left: calc(var(--padR) + env(safe-area-inset-left, 0px)); right: calc(var(--padR) + env(safe-area-inset-right, 0px)); }
+  #zExit { position: absolute; z-index: 5; left: 24px; top: 16px;
     display: flex; flex-direction: column; align-items: center; gap: 2px; background: none; border: none; padding: 0; color: var(--muted); }
-  #zExit i { width: clamp(40px, 7cqw, 60px); height: clamp(40px, 7cqw, 60px); border: 4px solid #ff6b6b; border-radius: 30%;
-    display: grid; place-items: center; color: #ff6b6b; font-style: normal; font-weight: 900; font-size: clamp(20px, 3.6cqw, 32px); }
+  #zExit i { width: 56px; height: 56px; border: 4px solid #ff6b6b; border-radius: 30%;
+    display: grid; place-items: center; color: #ff6b6b; font-style: normal; font-weight: 900; font-size: 30px; }
   #zExit:active i { transform: scale(.92); }
   #zExit small { font-size: 11px; letter-spacing: .15em; font-weight: 700; }
-  #zTitle { position: absolute; z-index: 4; left: calc(4cqw + clamp(40px, 7cqw, 60px) + env(safe-area-inset-left, 0px)); top: calc(2.5cqh + env(safe-area-inset-top, 0px));
-    font-size: clamp(20px, 4cqw, 38px); font-weight: 900; line-height: 1.1; white-space: nowrap; }
+  #zTitle { position: absolute; z-index: 4; left: 96px; top: 16px;
+    font-size: 36px; font-weight: 900; line-height: 1.1; white-space: nowrap; }
   #zTitle small { display: block; font-size: max(12px, .42em); font-weight: 700; color: var(--muted); margin-top: .15em; font-variant-numeric: tabular-nums; }
 
-  #dancer { position: absolute; right: calc(3cqw + var(--padW)); bottom: 2cqh; height: 60cqh; max-width: 36cqw; object-fit: contain; pointer-events: none; }
+  #dancer { position: absolute; right: 28px; bottom: 12px; height: 324px; max-width: 340px; object-fit: contain; pointer-events: none; }
 
   /* 댄서 피격 효과: 빨강(늦음/미스), 파랑(빠름) + 흔들림 */
   #dancer.hitR { animation: dShake .32s linear, dRed .38s ease-out; }
@@ -97,9 +105,9 @@
   @keyframes dBlue { 0%, 35% { filter: brightness(.9) sepia(1) saturate(8) hue-rotate(178deg) drop-shadow(0 0 10px rgba(59,130,246,.8)); } 100% { filter: none; } }
 
   /* 말풍선 */
-  #zBubble { position: absolute; z-index: 3; right: calc(1.5cqw + var(--padW)); top: 3cqh; width: min(50cqw, 660px, calc(56cqw - var(--padW))); height: 33cqh;
-    border: 4px solid #8e9297; border-radius: 9cqh; background: #383a40;
-    transform-origin: 60% 110%; opacity: 0; transform: scale(.6) translateY(4cqh); transition: opacity .16s, transform .22s cubic-bezier(.2,.9,.3,1.3); pointer-events: none; }
+  #zBubble { position: absolute; z-index: 3; right: 16px; top: 16px; width: 480px; height: 180px;
+    border: 4px solid #8e9297; border-radius: 48px; background: #383a40;
+    transform-origin: 60% 110%; opacity: 0; transform: scale(.6) translateY(22px); transition: opacity .16s, transform .22s cubic-bezier(.2,.9,.3,1.3); pointer-events: none; }
   #zBubble.show { opacity: 1; transform: none; }
   #zBubble::after { content: ""; position: absolute; left: 58%; bottom: -16px; width: 26px; height: 26px; background: #383a40;
     border-right: 4px solid #8e9297; border-bottom: 4px solid #8e9297; transform: rotate(45deg) skew(8deg, 8deg); }
@@ -120,8 +128,8 @@
   .jl { position: absolute; z-index: 2; text-align: center; font-weight: 900; line-height: 1; white-space: nowrap; letter-spacing: -.02em;
     text-shadow: 0 1px 3px rgba(0,0,0,.6); animation: jlIn .25s ease-out; pointer-events: none; }
   @keyframes jlIn { from { opacity: 0; transform: translateY(40%) scale(.8); } to { opacity: 1; transform: none; } }
-  #zCount { position: absolute; z-index: 2; right: 100%; top: 50%; margin-right: 1.2cqw; transform: translateY(-50%);
-    font-size: clamp(18px, 5.5cqh, 30px); font-weight: 900; line-height: 1; color: #fde047; opacity: 0; }
+  #zCount { position: absolute; z-index: 2; right: 100%; top: 50%; margin-right: 12px; transform: translateY(-50%);
+    font-size: 30px; font-weight: 900; line-height: 1; color: #fde047; opacity: 0; }
   #zCount.on { opacity: 1; }
   #zCount.pop { animation: cdPop .3s ease-out; }
   @keyframes cdPop { from { transform: translateY(-50%) scale(1.4); } to { transform: translateY(-50%); } }
@@ -137,17 +145,17 @@
   .sq.miss { border-color: #6b6e75; } .sq.miss b { background: rgba(120,123,130,.45); height: 100% !important; }
 
   /* 가사 */
-  #lyrics { position: absolute; z-index: 4; left: calc(4cqw + env(safe-area-inset-left, 0px)); top: 40cqh; width: 58cqw; pointer-events: none; }
+  #lyrics { position: absolute; z-index: 4; left: 40px; top: 216px; width: 560px; pointer-events: none; }
 
   /* 세부 판정 인디케이터 */
-  #zInd { position: absolute; z-index: 4; left: 50%; transform: translateX(-50%); bottom: calc(4cqh + env(safe-area-inset-bottom, 0px));
-    width: min(36cqw, 420px); text-align: center; pointer-events: none; font-variant-numeric: tabular-nums; }
+  #zInd { position: absolute; z-index: 4; left: 50%; transform: translateX(-50%); bottom: 22px;
+    width: 360px; text-align: center; pointer-events: none; font-variant-numeric: tabular-nums; }
   #zInd .top { display: flex; justify-content: center; align-items: baseline; gap: 10px; height: 1.6em; }
-  #zJudge { font-size: clamp(14px, 2.4cqw, 22px); font-weight: 900; letter-spacing: .04em; }
+  #zJudge { font-size: 22px; font-weight: 900; letter-spacing: .04em; }
   #zJudge.pop { animation: zPop .2s ease-out; }
   @keyframes zPop { from { transform: scale(1.3); } to { transform: none; } }
   #zDelta { font-size: 12px; color: var(--muted); }
-  #zCombo { font-size: clamp(13px, 2cqw, 18px); font-weight: 800; }
+  #zCombo { font-size: 18px; font-weight: 800; }
   #zMeter { position: relative; height: 22px; margin-top: 2px; }
   #zMeter .zone { position: absolute; top: 8px; height: 6px; border-radius: 3px; }
   #zMeter .mid { position: absolute; left: 50%; top: 2px; width: 2px; height: 18px; margin-left: -1px; background: #fff; }
@@ -156,29 +164,29 @@
   #zAvg { position: absolute; top: -8px; width: 0; height: 0; margin-left: -6px; border: 6px solid transparent; border-top-color: #fde047; transition: left .2s; }
   #zMeter + .lbl { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); }
 
-  #zResult { position: absolute; z-index: 6; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(340px, 80cqw); text-align: center; }
+  #zResult { position: absolute; z-index: 6; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 340px; text-align: center; }
   #zResAcc { font-size: 40px; font-weight: 900; color: #fde047; margin: 2px 0 8px; }
   #zResRows { display: grid; gap: 4px; margin-bottom: 12px; text-align: left; }
   #zResRows div { display: flex; justify-content: space-between; font-variant-numeric: tabular-nums; }
   #zLoad { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); color: var(--muted); }
 
-  .pad { position: absolute; bottom: calc(4cqh + env(safe-area-inset-bottom, 0px)); width: max(17cqh, 72px); height: max(17cqh, 72px);
-    border-radius: 50%; border: none; font-size: clamp(18px, 6cqh, 40px); font-weight: 800; color: #fff; opacity: .88; display: none; touch-action: none; }
+  .pad { position: absolute; z-index: 7; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); width: var(--padS); height: var(--padS);
+    border-radius: 50%; border: none; font-size: 32px; font-weight: 800; color: #fff; opacity: .88; display: none; touch-action: none; }
   .pad.down { transform: scale(.92); opacity: 1; }
-  .pad.L { left: calc(4cqw + env(safe-area-inset-left, 0px)); background: var(--tta); }
-  .pad.R { right: calc(4cqw + env(safe-area-inset-right, 0px)); background: var(--bbak); }
+  .pad.L { left: calc(16px + env(safe-area-inset-left, 0px)); background: var(--tta); }
+  .pad.R { right: calc(16px + env(safe-area-inset-right, 0px)); background: var(--bbak); }
   body.touch .pad { display: block; }
 
 
   /* 잘자콘 다크 배경 + 가사 */
   #app.zdark { --bg: #313338; --panel: #2b2d31; --fg: #f2f3f5; --muted: #b5bac1; --line: #45474e; color: var(--fg); }
-  #lyCur { font-size: clamp(20px, 3.6cqw, 42px); font-weight: 900; line-height: 1.3; color: #fff; letter-spacing: -0.01em;
+  #lyCur { font-size: 36px; font-weight: 900; line-height: 1.3; color: #fff; letter-spacing: -0.01em;
     text-shadow: 0 2px 10px rgba(0,0,0,.35); white-space: nowrap; transition: opacity .4s; }
   #lyCur.in { animation: lyIn .38s cubic-bezier(.2,.9,.3,1.25) backwards; }
   #lyCur.out { opacity: 0; }
   #lyCur span { display: inline-block; white-space: pre; color: #fff; transform: translateY(.08em); transition: color .1s, transform .18s; }
   #lyCur span.on { color: #fde047; transform: none; animation: lyPop .22s ease-out; }
-  #lyNext { font-size: clamp(12px, 2cqw, 20px); font-weight: 600; line-height: 1.5; color: rgba(255,255,255,.5); white-space: nowrap; }
+  #lyNext { font-size: 19px; font-weight: 600; line-height: 1.5; color: rgba(255,255,255,.5); white-space: nowrap; }
   #lyNext.in { animation: lyFade .35s ease-out both; }
   @keyframes lyIn { from { opacity: 0; transform: translateY(.55em) scale(.94); } to { opacity: 1; transform: none; } }
   @keyframes lyPop { 0% { transform: translateY(.08em) scale(1); } 45% { transform: translateY(-.1em) scale(1.12); } 100% { transform: none; } }
@@ -196,20 +204,20 @@
   .calBody { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
   #vPad { border-radius: 24px; background: #313338; color: #f2f3f5; display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 10px; min-height: 0; touch-action: none; position: relative; overflow: hidden; }
-  #vBox { position: relative; width: 90%; display: flex; }
+  #vBox { position: relative; width: 90%; max-width: 460px; display: flex; }
   #vBox .vcell { flex: 1; aspect-ratio: 1; display: grid; place-items: center; }
   #vBox .sq { position: relative; width: 70%; height: auto; aspect-ratio: 1; border-width: 3px; }
-  #vBox .sq i { font-size: clamp(14px, 3cqw, 26px); }
+  #vBox .sq i { font-size: 22px; }
   #vScan { position: absolute; top: 4%; bottom: 4%; width: 4px; margin-left: -2px; border-radius: 2px; background: #fde047;
     box-shadow: 0 0 10px 2px rgba(253,224,71,.55); opacity: 0; transition: opacity .08s; z-index: 0; }
   #vScan.on { opacity: 1; }
-  #vCount { height: 1.2em; font-size: clamp(18px, 5.5cqh, 30px); font-weight: 900; color: #fde047; }
+  #vCount { height: 1.2em; font-size: 28px; font-weight: 900; color: #fde047; }
   #vHint { font-size: 13px; text-align: center; padding: 0 12px; color: #b5bac1; }
   #vMeter { width: 100%; height: 56px; display: block; }
   #calPad { border-radius: 24px; background: var(--panel); border: 2px solid var(--line); display: flex; flex-direction: column;
-    align-items: center; justify-content: center; gap: 8px; min-height: 0; touch-action: none; }
-  #calDrum { width: min(34cqh, 26cqw); height: min(34cqh, 26cqw); border-radius: 50%; background: var(--fg); color: var(--bg);
-    display: grid; place-items: center; font-size: clamp(22px, 8cqh, 54px); font-weight: 900; transition: transform .05s; }
+    align-items: center; justify-content: center; gap: 8px; min-height: 0; touch-action: none; container-type: size; }
+  #calDrum { flex-shrink: 0; width: min(180px, 55cqmin); height: min(180px, 55cqmin); border-radius: 50%; background: var(--fg); color: var(--bg);
+    display: grid; place-items: center; font-size: min(54px, 16cqmin); font-weight: 900; transition: transform .05s; }
   #calPad .muted { font-size: 13px; text-align: center; padding: 0 12px; }
   .calSide { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
   #calMeter { width: 100%; height: 56px; display: block; }
@@ -271,6 +279,7 @@
 
   <!-- 메인 메뉴 -->
   <section class="screen" id="scr-menu">
+    <div class="stageBox"><div class="stage">
     <div class="menuCol">
       <div class="logo"><b>빡</b><i>따</i>빡</div>
       <button class="menuBtn" data-go="select">게임 시작 <span>▶</span></button>
@@ -278,6 +287,7 @@
       <button class="menuBtn" data-go="timing">타이밍 측정 <span>노트 찍기</span></button>
     </div>
     <img src="img/dancer.gif" alt="">
+    </div></div>
   </section>
 
   <!-- 게임 선택 -->
@@ -298,6 +308,7 @@
 
   <!-- 잘자콘 -->
   <section class="screen" id="scr-zalza" hidden>
+    <div class="stageBox"><div class="stage">
     <button id="zExit" aria-label="나가기 (ESC)"><i>✕</i><small>ESC</small></button>
     <div id="zTitle">잘자콘<small id="zAccTxt">100.00%</small></div>
     <img id="dancer" src="img/dancer.gif" alt="">
@@ -320,6 +331,7 @@
       <div id="zResRows"></div>
       <button class="btn primary" id="zAgain">다시 하기</button> <button class="btn" id="zClose">나가기</button>
     </div>
+    </div></div>
     <button class="pad L" data-key="L">따</button>
     <button class="pad R" data-key="R">빡</button>
   </section>
@@ -656,6 +668,7 @@ function go(name) {
   for (const k in SCREENS) $("scr-" + k).hidden = k !== name;
   $("scrTitle").textContent = SCREENS[name].title;
   $("btnBack").hidden = !SCREENS[name].parent;
+  fitStages();
   if (name === "timing") tEnter();
   if (name === "calib") calTab === "video" ? drawVisMeter() : drawCalMeter();
 }
@@ -682,10 +695,19 @@ $("setGoCalib").addEventListener("click", () => { $("settings").hidden = true; g
 $("btnRotate").addEventListener("click", () => {
   const want = !document.body.classList.contains("forceLand") && innerHeight > innerWidth;
   document.body.classList.toggle("forceLand", want);
-  setTimeout(resizeCanvases, 50);
+  setTimeout(() => { fitStages(); resizeCanvases(); }, 50);
 });
+// 고정 무대(.stage, 960×540)를 들어 있는 칸에 맞게 비율 그대로 확대·축소
+function fitStages() {
+  document.querySelectorAll(".stage").forEach(st => {
+    const b = st.parentElement, w = b.clientWidth, h = b.clientHeight;
+    if (w && h) st.style.setProperty("--s", Math.min(w / 960, h / 540));
+  });
+}
+new ResizeObserver(fitStages).observe($("app"));
 addEventListener("resize", () => {
   if (innerWidth > innerHeight) document.body.classList.remove("forceLand");
+  fitStages();
   resizeCanvases();
 });
 
