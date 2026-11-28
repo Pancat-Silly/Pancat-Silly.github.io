@@ -36,6 +36,8 @@
   .iconbtn.on { background: var(--fg); color: var(--bg); border-color: var(--fg); }
   .backbtn { height: 36px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); }
   .touchOnly { display: none !important; }
+  .siteOnly { display: none; }
+  body.insite .siteOnly { display: block; }
   body.touch .touchOnly { display: grid !important; }
 
   .screen { position: absolute; inset: 0; padding: 60px max(16px, env(safe-area-inset-right, 0px)) 16px max(16px, env(safe-area-inset-left, 0px)); }
@@ -275,6 +277,7 @@
     <button class="backbtn" id="btnBack" hidden>← 뒤로</button>
     <span class="title" id="scrTitle"></span>
     <div class="right">
+      <button class="backbtn siteOnly" id="btnDesk" title="게임 끄고 바탕화면으로">🖥️ 바탕화면으로</button>
       <button class="iconbtn touchOnly" id="btnRotate" title="가로 회전" aria-label="가로 회전">⟳</button>
       <button class="iconbtn" id="btnSettings" title="설정" aria-label="설정">⚙</button>
     </div>
@@ -724,6 +727,12 @@ $("btnRotate").addEventListener("click", () => {
   $("btnRotate").classList.toggle("on", landOn);
   landCheck();
 });
+// 사이트 데스크톱 창 안: 다른 게임처럼 "게임 끄고 바탕화면으로"(창 닫기, 전체화면도 풀림). 단독 실행에서는 안 보임
+if (inSite) document.body.classList.add("insite");
+$("btnDesk").addEventListener("click", () => { zStopMusic(); try { parent.postMessage({ site: 1, t: "close" }, "*"); } catch (e) { } });
+// 모바일 기본은 가로 전체화면: 데스크톱이 창을 열 때 이미 가로 전체화면으로 바꿈(앱 land: true) → 켜진 상태로 시작.
+// 가로 고정이 안 되는 기기는 landCheck가 CSS로 돌림
+if (inSite && isTouch) { landOn = true; $("btnRotate").classList.add("on"); $("landHint").hidden = true; landCheck(); }
 // 고정 무대(.stage, 960×540)를 들어 있는 칸에 맞게 비율 그대로 확대·축소
 function fitStages() {
   document.querySelectorAll(".stage").forEach(st => {

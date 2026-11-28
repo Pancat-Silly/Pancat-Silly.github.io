@@ -114,7 +114,7 @@ const DESK = {
     return '<div class="dkIcon' + (a.folder ? ' dkfold' : '') + '" data-app="' + a.id + '" title="' + (a.folder || this.mobile ? '' : '더블클릭해서 열기') + '"><div class="dkimg" style="background:' + (a.folder ? '#000' : a.bg || '#3c6a24') + '">' + inner + '</div><div class="dklbl">' + a.label + '</div></div>';
   },
   bindIcon(el, inFolder) {
-    const go = () => { const A = this.APPS.find(a => a.id === el.dataset.app); if (!A) return; if (A.folder) return this.folder(A.id, el); this.folder(null); this.open(A.id); if (this.mobile && A.game) { this.setMode(A.id, 'full'); this.goFs(false); } };
+    const go = () => { const A = this.APPS.find(a => a.id === el.dataset.app); if (!A) return; if (A.folder) return this.folder(A.id, el); this.folder(null); this.open(A.id); if (this.mobile && A.game) { this.setMode(A.id, 'full'); if (A.land) this.land(true); else this.goFs(false); } };
     el.onclick = e => { e.stopPropagation(); const A = this.APPS.find(a => a.id === el.dataset.app); if (this.mobile || inFolder || (A && A.folder)) return go(); for (const o of document.querySelectorAll('.dkIcon')) o.classList.remove('sel'); el.classList.add('sel'); };
     el.ondblclick = () => { if (!this.mobile && !inFolder) { const A = this.APPS.find(a => a.id === el.dataset.app); if (A && !A.folder) go(); } };
   },
@@ -252,7 +252,7 @@ const DESK = {
     const fs = !!document.fullscreenElement;
     m.innerHTML = '<div class="smh">앱</div>' + this.APPS.filter(a => !a.hidden && !a.folder).map(a => '<div data-a="open" data-app="' + a.id + '">' + (a.img ? '<img src="' + a.img + '">' : a.icon) + ' ' + a.title + '</div>').join('')
       + '<div class="smh">화면</div><div data-a="fs">' + (fs ? '↩ 브라우저 전체화면 나가기' : '⛶ 브라우저 전체화면') + '</div>';
-    m.onclick = e => { const t = e.target.closest('[data-a]'); if (!t) return; e.stopPropagation(); if (t.dataset.a === 'open') { this.open(t.dataset.app); const A = this.APPS.find(a => a.id === t.dataset.app); if (this.mobile && A && A.game) { this.setMode(A.id, 'full'); this.goFs(false); } } if (t.dataset.a === 'fs') { this.toggleFs(); this.startMenu(false); } };
+    m.onclick = e => { const t = e.target.closest('[data-a]'); if (!t) return; e.stopPropagation(); if (t.dataset.a === 'open') { this.open(t.dataset.app); const A = this.APPS.find(a => a.id === t.dataset.app); if (this.mobile && A && A.game) { this.setMode(A.id, 'full'); if (A.land) this.land(true); else this.goFs(false); } } if (t.dataset.a === 'fs') { this.toggleFs(); this.startMenu(false); } };
     m.classList.remove('hide');
   },
   toggleFs() { if (document.fullscreenElement) { try { document.exitFullscreen(); } catch (e) { } return; } this.goFs(false); },
@@ -263,8 +263,8 @@ const DESK = {
 DESK.addApp({ id: 'games', folder: true, icon: '📁', label: '게임', title: '게임' });
 DESK.addApp({ id: 'apvp', in: 'games', icon: '⚔️', label: '4중인격<br>PvP', title: '4중인격 PvP', game: true, w: 1280, h: 800, bg: 'linear-gradient(#5b8a3a,#3c6a24)' });
 DESK.addApp({ id: 'rbs', in: 'games', icon: '🧱', img: (typeof RB_ICON !== 'undefined' ? RB_ICON : ''), label: '랜덤블록<br>서바이벌', title: '랜덤블록 서바이벌', game: true, w: 1280, h: 800, bg: 'linear-gradient(#3a7bd5,#22427a)' });
-// 빡따빡 (베타): 리듬 게임 (zalza/index.html, 따로인 한 파일 페이지 + music·charts·lyrics·sfx·img). game: 창은 게임처럼(모바일 꽉 찬 화면, ⛶), frame: P2P 동의 없이 그 페이지를 띄움
-DESK.addApp({ id: 'zalza', in: 'games', icon: '🌙', label: '빡따빡 <b class="dkbeta">베타</b>', title: '빡따빡 · 베타', frame: 'zalza/index.html', game: true, w: 1280, h: 800, bg: 'linear-gradient(#ff9a5c,#2563eb)' });
+// 빡따빡 (베타): 리듬 게임 (zalza/index.html, 따로인 한 파일 페이지 + music·charts·lyrics·sfx·img). game: 창은 게임처럼(모바일 꽉 찬 화면, ⛶), frame: P2P 동의 없이 그 페이지를 띄움, land: 모바일에서 열면 바로 가로 전체화면
+DESK.addApp({ id: 'zalza', in: 'games', icon: '🌙', label: '빡따빡 <b class="dkbeta">베타</b>', title: '빡따빡 · 베타', frame: 'zalza/index.html', game: true, land: true, w: 1280, h: 800, bg: 'linear-gradient(#ff9a5c,#2563eb)' });
 // 개발 도구: the 4중인격 game with APVP_DEV, offline only. No icon; opened from the game's '개발 도구 창 열기' or 사이트주소/ability_pvp_dev
 DESK.addApp({ id: 'apvp_dev', app: 'apvp', dev: true, offline: true, hidden: true, icon: '🛠', title: '4중인격 개발 도구', game: true, w: 1280, h: 800 });
 // 가사 맞추기 (베타): 노래 가사를 문장·단어·글자 단위로 TAP해서 시간을 찍는 도구 (lyrics/index.html, 게임과 따로인 한 파일) -> 확장 LRC
