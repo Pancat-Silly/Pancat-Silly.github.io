@@ -71,7 +71,9 @@
   #noteHint .card { max-width: 360px; text-align: center; }
   #landHint { position: absolute; inset: 0; z-index: 20; background: rgba(0,0,0,.45); display: grid; place-items: center; padding: 20px; }
   #landHint .card { max-width: 320px; text-align: center; }
-  #scr-menu .stage img { height: 440px; max-width: 420px; object-fit: contain; pointer-events: none; }
+  #scr-menu .stage img { height: 440px; max-width: 420px; object-fit: contain; -webkit-user-drag: none; }
+  #menuDancer { cursor: pointer; transition: transform .08s; }
+  #menuDancer.pop { transform: scale(.96) rotate(-2deg); }
 
   /* 게임 선택 */
   #scr-select .grid { display: flex; flex-wrap: wrap; gap: 14px; }
@@ -226,7 +228,7 @@
   .offRow input[type=number] { width: 84px; padding: 6px 8px; border-radius: 9px; border: 1px solid var(--line); text-align: right; font-variant-numeric: tabular-nums; }
   #calResult { font-size: 15px; min-height: 1.4em; font-variant-numeric: tabular-nums; }
 
-  /* 타이밍 측정 */
+  /* 채보 제작기 */
   #scr-timing { display: flex; flex-direction: column; gap: 10px; }
   #scr-timing > * { flex-shrink: 0; }
   body.touch .kbdHint { display: none; }
@@ -285,9 +287,8 @@
       <div class="logo"><b>빡</b><i>따</i>빡</div>
       <button class="menuBtn" data-go="select">게임 시작 <span>▶</span></button>
       <button class="menuBtn" data-go="calib">보정 <span id="menuOff">0ms</span></button>
-      <button class="menuBtn" data-go="timing">타이밍 측정 <span>노트 찍기</span></button>
     </div>
-    <img src="img/dancer.gif" alt="">
+    <img id="menuDancer" src="img/dancer.gif" alt="">
     </div></div>
   </section>
 
@@ -415,7 +416,7 @@
     </div>
   </section>
 
-  <!-- 타이밍 측정 -->
+  <!-- 채보 제작기 -->
   <section class="screen scroll" id="scr-timing" hidden>
     <div class="tRow">
       <select id="tSong" aria-label="음악 선택"></select>
@@ -657,7 +658,7 @@ const SCREENS = {
   select: { title: "게임 선택", parent: "menu" },
   zalza:  { title: "잘자콘", parent: "select" },
   calib:  { title: "보정", parent: "menu" },
-  timing: { title: "타이밍 측정", parent: "menu" },
+  timing: { title: "채보 제작기", parent: "menu" },
 };
 let screen = "menu";
 function go(name) {
@@ -671,9 +672,19 @@ function go(name) {
   $("btnBack").hidden = !SCREENS[name].parent;
   fitStages();
   if (name === "timing") tEnter();
+  if (name === "menu") dancerTaps = 0;
   if (name === "calib") calTab === "video" ? drawVisMeter() : drawCalMeter();
 }
 document.querySelectorAll("[data-go]").forEach(b => b.addEventListener("click", () => go(b.dataset.go)));
+// 채보 제작기 (숨김): 메뉴의 댄서를 9번 누르면 들어감. 누를 때마다 효과음 9.wav → 17.wav(마지막)를 차례로 재생
+let dancerTaps = 0;
+$("menuDancer").addEventListener("click", () => {
+  const first = 8, n = SEQ.length - first;   // 9.wav(인덱스 8)부터 마지막까지 = 9번
+  if (dancerTaps >= n) return;
+  playSfx(first + dancerTaps); dancerTaps++;
+  const d = $("menuDancer"); d.classList.remove("pop"); void d.offsetWidth; d.classList.add("pop"); setTimeout(() => d.classList.remove("pop"), 90);
+  if (dancerTaps === n) setTimeout(() => { if (screen === "menu") go("timing"); }, 450);
+});
 $("btnBack").addEventListener("click", () => SCREENS[screen].parent && go(SCREENS[screen].parent));
 
 // ---- 설정 ----
@@ -924,7 +935,7 @@ function drawMeter(cv, errs, cur, res) {
   if (res != null) { g.fillStyle = "#ea580c"; g.fillRect(x(res) - 1.5, 10, 3, 32); }
 }
 
-// ================= 타이밍 측정 =================
+// ================= 채보 제작기 =================
 const SONGS = [{ id: "zalza", title: "잘자콘", src: "music/zalza.mp3", chart: "charts/zalza.json",
   grid: { bpm: 180, div: 2, swing: 50, phase: 149, snap: false } },
   { id: "zalza_remix", title: "잘자콘 Remix", src: "music/zalza_remix.mp3", chart: "charts/zalza_remix.json", hit: "tick",
@@ -1385,7 +1396,7 @@ function zApply(note, jd, dms) {
   }
   zJudgeText(jd.name, jd.color, jd === MISS ? null : dms); zHud();
 }
-// 노트음: 원곡은 효과음 1~17, hit:"tick" 곡은 타이밍 측정과 같은 빡/따 소리. 설정에서 끌 수 있음
+// 노트음: 원곡은 효과음 1~17, hit:"tick" 곡은 채보 제작기와 같은 빡/따 소리. 설정에서 끌 수 있음
 function zHitSnd(k, i, rate) {
   if (settings.noteSnd === false) return;
   if (G.song && G.song.hit === "tick") tick(ctx.currentTime, k);
